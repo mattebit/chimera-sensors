@@ -18,6 +18,13 @@
  *For the configuration of the first timer go to the description of the read_encoder() function.
  *For the configuration of the second timer you have to configure it to generate an interrupt.
  *That interrupt must be long enough to calculate a speed but not too long because you have to get the two angles in the same wheel rotation.
+ *
+ *working settings:
+ *interrupt timer -> prescaler 36, counter period 1000
+ *timer2 -> prescaler = 18, counter period = 65500
+ *pin PC8 = data in
+ *pin PC9 = clock pin
+ *angles_array[15]
 */
 
 //----------------GPS----------------//
@@ -51,6 +58,7 @@
 #include "stm32f4xx_hal_spi.h"
 	//gyro initialization function
 	//call this function before requesting data from the sensor
+	//hspi = pointer to the spi port defined
 	void gyro_init(SPI_HandleTypeDef *hspi){
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
@@ -69,6 +77,7 @@
 
 	//accelerometer and magnetometer initialization
 	//call this function before requesting data from the sensor
+	//hspi = pointer to the spi port defined
 	void magn_accel_init(SPI_HandleTypeDef *hspi){
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
@@ -107,6 +116,10 @@
 	}
 
 	//this function is used to calibrate the gyroscope
+	//hspi = pointer to the spi port defined
+	//X_G_axis_offset = gyroscope x axis offset value that changes after executing this function
+	//Y_G_axis_offset = gyroscope y axis offset value that changes after executing this function
+	//Z_G_axis_offset = gyroscope z axis offset value that changes after executing this function
 	void gyro_calib(SPI_HandleTypeDef *hspi, float * X_G_axis_offset, float * Y_G_axis_offset, float * Z_G_axis_offset){
 		float kp_G = 0.0175;
 		*X_G_axis_offset = LSM9DS0_calib(hspi,GPIOA, GPIO_PIN_8, GPIOC, GPIO_PIN_9, OUT_X_L_G_ADD, OUT_X_H_G_ADD, kp_G);
@@ -116,6 +129,10 @@
 
 
 	//this function is used to calibrate the accelerometer
+	//hspi = pointer to the spi port defined
+	//X_A_axis_offset = accelerometer x axis offset value that changes after executing this function
+	//Y_A_axis_offset = accelerometer y axis offset value that changes after executing this function
+	//Z_A_axis_offset = accelerometer z axis offset value that changes after executing this function
 	void accel_calib(SPI_HandleTypeDef *hspi, float * X_A_axis_offset, float * Y_A_axis_offset, float * Z_A_axis_offset){
 		float kp_A = 0.00119782; ///0.000122 * 9,81
 		*X_A_axis_offset = LSM9DS0_calib(hspi,GPIOC, GPIO_PIN_9, GPIOA, GPIO_PIN_8, OUT_X_L_A_ADD, OUT_X_H_A_ADD, kp_A);
@@ -155,6 +172,7 @@
 		return axis;
 	}
 
+
 	float LSM9DS0_calib(SPI_HandleTypeDef *hspi, GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp)
 	{
 		float axis_cal;
@@ -166,6 +184,8 @@
 		axis_cal = sum_cal / 10000;
 		return axis_cal;
 	}
+
+
 	int LSMD9S0_check(SPI_HandleTypeDef *hspi){
 		int check = 0;
 
@@ -198,8 +218,17 @@
 
 		return check;
 	}
-	///Reading G_axis values
-	void gyro_read(SPI_HandleTypeDef *hspi,float * X_G_axis, float * Y_G_axis, float * Z_G_axis, float *X_G_axis_offset,float * Y_G_axis_offset,float * Z_G_axis_offset){
+
+
+	//Reading G_axis values
+	//hspi = pointer to the spi port defined
+	//X_G_axis = pointer gyroscope x variable
+	//Y_G_axis = pointer gyroscope y variable
+	//Z_G_axis = pointer gyroscope z variable
+	//X_G_axis_offset = offset x value
+	//Y_G_axis_offset = offset y value
+	//Z_G_axis_offset = offset z value
+	void gyro_read(SPI_HandleTypeDef *hspi,float * X_G_axis, float * Y_G_axis, float * Z_G_axis, float X_G_axis_offset, float Y_G_axis_offset, float Z_G_axis_offset){
 		float kp_G = 0.0175;
 		*X_G_axis = LSMD9S0_read(hspi,GPIOA, GPIO_PIN_8, GPIOC, GPIO_PIN_9, OUT_X_L_G_ADD, OUT_X_H_G_ADD, kp_G);
 		*X_G_axis = X_G_axis - X_G_axis_offset;
@@ -208,8 +237,16 @@
 		*Z_G_axis = LSMD9S0_read(hspi,GPIOA, GPIO_PIN_8, GPIOC, GPIO_PIN_9, OUT_Z_L_G_ADD, OUT_Z_H_G_ADD, kp_G);
 		*Z_G_axis = Z_G_axis - Z_G_axis_offset;
 	}
+
 	///Reading A_axis values
-	void accel_read(SPI_HandleTypeDef *hspi,float * X_A_axis, float * Y_A_axis, float * Z_A_axis,float *X_A_axis_offset,float * Y_A_axis_offset,float * Z_A_axis_offset){
+	//hspi = pointer to the spi port defined
+	//X_A_axis = pointer accelerometer x variable
+	//Y_A_axis = pointer accelerometer y variable
+	//Z_A_axis = pointer accelerometer z variable
+	//X_A_axis_offset = offset x value
+	//Y_A_axis_offset = offset y value
+	//Z_A_axis_offset = offset z value
+	void accel_read(SPI_HandleTypeDef *hspi,float * X_A_axis, float * Y_A_axis, float * Z_A_axis,float X_A_axis_offset, float Y_A_axis_offset, float Z_A_axis_offset){
 		float kp_A = 0.00119782; ///0.000122 * 9,81
 		*X_A_axis = LSMD9S0_read(hspi,GPIOC, GPIO_PIN_9, GPIOA, GPIO_PIN_8, OUT_X_L_A_ADD, OUT_X_H_A_ADD, kp_A);
 		*X_A_axis = X_A_axis - X_A_axis_offset;
@@ -225,6 +262,7 @@
 #ifdef HAL_CAN_MODULE_ENABLED
 #include "stm32f4xx_hal_can.h"
 	//function that sends an array via CAN
+	//hcan = pointer to can port
 	//id = id of the message to be sent
 	//dataTx = the array that contains the data to be sent
 	//size = size of the array
@@ -251,6 +289,7 @@
 
 	//receive a buffer from the CAN communication
 	//you can call this function in the callback of the CAN interrupt
+	//hcan = pointer to can port
 	//DataRx = pointer to the buffer you are receiveng
 	//size = size of the buffer you are using
 	int CAN_Receive(CAN_HandleTypeDef *hcan,uint8_t *DataRx, int size){
@@ -415,6 +454,9 @@
 	//interrupt function of tim 2
 	//call this function in the timer callback function of the stm
 	//htim = timer TimerInstance of the timer that you are using for the clock of the encoder
+	//interrupt_flag = initilize a int variable in the main file
+	//angles_array = array to store the last angles
+	//speed = pointer to the speed value
 	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, int * interrupt_flag, double * angles_array, double * speed){
 		double average_speed = 0;
 		if(*interrupt_flag == 0){									//every 3 times request the angle from encoder
@@ -442,6 +484,9 @@
 
 	//Function to check if the two ADC values are approximately the same
 	//if the values are different for more tha 10 points percentage for more than 100 milliseconds returns the SCS Error
+	//TimerInstance = pointer to the timer needed to check the SCS error
+	//val0_100 = pointer to the first potentiometer
+	//val1_100 = pointer to the second potentiometer
 	int implausibility_check(TIM_HandleTypeDef *TimerInstance, int * Val0_100, int * Val1_100){
 
 		int SCS1 = 0;
@@ -477,13 +522,14 @@
 
 
 //function to calculate the decimal value from MSB binary array
-int bin_dec(int* bin){
+//bin = pointer to binary array
+//max = size of the array
+int bin_dec(int* bin, int size){
 	int dec = 0;
-	int max = 15;
 
-	for(int i = 0; i < max; i++){
+	for(int i = 0; i < size; i++){
 		if(bin[i] == 1){
-			dec += Power(2, max-i-1);
+			dec += Power(2, size-i-1);
 		}
 	}
 
@@ -661,29 +707,6 @@ int Get_Sentence(char * bufferRx, char (*sentences)[5], int len){
 			else{
 				return -1;
 			}
-			/*
-			switch(i){
-			case 0:
-			return 0;  MX_USART1_USART_Init();
-
-			break;
-			case 1:
-			return 1;
-			break;
-			case 2:
-			return 2;
-			break;
-			case 3:
-			return 3;
-			break;
-			case 4:
-			return 4;
-			break;
-			default:
-			return -1;
-			break;
-		}
-		*/
 	}
 	else{
 		continue;
@@ -693,13 +716,19 @@ return -1;
 }
 
 //function to set the value of the potentiometer when the pedal is released
-void set_max(int * val, int * min1, int * max1, int * min2, int * max2){
+//val = array pointer to the potentiometer values
+//max1 = pointer to the maximum value of the APPS1
+//max2 = pointer to the maximum value of the APPS2
+void set_max(int * val, int * max1, int * max2){
 	&max1 = val[0];
 	&max2 = val[1];
 }
 
 //function to set the value of the potentiometer when the pedal is pressed
-void set_min(int * val, int * min1, int * max1, int * min2, int * max2){
+//val = array pointer to the potentiometer values
+//min1 = pointer to the minimum value of the APPS1
+//min2 = pointer to the minimum value of the APPS2
+void set_min(int * val, int * min1, int * min2){
 	&min1 = val[0];
 	&min2 = val[1];
 }

@@ -22,7 +22,7 @@ void GPS_Awake();
 	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, int * interrupt_flag, double * angles_array, double * speed);
 	int implausibility_check(TIM_HandleTypeDef *TimerInstance, int * Val0_100, int * Val1_100);
 #endif
-int bin_dec(int* bin);
+int bin_dec(int* bin, int size);
 double Power(int base, int expn);
 double get_speed_encoder(float angle0, float angle1, int refresh, float wheel_diameter);
 void shift_array(double *array, int size, double data);
@@ -36,8 +36,8 @@ double dynamic_average(double *array, int size);
 	int LSMD9S0_check(SPI_HandleTypeDef *hspi);
 	float LSMD9S0_read(SPI_HandleTypeDef *hspi,GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
 	float LSM9DS0_calib(SPI_HandleTypeDef *hspi, GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
-	void gyro_read(SPI_HandleTypeDef *hspi,float * X_G_axis, float * Y_G_axis, float * Z_G_axis, float *X_G_axis_offset,float * Y_G_axis_offset,float * Z_G_axis_offset);
-	void accel_read(SPI_HandleTypeDef *hspi,float * X_A_axis, float * Y_A_axis, float * Z_A_axis,float *X_A_axis_offset,float * Y_A_axis_offset,float * Z_A_axis_offset);
+	void gyro_read(SPI_HandleTypeDef *hspi,float * X_G_axis, float * Y_G_axis, float * Z_G_axis, float X_G_axis_offset, float Y_G_axis_offset, float Z_G_axis_offset);
+	void accel_read(SPI_HandleTypeDef *hspi,float * X_A_axis, float * Y_A_axis, float * Z_A_axis,float X_A_axis_offset, float Y_A_axis_offset, float Z_A_axis_offset);
 #endif
 void gyro_init();
 void magn_accel_init();
