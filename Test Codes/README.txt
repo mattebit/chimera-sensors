@@ -1,0 +1,3 @@
+Directory in cui avremo tutti i codici su cui stiamo lavorado
+Possono essere inseriti anche codci che non funzionano etc...
+
