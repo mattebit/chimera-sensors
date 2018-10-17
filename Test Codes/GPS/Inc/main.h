@@ -57,12 +57,6 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-char* Get_Requested_Data(int data_pos);
-int Get_Sentence();
-void print(char* text);
-int* Is_Valid();
-void GPS_INIT();
-void GPS_Awake();
 int checksum(char * string_checksum, int size_string_checksum);
 
 /* USER CODE END Private defines */
