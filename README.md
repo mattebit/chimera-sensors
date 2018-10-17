@@ -1,15 +1,15 @@
 # Sensors of Fenice 
 Repository del team Sensori con raccolti i codici delle STM
 
-Le directory sono così suddivise
+## 1 Directories
 
-## 1 Working Codes
+### 1 Working Codes
 Use this directory to share all the projects that are working and are ready to be used in the vehicle.
 
-## 2 Test Codes
+### 2 Test Codes
 Use this directory to share projects  
 
-## 3 Library
+### 3 Library
 Library folder
 
 ## 4 Git Giude
