@@ -3,16 +3,16 @@ Repository del team Sensori con raccolti i codici delle STM
 
 ## 1 Directories
 
-### 1 Working Codes
+### Working Codes
 Use this directory to share all the projects that are working and are ready to be used in the vehicle.
 
-### 2 Test Codes
+### Test Codes
 Use this directory to share projects  
 
-### 3 Library
+### Library
 Library folder
 
-## 4 Git Giude
+## 2 Git Giude
 
 creare una cartella in cui verrà scaricato il github da internet
 
@@ -33,7 +33,7 @@ clonare un github da internet
 
 -git push origin master    //eseguo l'upload della repo sul github
 
-## 5 Git Commands
+## 3 Git Commands
 gitkraken //gui visuale per github
 
 -git status //stato della repo
@@ -57,6 +57,3 @@ gitkraken //gui visuale per github
 -git status // mostra i file che sto caricando
 
 -git push origin master //al posto di master il branch su cui sto lavorando
-
-
-
