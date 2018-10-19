@@ -719,9 +719,9 @@ return -1;
 //val = array pointer to the potentiometer values
 //max1 = pointer to the maximum value of the APPS1
 //max2 = pointer to the maximum value of the APPS2
-void set_max(int *val, int * max1, int * max2){
-	//&max1 = val[0];
-	//&max2 = &val[1];
+void set_max(int * val, int * max1, int * max2){
+	&max1 = val[0];
+	&max2 = val[1];
 }
 
 //function to set the value of the potentiometer when the pedal is pressed
@@ -729,8 +729,8 @@ void set_max(int *val, int * max1, int * max2){
 //min1 = pointer to the minimum value of the APPS1
 //min2 = pointer to the minimum value of the APPS2
 void set_min(int * val, int * min1, int * min2){
-	//&min1 = val[0];
-	//i&min2 = val[1];
+	&min1 = val[0];
+	&min2 = val[1];
 }
 
 
