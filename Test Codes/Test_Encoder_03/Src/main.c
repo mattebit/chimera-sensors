@@ -41,6 +41,10 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "Eagle_TRT.h"
 
 /* USER CODE END Includes */
 
@@ -53,6 +57,8 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef s_TimerInstance = {.Instance = TIM2};
+TIM_HandleTypeDef a_TimerInstance = {.Instance = TIM3};
 
 /* USER CODE END PV */
 
@@ -67,7 +73,9 @@ static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+int flag = 0;
+double angles_array[15];
+double speed = 0;
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -111,7 +119,12 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start(&htim2);
+  HAL_TIM_Base_Start(&htim3);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance, 0);
+  __HAL_TIM_SET_COUNTER(&s_TimerInstance, 0);
+  char txt[100];
+  HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,6 +135,8 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  sprintf(txt, "%d \t %d", (int)angles_array[1], (int)(speed * 10));
+	  print(&huart2, txt);
 
   }
   /* USER CODE END 3 */
@@ -208,7 +223,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 36;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4000000000;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -343,7 +358,9 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	encoder_tim_interrupt(&htim2, angles_array, &speed, &htim3);
+}
 /* USER CODE END 4 */
 
 /**

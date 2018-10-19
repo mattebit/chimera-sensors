@@ -19,7 +19,7 @@ void GPS_Awake();
 #ifdef HAL_TIM_MODULE_ENABLED
 #include "stm32f4xx_hal_tim.h"
 	double read_encoder(TIM_HandleTypeDef *TimerInstance);
-	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, int * interrupt_flag, double * angles_array, double * speed);
+	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, double * angles_array, double * average_speed, TIM_HandleTypeDef *htim1);
 	int implausibility_check(TIM_HandleTypeDef *TimerInstance, int * Val0_100, int * Val1_100);
 #endif
 int bin_dec(int* bin, int size);

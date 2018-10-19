@@ -25,6 +25,11 @@
  *pin PC8 = data in
  *pin PC9 = clock pin
  *angles_array[15]
+ *
+ *
+ *callback timer function to be added in the main.c file:
+ *
+ *=======>>>> void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 */
 
 //----------------GPS----------------//
@@ -53,6 +58,8 @@
  *You can read the x, y, z data from the Gyroscope by calling accel_read()
 */
 
+double speed[15];
+int interrupt_flag = 0;
 
 #ifdef HAL_SPI_MODULE_ENABLED
 #include "stm32f4xx_hal_spi.h"
@@ -433,7 +440,7 @@
 			}
 
 			if(i == 15){												//if it is the last loop cast the sata from binary to decimal
-				int_data = bin_dec(Data);
+				int_data = bin_dec(Data, 15);
 
 				//sprintf(txt, "%d", (int)int_data);
 
@@ -457,25 +464,42 @@
 	//interrupt_flag = initilize a int variable in the main file
 	//angles_array = array to store the last angles
 	//speed = pointer to the speed value
-	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, int * interrupt_flag, double * angles_array, double * speed){
-		double average_speed = 0;
-		if(*interrupt_flag == 0){									//every 3 times request the angle from encoder
-			angles_array[0] = read_encoder(htim);
-			interrupt_flag ++;
+	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, double * angles_array, double * average_speed, TIM_HandleTypeDef *htim1){
+		if(interrupt_flag == 0){									//every 3 times request the angle from encoder
+			//angles_array[0] = read_encoder(htim1);
+			shift_array(angles_array, 15, read_encoder(htim1));
+			interrupt_flag = 1;
 		}
 		else{
-			if(*interrupt_flag == 1){									//every 3 times request the angle from encoder
-				angles_array[1] = read_encoder(htim);
-				interrupt_flag++;
+			if(interrupt_flag == 1){									//every 3 times request the angle from encoder
+				//angles_array[1] = read_encoder(htim1);
+				shift_array(angles_array, 15, read_encoder(htim1));
+				interrupt_flag = 2;
 			}
 			else{
-				if(*interrupt_flag == 2){									//calculate the speed from the two last angles
-					double Speed = get_speed_encoder(angles_array[0], angles_array[1],1000,0.4064);
-					if(abs(Speed - speed[8]) <= abs(speed[8] * 10)){			//exclude the wrong speeds
-						shift_array(speed, 15, Speed);
-						average_speed = dynamic_average(speed, 15);
+				if(interrupt_flag == 2){									//calculate the speed from the two last angles
+					int flag = 0;
+					int encoder_refresh = htim->Init.Period;
+
+					for(int i = 1; i < 15; i ++){
+						if((int)(10 * angles_array[i]) != (int)(10 * angles_array[i-1])){
+							flag = 1;
+							break;
+						}
 					}
-					*interrupt_flag = 0;
+					double Speed = get_speed_encoder(angles_array[0], angles_array[1], encoder_refresh, 0.4064);
+
+					if(flag == 1){
+						if(abs(Speed - speed[8]) <= abs(speed[8] * 10)){			//exclude the wrong speeds
+							shift_array(speed, 15, Speed);
+							*average_speed = dynamic_average(speed, 15);
+						}
+					}
+					else{
+						*average_speed = 0;
+					}
+					//*average_speed = get_speed_encoder(angles_array[0], angles_array[1], encoder_refresh, 0.4064);
+					interrupt_flag = 0;
 				}
 			}
 		}
@@ -571,12 +595,9 @@ double get_speed_encoder(float angle0, float angle1, int refresh, float wheel_di
 	double meters_per_second = 0;
 	double dt = 0;
 
-	dt = refresh / 1000000;
-	meters_per_second = ((angle0 - angle1)/360)*3.14159265359*(wheel_diameter);			//calculating the speed using the circumference arc
-	meters_per_second /= dt;
-
-	//sprintf(txt, "%d", (int)(speed[9]*100));
-	//print(txt);
+	dt = refresh / 1000;
+	meters_per_second = (1000 * (angle1 - angle0)/dt);
+	meters_per_second = meters_per_second * wheel_diameter * 3.14159;
 
 	return meters_per_second;
 }
@@ -714,7 +735,7 @@ int Get_Sentence(char * bufferRx, char (*sentences)[5], int len){
 }
 return -1;
 }
-
+/*
 //function to set the value of the potentiometer when the pedal is released
 //val = array pointer to the potentiometer values
 //max1 = pointer to the maximum value of the APPS1
@@ -732,7 +753,7 @@ void set_min(int * val, int * min1, int * min2){
 	&min1 = val[0];
 	&min2 = val[1];
 }
-
+*/
 
 ///IMU VARIABLES///
 uint8_t ZERO = 0x00;

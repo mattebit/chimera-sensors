@@ -46,7 +46,7 @@
 #include "string.h"
 #include "stdio.h"
 #include "stdlib.h"
-#include "Eagle_TRT.h"
+//#include "Eagle_TRT.h
 
 /* USER CODE END Includes */
 
@@ -386,7 +386,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/*
+
 void print(char* text){
 	HAL_UART_Transmit(&huart2, (uint8_t*)text, strlen(text), 5);
 	HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 1);
@@ -539,7 +539,7 @@ double dynamic_average(double *array, int size){
 
 	return average;
 }
-*/
+
 
 /* USER CODE END 4 */
 

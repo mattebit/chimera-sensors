@@ -57,14 +57,14 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-/*
+
 void print(char* text);
 double read_encoder();
 int bin_dec(int* bin);
 double Power(int base, int expn);
 double get_speed(float angle0, float angle1);
 void shift_array(double *array, int size, double data);
-double dynamic_average(double *array, int size);*/
+double dynamic_average(double *array, int size);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

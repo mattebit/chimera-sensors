@@ -695,7 +695,7 @@ int Get_Sentence(char * bufferRx, char (*sentences)[5], int len){
 }
 return -1;
 }
-
+/*
 //function to set the value of the potentiometer when the pedal is released
 void set_max(int * val, int * min1, int * max1, int * min2, int * max2){
 	&max1 = val[0];
@@ -707,7 +707,7 @@ void set_min(int * val, int * min1, int * max1, int * min2, int * max2){
 	&min1 = val[0];
 	&min2 = val[1];
 }
-
+*/
 
 ///IMU VARIABLES///
 uint8_t ZERO = 0x00;
