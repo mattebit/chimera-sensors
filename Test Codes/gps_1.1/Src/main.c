@@ -53,7 +53,7 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+gps_struct g;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,6 +70,10 @@ static void MX_NVIC_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+//GPS-->> Board
+//RX -->> D2 = PA10
+//TX -->> D8 = PA9
 
 
 
@@ -115,7 +119,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   print("il programma sta iniziando...");
   HAL_Delay(1000);
-  GPS_INIT(&huart3); //gps_initialization
+  GPS_INIT(&huart3,&g);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -292,7 +296,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	GPS_INTERRUPT(huart); //call GPS_interrupt
+	GPS_INTERRUPT(huart,&g);
 
 }
 /* USER CODE END 4 */

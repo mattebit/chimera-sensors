@@ -1,10 +1,16 @@
-int checksum(char * string_checksum, int size_string_checksum);
+typedef struct
+{
+	char speed[12];
+	char latitude[12];
+	char longitude[13];
+	char altitude[10];
+}gps_struct;
 void GPS_Awake(UART_HandleTypeDef *huart);
-int GPS_INTERRUPT(UART_HandleTypeDef *huart);
-int GPS_INIT(UART_HandleTypeDef* huart);
+int GPS_INTERRUPT(UART_HandleTypeDef *huart, gps_struct* gps);
+int GPS_INIT(UART_HandleTypeDef* huart, gps_struct * gps);
 
 
-
+//struct gps_struct * gps={"000.00,km/h","0000.0000,N","00000.0000,W","0000.00,M"};
 
 
 
