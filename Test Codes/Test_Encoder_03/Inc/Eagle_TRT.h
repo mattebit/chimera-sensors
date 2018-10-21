@@ -24,7 +24,7 @@ void GPS_Awake();
 #endif
 int bin_dec(int* bin, int size);
 double Power(int base, int expn);
-double get_speed_encoder(float angle0, float angle1, int refresh, float wheel_diameter);
+double get_speed_encoder(double angle0, double angle1, int refresh, double wheel_diameter);
 void shift_array(double *array, int size, double data);
 double dynamic_average(double *array, int size);
 

@@ -1,96 +1,83 @@
-/**
-  ******************************************************************************
-  * @file    stm32f4xx_hal_flash_ramfunc.c
-  * @author  MCD Application Team
-  * @brief   FLASH RAMFUNC module driver.
-  *          This file provides a FLASH firmware functions which should be 
-  *          executed from internal SRAM
-  *            + Stop/Start the flash interface while System Run
-  *            + Enable/Disable the flash sleep while System Run
-  @verbatim
-  ==============================================================================
-                    ##### APIs executed from Internal RAM #####
-  ==============================================================================
-  [..]
-    *** ARM Compiler ***
-    --------------------
-    [..] RAM functions are defined using the toolchain options. 
-         Functions that are be executed in RAM should reside in a separate
-         source module. Using the 'Options for File' dialog you can simply change
-         the 'Code / Const' area of a module to a memory space in physical RAM.
-         Available memory areas are declared in the 'Target' tab of the 
-         Options for Target' dialog.
+Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o: \
+ ../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Inc/stm32f4xx_hal_conf.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Inc/main.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cm4.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmInstr.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/cmsis_gcc.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmFunc.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmSimd.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 
-    *** ICCARM Compiler ***
-    -----------------------
-    [..] RAM functions are defined using a specific toolchain keyword "__ramfunc".
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 
-    *** GNU Compiler ***
-    --------------------
-    [..] RAM functions are defined using a specific toolchain attribute
-         "__attribute__((section(".RamFunc")))".
-  
-  @endverbatim         
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */ 
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Inc/stm32f4xx_hal_conf.h:
 
-/* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Inc/main.h:
 
-/** @addtogroup STM32F4xx_HAL_Driver
-  * @{
-  */
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
 
-/** @defgroup FLASH_RAMFUNC FLASH RAMFUNC
-  * @brief FLASH functions executed from RAM
-  * @{
-  */
-#ifdef HAL_FLASH_MODULE_ENABLED
-#if defined(STM32F410Tx) || defined(STM32F410Cx) || defined(STM32F410Rx) || defined(STM32F411xE) || defined(STM32F446xx) || defined(STM32F412Zx) || defined(STM32F412Vx) || \
-    defined(STM32F412Rx) || defined(STM32F412Cx)
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
 
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-/* Private function prototypes -----------------------------------------------*/
-/* Exported functions --------------------------------------------------------*/
-/** @defgroup FLASH_RAMFUNC_Exported_Functions FLASH RAMFUNC Exported Functions
-  * @{
-  */
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
 
-/** @defgroup FLASH_RAMFUNC_Exported_Functions_Group1 Peripheral features functions executed from internal RAM 
-  *  @brief Peripheral Extended features functions 
-  *
-@verbatim   
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h:
 
- ===============================================================================
-                      ##### ramfunc functions #####
- ============================
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cm4.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmInstr.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/cmsis_gcc.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmFunc.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Include/core_cmSimd.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/can_interrupt/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:

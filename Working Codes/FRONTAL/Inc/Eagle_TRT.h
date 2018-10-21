@@ -8,64 +8,56 @@
 #include "stdlib.h"
 #include "string.h"
 
-
-int LSMD9S0_check(void);
-float LSMD9S0_read(GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
-float LSM9DS0_calib(GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
-int CAN_Send(int id, uint8_t dataTx[], int size);
-int CAN_Receive(uint8_t *DataRx, int size);
+//----------------GPS----------------//
 char* Get_Requested_Data(char * bufferRx, int data_pos, char * requested_data);
 int* Is_Valid(char * bufferRx, int  * fix, char * requested_data);
 int Get_Sentence(char * bufferRx, char (*sentences)[5], int len);
-void print(UART_HandleTypeDef *huart, char* text);
-void GPS_INIT();
+void GPS_INIT(UART_HandleTypeDef *huart);
 void GPS_Awake();
-double read_encoder(TIM_HandleTypeDef *TimerInstance);
-void encoder_tim_interrupt(TIM_HandleTypeDef *htim, int * interrupt_flag, double * angles_array, double * speed);
-int implausibility_check(TIM_HandleTypeDef *TimerInstance, int * Val0_100, int * Val1_100);
-int bin_dec(int* bin);
+
+//----------------ENCODER----------------//
+#ifdef HAL_TIM_MODULE_ENABLED
+#include "stm32f4xx_hal_tim.h"
+	double read_encoder(TIM_HandleTypeDef *TimerInstance);
+	void encoder_tim_interrupt(TIM_HandleTypeDef *htim, double * angles_array, double * average_speed, TIM_HandleTypeDef *htim1);
+	int implausibility_check(TIM_HandleTypeDef *TimerInstance, int * Val0_100, int * Val1_100);
+#endif
+int bin_dec(int* bin, int size);
 double Power(int base, int expn);
-double get_speed_encoder(float angle0, float angle1, int refresh, float wheel_diameter);
+double get_speed_encoder(double angle0, double angle1, int refresh, double wheel_diameter);
 void shift_array(double *array, int size, double data);
 double dynamic_average(double *array, int size);
 
+//----------------IMU----------------//
+#ifdef HAL_SPI_MODULE_ENABLED
+#include "stm32f4xx_hal_spi.h"
+	void gyro_calib(SPI_HandleTypeDef *hspi, float * X_G_axis_offset, float * Y_G_axis_offset, float * Z_G_axis_offset);
+	void accel_calib(SPI_HandleTypeDef *hspi, float * X_A_axis_offset, float * Y_A_axis_offset, float * Z_A_axis_offset);
+	int LSMD9S0_check(SPI_HandleTypeDef *hspi);
+	float LSMD9S0_read(SPI_HandleTypeDef *hspi,GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
+	float LSM9DS0_calib(SPI_HandleTypeDef *hspi, GPIO_TypeDef* GPIOx_InUse, uint16_t GPIO_Pin_InUse, GPIO_TypeDef* GPIOx_NotInUse, uint16_t GPIO_Pin_NotInUse, uint8_t REG_L, uint8_t REG_H, float kp);
+	void gyro_read(SPI_HandleTypeDef *hspi,float * X_G_axis, float * Y_G_axis, float * Z_G_axis, float X_G_axis_offset, float Y_G_axis_offset, float Z_G_axis_offset);
+	void accel_read(SPI_HandleTypeDef *hspi,float * X_A_axis, float * Y_A_axis, float * Z_A_axis,float X_A_axis_offset, float Y_A_axis_offset, float Z_A_axis_offset);
+#endif
+void gyro_init();
+void magn_accel_init();
 
-///IMU VARIABLES///
-uint8_t ZERO = 0x00;
-uint8_t WHO_AM_I_G = 0x8F;
-uint8_t WHO_AM_I_G_VAL;
-uint8_t WHO_AM_I_XM = 0x8F;
-uint8_t WHO_AM_I_XM_VAL;
+//----------------CAN----------------//
+#ifdef HAL_CAN_MODULE_ENABLED
+#include "stm32f4xx_hal_can.h"
+  int CAN_Send(CAN_HandleTypeDef *hcan,int id, uint8_t dataTx[], int size);
+  int CAN_Receive(CAN_HandleTypeDef *hcan,uint8_t *DataRx, int size);
+#endif
 
-uint8_t CTRL_REG1_G_ADD = 0x20;
-uint8_t CTRL_REG1_G_VAL = 0x0F;
-uint8_t CTRL_REG4_G_ADD = 0x23;
-uint8_t CTRL_REG4_G_VAL = 0x10;
+//----------------MISCELLANEOUS----------------//
+#ifdef HAL_UART_MODULE_ENABLED
+#include "stm32f4xx_hal_uart.h"
+  void print(UART_HandleTypeDef *huart, char* text);
+#endif
+void calc_pot_value(int max, int min, int range, float * val0_100, int * val);
+void set_min(int * val, int * min1, int * max1, int * min2, int * max2);
+void set_max(int * val, int * min1, int * max1, int * min2, int * max2);
 
-uint8_t CTRL_REG1_XM_ADD = 0x20;
-uint8_t CTRL_REG1_XM_VAL = 0xA7;
-uint8_t CTRL_REG2_XM_ADD = 0x21;
-uint8_t CTRL_REG2_XM_VAL = 0x08;
-uint8_t CTRL_REG5_XM_ADD = 0x24;
-uint8_t CTRL_REG5_XM_VAL = 0x70;
-uint8_t CTRL_REG6_XM_ADD = 0x25;
-uint8_t CTRL_REG6_XM_VAL = 0x20;
-uint8_t CTRL_REG7_XM_ADD = 0x26;
-uint8_t CTRL_REG7_XM_VAL = 0x00;
-
-uint8_t OUT_X_L_G_ADD = 0xE8;
-uint8_t OUT_X_H_G_ADD = 0xE9;
-uint8_t OUT_Y_L_G_ADD = 0xEA;
-uint8_t OUT_Y_H_G_ADD = 0xEB;
-uint8_t OUT_Z_L_G_ADD = 0xEC;
-uint8_t OUT_Z_H_G_ADD = 0xED;
-
-uint8_t OUT_X_L_A_ADD = 0xE8;
-uint8_t OUT_X_H_A_ADD = 0xE9;
-uint8_t OUT_Y_L_A_ADD = 0xEA;
-uint8_t OUT_Y_H_A_ADD = 0xEB;
-uint8_t OUT_Z_L_A_ADD = 0xEC;
-uint8_t OUT_Z_H_A_ADD = 0xED;
 
 
 //GPS CONSTANTS
@@ -98,9 +90,6 @@ uint8_t OUT_Z_H_A_ADD = 0xED;
 // turn off output
 #define PMTK_SET_NMEA_OUTPUT_OFF "$PMTK314,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"
 
-// to generate your own sentences, check out the MTK command datasheet and use a checksum calculator
-// such as the awesome http://www.hhhh.org/wiml/proj/nmeaxor.html
-
 #define PMTK_LOCUS_STARTLOG  "$PMTK185,0*22"
 #define PMTK_LOCUS_STOPLOG "$PMTK185,1*23"
 #define PMTK_LOCUS_STARTSTOPACK "$PMTK001,185,3*3C"
@@ -126,9 +115,5 @@ uint8_t OUT_Z_H_A_ADD = 0xED;
 
 // how long to wait when we're looking for a response
 #define MAXWAITSENTENCE 10
-//////////////////sentence with speed in it are: GPRMA; GPRMC; GPVTG; GPVBW
-//////////////////GPVBW Water referenced and ground referenced speed data
-
-
 
 #endif

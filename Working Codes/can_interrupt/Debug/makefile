@@ -28,13 +28,13 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: can_interrupt.elf
+all: CAN_interrupt.elf
 
 # Tool invocations
-can_interrupt.elf: $(OBJS) $(USER_OBJS) ../STM32F446RETx_FLASH.ld
+CAN_interrupt.elf: $(OBJS) $(USER_OBJS) ../STM32F446RETx_FLASH.ld
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU GCC Linker'
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "can_interrupt.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "CAN_interrupt.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
@@ -46,8 +46,8 @@ clean:
 
 post-build:
 	-@echo 'Generating hex and Printing size information:'
-	arm-none-eabi-objcopy -O ihex "can_interrupt.elf" "can_interrupt.hex"
-	arm-none-eabi-size "can_interrupt.elf"
+	arm-none-eabi-objcopy -O ihex "CAN_interrupt.elf" "CAN_interrupt.hex"
+	arm-none-eabi-size "CAN_interrupt.elf"
 	-@echo ' '
 
 .PHONY: all clean dependents

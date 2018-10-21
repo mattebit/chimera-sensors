@@ -482,7 +482,7 @@ int interrupt_flag = 0;
 					int encoder_refresh = htim->Init.Period;
 
 					for(int i = 1; i < 15; i ++){
-						if((int)(10 * angles_array[i]) != (int)(10 * angles_array[i-1])){
+						if((int)(100 * angles_array[i]) != (int)(100 * angles_array[i-1])){
 							flag = 1;
 							break;
 						}
@@ -496,7 +496,9 @@ int interrupt_flag = 0;
 						}
 					}
 					else{
-						*average_speed = 0;
+						shift_array(speed, 15, 0);
+						*average_speed = dynamic_average(speed, 15);
+						//*average_speed = 0;
 					}
 					//*average_speed = get_speed_encoder(angles_array[0], angles_array[1], encoder_refresh, 0.4064);
 					interrupt_flag = 0;
@@ -591,13 +593,14 @@ void shift_array(double *array, int size, double data){
 //angle1 = previous angle calculated
 //refresh = delta-time from the two calculations, express it in microseconds
 //wheel_diameter = diameter of the wheel expressed meters
-double get_speed_encoder(float angle0, float angle1, int refresh, float wheel_diameter){
+double get_speed_encoder(double angle0, double angle1, int refresh, double wheel_diameter){
 	double meters_per_second = 0;
 	double dt = 0;
 
 	dt = refresh / 1000;
 	meters_per_second = (1000 * (angle1 - angle0)/dt);
 	meters_per_second = meters_per_second * wheel_diameter * 3.14159;
+	meters_per_second /= 360;
 
 	return meters_per_second;
 }

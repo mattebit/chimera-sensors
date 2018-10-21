@@ -75,7 +75,7 @@ static void MX_NVIC_Init(void);
 /* Private function prototypes -----------------------------------------------*/
 int flag = 0;
 double angles_array[15];
-double speed = 0;
+double speed_avrg = 0;
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -135,7 +135,8 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  sprintf(txt, "%d \t %d", (int)angles_array[1], (int)(speed * 10));
+	  //sprintf(txt, "%d \t %d", (int)angles_array[1], (int)(speed * 10));
+	  sprintf(txt, "%d", (int)(speed_avrg * 100));
 	  print(&huart2, txt);
 
   }
@@ -359,7 +360,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	encoder_tim_interrupt(&htim2, angles_array, &speed, &htim3);
+	encoder_tim_interrupt(&htim2, angles_array, &speed_avrg, &htim3);
 }
 /* USER CODE END 4 */
 
