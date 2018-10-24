@@ -119,7 +119,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   print("il programma sta iniziando...");
   HAL_Delay(1000);
-  GPS_INIT(&huart3,&g);
+  GPS_INIT(&huart1,&g);
   /* USER CODE END 2 */
 
   /* Infinite loop */

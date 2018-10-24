@@ -51,16 +51,16 @@ int GPS_INIT(UART_HandleTypeDef* huart,gps_struct * gps){ //initialization of GP
 	if (HAL_UART_Init(huart_GPS) != HAL_OK){
 		return 0;
 	}*/
-
+	HAL_Delay(1000);
 	//send other commands to speed up the data flow
-	/*for(int i = 0; i < 50; i++){
-		HAL_UART_Transmit(huart, (uint8_t*)PMTK_API_SET_FIX_CTL_5HZ, strlen(PMTK_API_SET_FIX_CTL_5HZ), 20);
+	for(int i = 0; i < 10; i++){
+		HAL_UART_Transmit(huart, (uint8_t*)PMTK_API_SET_FIX_CTL_5HZ, strlen(PMTK_API_SET_FIX_CTL_5HZ), 200);
 		HAL_UART_Transmit(huart, (uint8_t*)"\r\n", 2, 4);
 	}
-	for(int i = 0; i < 50; i++){
-		HAL_UART_Transmit(huart, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10HZ), 20);
+	for(int i = 0; i < 10; i++){
+		HAL_UART_Transmit(huart, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10HZ), 200);
 		HAL_UART_Transmit(huart, (uint8_t*)"\r\n", 2, 4);
-	}*/
+	}
 	//HAL_Delay(100);
 	HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request of rx buffer interrupt
 	return 1;
@@ -166,6 +166,10 @@ int GPS_INTERRUPT(UART_HandleTypeDef *huart, gps_struct* gps){
 					}else if(string_gps[2]=='T'&&string_gps[3]=='O'&&string_gps[4]=='P'){ // operation when the string is GPTOP //
 						//print("GPTOP");
 					}
+					print(gps->latitude);
+					print(gps->longitude);
+					print(gps->altitude);
+					print(gps->speed);
 					ret=1;
 				}else{
 					//print("error in the checksum control"); // error in the checksum control
