@@ -1,4 +1,5 @@
-Src/function.o: ../Src/function.c \
+Src/queue.o: ../Src/queue.c \
+ C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/queue.h \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/stm32f4xx_hal_conf.h \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/main.h \
@@ -25,8 +26,9 @@ Src/function.o: ../Src/function.c \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/function.h \
- C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/queue.h
+ C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/function.h
+
+C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/queue.h:
 
 C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 
@@ -81,5 +83,3 @@ C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers
 C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
 
 C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/function.h:
-
-C:/Users/Luca\ Caronti/Desktop/github/fenice-sensors/Test\ Codes/gps_1.1/Inc/queue.h:

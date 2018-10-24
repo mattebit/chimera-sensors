@@ -126,6 +126,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  /*
+	print_it(&huart2,gps->latitude);
+	print_it(&huart2,gps->longitude);
+	print_it(&huart2,gps->altitude);
+	print_it(&huart2,gps->speed);
+	print_it(&huart2,"\r\n");*/
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -298,6 +304,9 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	GPS_INTERRUPT(huart,&g);
 
+}
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	PRINT_INTERRUPT(huart);
 }
 /* USER CODE END 4 */
 

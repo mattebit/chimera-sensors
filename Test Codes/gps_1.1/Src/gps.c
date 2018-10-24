@@ -25,6 +25,7 @@
 #include "string.h"
 
 UART_HandleTypeDef* huart_GPS;
+extern UART_HandleTypeDef huart2;
 uint8_t* dato_p;
 int start_string_gps=0;
 char string_gps[100];
@@ -37,31 +38,31 @@ int GPS_INIT(UART_HandleTypeDef* huart,gps_struct * gps){ //initialization of GP
 	//baud=9600
 	huart_GPS=huart;
 	huart_GPS->Init.BaudRate = 9600;
-	if (HAL_UART_Init(huart_GPS) != HAL_OK){
-		return 0;
-	}
+	HAL_UART_Init(huart_GPS);
+	HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+	HAL_Delay(500);
+	huart_GPS->Init.BaudRate = 57600;
+	HAL_UART_Init(huart_GPS);
+	HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+	HAL_Delay(500);
+	huart_GPS->Init.BaudRate = 115200;
+	HAL_UART_Init(huart_GPS);
+	HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+	HAL_Delay(500);
+	HAL_UART_Transmit(huart, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10HZ), 200);
+	HAL_Delay(500);
+	HAL_UART_Transmit(huart, (uint8_t*)PMTK_SET_NMEA_OUTPUT_GGAVTG, strlen(PMTK_SET_NMEA_OUTPUT_GGAVTG), 200);
+	HAL_Delay(500);
 	strcpy(gps->speed,"000.00,km/h");
 	strcpy(gps->latitude,"0000.0000,N");
 	strcpy(gps->longitude,"00000.0000,W");
 	strcpy(gps->altitude,"0000.00,M");
-	/*
-	for(int i=0;i<10;i++)HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_57600, strlen(PMTK_SET_BAUD_57600), 100);
-	HAL_Delay(50);
-	huart_GPS->Init.BaudRate = 9600;
-	if (HAL_UART_Init(huart_GPS) != HAL_OK){
-		return 0;
-	}*/
-	HAL_Delay(1000);
-	//send other commands to speed up the data flow
-	for(int i = 0; i < 10; i++){
-		HAL_UART_Transmit(huart, (uint8_t*)PMTK_API_SET_FIX_CTL_5HZ, strlen(PMTK_API_SET_FIX_CTL_5HZ), 200);
-		HAL_UART_Transmit(huart, (uint8_t*)"\r\n", 2, 4);
-	}
-	for(int i = 0; i < 10; i++){
-		HAL_UART_Transmit(huart, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10HZ), 200);
-		HAL_UART_Transmit(huart, (uint8_t*)"\r\n", 2, 4);
-	}
-	//HAL_Delay(100);
+
+	/*risposte:
+		$PMTK001,220,3*30
+		$PMTK001,314,3*36
+	 */
+
 	HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request of rx buffer interrupt
 	return 1;
 }
@@ -144,15 +145,17 @@ int GPS_INTERRUPT(UART_HandleTypeDef *huart, gps_struct* gps){
 							}
 
 						}
-
+						//print_it(&huart2,gps->latitude);
+						//print_it(&huart2,gps->longitude);
+						//print_it(&huart2,gps->altitude);
+						/*
 					}else if(string_gps[2]=='G'&&string_gps[3]=='S'&&string_gps[4]=='A'){ // operation when the string is GPGSA //
 						//print("GPGSA");
 					}else if(string_gps[2]=='G'&&string_gps[3]=='S'&&string_gps[4]=='V'){ // operation when the string is GPGSV //
 						//print("GPGSV");
 					}else if(string_gps[2]=='R'&&string_gps[3]=='M'&&string_gps[4]=='C'){ // operation when the string is GPRMC //
-						//print("GPRMC");
+						//print("GPRMC");*/
 					}else if(string_gps[2]=='V'&&string_gps[3]=='T'&&string_gps[4]=='G'){ 	// operation when the string is GPVTG //
-						//print("GPVTG");
 						int cont_comma=0,cont_speed=0;
 						for(int i=5;i<cont_string;i++){
 							if(string_gps[i]==',')cont_comma++;
@@ -160,16 +163,18 @@ int GPS_INTERRUPT(UART_HandleTypeDef *huart, gps_struct* gps){
 								if(cont_comma==7){ //save the speed
 									gps->speed[cont_speed]=string_gps[i];
 									cont_speed++;
+								}else if(cont_comma==8){
+									i=cont_string;
 								}
 							}
 						}
-					}else if(string_gps[2]=='T'&&string_gps[3]=='O'&&string_gps[4]=='P'){ // operation when the string is GPTOP //
+						print_it(&huart2,gps->speed);
+						print_it(&huart2,"\r\n");
+
+					}/*else if(string_gps[2]=='T'&&string_gps[3]=='O'&&string_gps[4]=='P'){ // operation when the string is GPTOP //
 						//print("GPTOP");
-					}
-					print(gps->latitude);
-					print(gps->longitude);
-					print(gps->altitude);
-					print(gps->speed);
+					}*/
+
 					ret=1;
 				}else{
 					//print("error in the checksum control"); // error in the checksum control

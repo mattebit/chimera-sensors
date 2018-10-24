@@ -37,13 +37,39 @@ int GPS_INIT(UART_HandleTypeDef* huart, gps_struct * gps);
 #define PMTK_API_SET_FIX_CTL_5HZ  "$PMTK300,200,0,0,0,0*2F"
 // Can't fix position faster than 5 times a second!
 
-#define PMTK_SET_BAUD_57600 "$PMTK251,57600*2C"
+#define PMTK_SET_BAUD_57600 "$PMTK251,57600*2C\r\n"
 #define PMTK_SET_BAUD_9600 "$PMTK251,9600*17"
+#define PMTK_SET_BAUD_115200 "$PMTK251,115200*1F\r\n"
 #define PMKT_SER_BAUD_DEFAULT "$PMTK251,0*28"//It works only if: a.full cold start command issue
 										   //				     b.enter standby mode
+/*
+	Supported NMEA Sentences
+	0 NMEA_SEN_GLL, // GPGLL interval - Geographic Position - Latitude longitude
+	1 NMEA_SEN_RMC, // GPRMC interval - Recommended Minimum Specific GNSS Sentence
+	2 NMEA_SEN_VTG, // GPVTG interval - Course over Ground and Ground Speed
+	3 NMEA_SEN_GGA, // GPGGA interval - GPS Fix Data
+	4 NMEA_SEN_GSA, // GPGSA interval - GNSS DOPS and Active Satellites
+	5 NMEA_SEN_GSV, // GPGSV interval - GNSS Satellites in View
+	6 //Reserved
+	7 //Reserved
+	13 //Reserved
+	14 //Reserved
+	15 //Reserved
+	16 //Reserved
+	17 //Reserved
+	18 NMEA_SEN_MCHN, // PMTKCHN interval – GPS channel status
 
-// turn on only the second sentence (GPRMC)
-#define PMTK_SET_NMEA_OUTPUT_RMCONLY "$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29"
+	Supported Frequency Setting
+	0 - Disabled or not supported sentence
+	1 - Output once every one position fix
+	2 - Output once every two position fixes
+	3 - Output once every three position fixes
+	4 - Output once every four position fixes
+	5 - Output once every five position fixes
+
+ */
+//turn on GPGGA and GPTVG
+#define PMTK_SET_NMEA_OUTPUT_GGAVTG "$PMTK314,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n" //activate GPGGA, GPVTG
 // turn on GPRMC and GGA
 #define PMTK_SET_NMEA_OUTPUT_RMCGGA "$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28"
 // turn on ALL THE DATA

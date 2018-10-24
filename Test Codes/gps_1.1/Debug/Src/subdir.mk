@@ -7,6 +7,7 @@ C_SRCS += \
 ../Src/function.c \
 ../Src/gps.c \
 ../Src/main.c \
+../Src/queue.c \
 ../Src/stm32f4xx_hal_msp.c \
 ../Src/stm32f4xx_it.c \
 ../Src/system_stm32f4xx.c 
@@ -15,6 +16,7 @@ OBJS += \
 ./Src/function.o \
 ./Src/gps.o \
 ./Src/main.o \
+./Src/queue.o \
 ./Src/stm32f4xx_hal_msp.o \
 ./Src/stm32f4xx_it.o \
 ./Src/system_stm32f4xx.o 
@@ -23,6 +25,7 @@ C_DEPS += \
 ./Src/function.d \
 ./Src/gps.d \
 ./Src/main.d \
+./Src/queue.d \
 ./Src/stm32f4xx_hal_msp.d \
 ./Src/stm32f4xx_it.d \
 ./Src/system_stm32f4xx.d 
