@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=F:/progetto eagle/gps_1.1/Inc
+HeaderPath=C:/Users/Luca Caronti/Desktop/github/fenice-sensors/Test Codes/gps_1.1/Inc
 HeaderFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;main.h;
-SourcePath=F:/progetto eagle/gps_1.1/Src
+SourcePath=C:/Users/Luca Caronti/Desktop/github/fenice-sensors/Test Codes/gps_1.1/Src
 SourceFiles=stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

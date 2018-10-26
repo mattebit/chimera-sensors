@@ -1,13 +1,25 @@
 typedef struct
 {
-	char speed[12];
-	char latitude[12];
-	char longitude[13];
-	char altitude[10];
+	char speed[7];
+	int speed_i;
+	char latitude[10];
+	char latitude_o[2];
+	long int latitude_i;
+	int latitude_i_h;
+	int latitude_i_l;
+	char longitude[11];
+	char longitude_o[2];
+	long int longitude_i;
+	int longitude_i_h;
+	int longitude_i_l;
+	char altitude[8];
+	int altitude_i;
+	char time[11];
+	char GPGGA[100];
+	int gpgga_dim;
 }gps_struct;
-void GPS_Awake(UART_HandleTypeDef *huart);
-int GPS_INTERRUPT(UART_HandleTypeDef *huart, gps_struct* gps);
-int GPS_INIT(UART_HandleTypeDef* huart, gps_struct * gps);
+int gps_read_it(UART_HandleTypeDef *huart, gps_struct* gps);
+int gps_init(UART_HandleTypeDef* huart, gps_struct * gps);
 
 
 //struct gps_struct * gps={"000.00,km/h","0000.0000,N","00000.0000,W","0000.00,M"};
