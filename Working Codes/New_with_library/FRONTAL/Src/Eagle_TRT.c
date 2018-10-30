@@ -622,7 +622,7 @@ int interrupt_flag = 0;
 					int16_t speed_Send = *average_speed;
 
 					//GPS Velocity
-					CanSendMSG[0] = 0x03;
+					CanSendMSG[0] = 0x06;
 					CanSendMSG[1] = speed_Send / 256;
 					CanSendMSG[2] = speed_Send % 256;
 					CanSendMSG[3] = 0;
