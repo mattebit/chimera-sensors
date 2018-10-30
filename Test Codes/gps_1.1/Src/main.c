@@ -43,7 +43,8 @@
 /* USER CODE BEGIN Includes */
 #include "function.h"
 #include "string.h"
-#include "gps.h"
+//#include "gps.h"
+#include "Eagle_TRT.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -127,6 +128,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  /*
 	if(ok==1){
 		print_it(&huart2,g.time);
 		print_it(&huart2," ");
@@ -139,7 +141,7 @@ int main(void)
 		print_it(&huart2,g.speed);
 		print_it(&huart2,"\r\n");
 		ok=0;
-	}
+	}*/
 
   /* USER CODE END WHILE */
 

@@ -4,8 +4,8 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Src/Eagle_TRT.c \
 ../Src/function.c \
-../Src/gps.c \
 ../Src/main.c \
 ../Src/queue.c \
 ../Src/stm32f4xx_hal_msp.c \
@@ -13,8 +13,8 @@ C_SRCS += \
 ../Src/system_stm32f4xx.c 
 
 OBJS += \
+./Src/Eagle_TRT.o \
 ./Src/function.o \
-./Src/gps.o \
 ./Src/main.o \
 ./Src/queue.o \
 ./Src/stm32f4xx_hal_msp.o \
@@ -22,8 +22,8 @@ OBJS += \
 ./Src/system_stm32f4xx.o 
 
 C_DEPS += \
+./Src/Eagle_TRT.d \
 ./Src/function.d \
-./Src/gps.d \
 ./Src/main.d \
 ./Src/queue.d \
 ./Src/stm32f4xx_hal_msp.d \
