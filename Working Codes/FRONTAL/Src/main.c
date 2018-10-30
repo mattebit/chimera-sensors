@@ -73,10 +73,18 @@ UART_HandleTypeDef huart2;
 /* Private variables ---------------------------------------------------------*/
 extern can_stc can;
 extern imu_stc imu;
-extern pot_stc pot;
+extern enc_stc enc;
+extern pot_stc pot_1;
 CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
+
+TIM_HandleTypeDef s_TimerInstance = {.Instance = TIM2};
+TIM_HandleTypeDef a_TimerInstance = {.Instance = TIM3};
+TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
+TIM_HandleTypeDef a_TimerInstance5 = {.Instance = TIM5};
+TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
+TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 
 gps_struct gps_main;
 /* USER CODE END PV */
@@ -103,17 +111,6 @@ static void MX_NVIC_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-	for (int i = 0; i < 1; i++)
-	{
-		pot->val = ADC_buffer[i];
-	}
-}
-
-
-
 
 /* USER CODE END 0 */
 
@@ -197,13 +194,27 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_TIM_Base_Start(&htim2);
+	HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_Base_Start(&htim4);
+	HAL_TIM_Base_Start(&htim5);
+	HAL_TIM_Base_Start(&htim6);
+	HAL_TIM_Base_Start(&htim7);
+
+	__HAL_TIM_SET_COUNTER(&a_TimerInstance, 0);
+	__HAL_TIM_SET_COUNTER(&s_TimerInstance, 0);
+	__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
+	__HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
+	__HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
+	__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 999);
+
   while (1)
   {
 
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+  }
   /* USER CODE END 3 */
 
 }
@@ -704,6 +715,25 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		 }
 }
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim2){
+		encoder_tim_interrupt(&enc);
+	}
+	if(htim == &htim4){
+		calc_pot_value(&pot_1);
+	}
+	if(htim == &htim5){
+		LSMD9S0_gyro_read(&imu);
+	}
+	if(htim == &htim7){
+		LSMD9S0_accel_read(&imu);
+	}
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	pot_1.val = ADC_buffer[0];
+}
 
 /* USER CODE END 4 */
 

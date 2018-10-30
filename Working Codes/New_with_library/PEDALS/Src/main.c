@@ -42,6 +42,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal_gpio.h"
+#include "Eagle_TRT.h"
 #include "stm32f4xx_it.h"
 #include <string.h>
 #include <math.h>
@@ -63,6 +64,10 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+extern pot_stc pot1;
+extern pot_stc pot2;
+extern pot_stc pot3;
+
 int val0_100, val1_100, val2_100, Error, SCS, SCS1, SCS_Send, SCS_Send_real, Time1, Time2, fake_i, check;
 int fake_min0 = 0, fake_max0 = 6000, fake_min1 = 6000, fake_max1 = 0;
 uint32_t fake1[5];
@@ -111,10 +116,9 @@ static void MX_NVIC_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		val[i] = ADC_buffer[i];
-	}
+	pot_1.val = ADC_buffer[0];
+	pot_2.val = ADC_buffer[1];
+	pot_3.val = ADC_buffer[2];
 }
 
 //CALIBRATION FUNCTION, ONLY SHOWS THE NEW MAX & MIN VALUES
@@ -146,12 +150,12 @@ void print_Max_Min(){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	valMin0 = 3410;
-	valMax0 = 3294;	//released
-	val0rang = abs(valMax0 - valMin0);
-	valMin1 = 2353;
-	valMax1 = 2498; //released
-	val1rang = abs(valMax1 - valMin1);
+	pot_1.min = 3410;
+	pot_1.max = 3294;	//released
+	pot_1.range = abs(pot_1.max - pot_1.min);
+	pot_2.min = 2353;
+	pot_2.max = 2498; //released
+	pot_2.range = abs(pot_2.max - pot_2.min);
 	check = 0;
 	fake_i = 0;
 
@@ -256,7 +260,7 @@ int main(void)
 	  if (pc6 != GPIO_PIN_SET && pc6 != GPIO_PIN_RESET){
 		  SCS = 1;
 	  }
-
+/*
 	  val0_100 = 0;
 	  val1_100 = 0;
 	  fake1[fake_i] = (int)100-(abs(val[0] - valMin0)*100/(val0rang)); //val0_100 --> APPS1
@@ -298,7 +302,7 @@ int main(void)
 	  }
 	  if(val[1] <= 100){
 		  SCS = 1;
-	  }
+	  }*/
 
 
 
@@ -309,7 +313,7 @@ int main(void)
 	  else if (pc6 == GPIO_PIN_RESET){
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
 	  }
-
+/*
 	  ///SAFETY RANGES CODE///
 	  if (val0_100 >= 100){
 		  val0_100 = 100;
@@ -336,7 +340,7 @@ int main(void)
 	  else{
 		  Time1 = __HAL_TIM_GET_COUNTER(&s_TimerInstance);
 		  SCS1 = 0;
-	  }
+	  }*/
 
 
 	  if (SCS != 0 || SCS1 != 0){
@@ -345,6 +349,10 @@ int main(void)
 		  val2_100 = GPIO_PIN_RESET;
 		  SCS_Send = 1;
 	  }
+
+	  calc_pot_value(&pot_1);
+	  calc_pot_value(&pot_2);
+	  implausibility_check(&pot_1, &pot_2);
 
 	  //print_Max_Min();
 	  //}
@@ -773,8 +781,8 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
 			  if ((RxData[0] == 0) && (RxData[1] == 0)){
-				  valMin0 = val[0];
-				  valMin1 = val[1];
+				  set_min(&pot_1);
+				  set_min(&pot_2);
 				  //CheckControl[0] = 1;
 				  CanSendMSG[0] = 0;
 				  CanSendMSG[1] = 0;
@@ -788,8 +796,8 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 				  check = 1;
 			  }
 			  if ((RxData[0] == 0) && (RxData[1] == 1)){
-				  valMax0 = val[0];
-				  valMax1 = val[1];
+				  set_max(&pot_1);
+				  set_max(&pot_2);
 				  //CheckControl[1] = 1;
 				  CanSendMSG[0] = 0;
 				  CanSendMSG[1] = 1;
@@ -802,8 +810,10 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 				  CAN_Send(0xBC, CanSendMSG, 8);
 				  check = 0;
 			  }
-			  val0rang = abs(valMax0 - valMin0);
-			  val1rang = abs(valMax1 - valMin1);
+			  //val0rang = abs(valMax0 - valMin0);
+			  //val1rang = abs(valMax1 - valMin1);
+			  pot_1.range = abs(pot_1.max - pot_1.min);
+			  pot_2.range = abs(pot_2.max - pot_2.min);
 		  }
 }
 
@@ -814,8 +824,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		if (check != 1){
 		  CanSendMSG[0] = 0x01;
-		  CanSendMSG[1] = val0_100;
-		  CanSendMSG[2] = val1_100;
+		  CanSendMSG[1] = pot_1.val_100;
+		  CanSendMSG[2] = pot_2.val_100;
 		  CanSendMSG[3] = 0;
 		  CanSendMSG[4] = 0;
 		  CanSendMSG[5] = 0;
