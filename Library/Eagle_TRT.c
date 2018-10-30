@@ -37,7 +37,7 @@
  *To use GPS functions you have to setup the UART port to communicate with it.
  *Possibly set the port as interrupt because the received data are cleaner.
  *Call GPS_INIT() to setup the GPS
- *Every loop read the input data.
+ *Every loop read the input data
  *Then the function Get_Sentence() looks for a sequence of letters like "GPRMC"
  *Look at NMEA protocol, there you can find all the strings that a GPS can send,
  *every one of them defines the types of data that the GPS sends.

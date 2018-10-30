@@ -61,7 +61,7 @@ void set_max(int * val, int * min1, int * max1, int * min2, int * max2);
 
 
 //GPS CONSTANTS
-#define PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ  "$PMTK220,10000*2F\r\n" // Once every 10 seconds, 100 millihertz.
+#define PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ  "$PMTK220,10000*2F\r\n" // Once every 10 seconds, 100 millihertz
 #define PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ  "$PMTK220,5000*1B\r\n"  // Once every 5 seconds, 200 millihertz.
 #define PMTK_SET_NMEA_UPDATE_1HZ  "$PMTK220,1000*1F\r\n"
 #define PMTK_SET_NMEA_UPDATE_2HZ  "$PMTK220,500*2B\r\n"
