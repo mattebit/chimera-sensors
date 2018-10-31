@@ -64,9 +64,11 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-extern pot_stc pot1;
-extern pot_stc pot2;
-extern pot_stc pot3;
+
+extern pot_stc pot_1;
+extern pot_stc pot_2;
+extern pot_stc pot_3;
+extern can_stc can;
 
 int val0_100, val1_100, val2_100, Error, SCS, SCS1, SCS_Send, SCS_Send_real, Time1, Time2, fake_i, check;
 int fake_min0 = 0, fake_max0 = 6000, fake_min1 = 6000, fake_max1 = 0;
@@ -77,7 +79,7 @@ uint32_t valMax0, valMin0, valMax1, valMin1, valMax2, valMin2, val0rang, val1ran
 uint32_t ADC_buffer[3], val[3];
 
 static TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
-static TIM_HandleTypeDef s_TimerInstance = {.Instance = TIM3};
+static TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
 static TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
 
 CAN_RxHeaderTypeDef RxHeader;
@@ -150,8 +152,8 @@ void print_Max_Min(){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	pot_1.min = 3410;
-	pot_1.max = 3294;	//released
+	pot_1.min = 3370;
+	pot_1.max = 3329;	//released
 	pot_1.range = abs(pot_1.max - pot_1.min);
 	pot_2.min = 2353;
 	pot_2.max = 2498; //released
@@ -200,8 +202,6 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_Base_Start(&htim3);
-
   sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilter.FilterIdLow = 0;
   sFilter.FilterIdHigh = 0;
@@ -221,13 +221,17 @@ int main(void)
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
   HAL_TIM_Base_Start(&htim2);
+  HAL_TIM_Base_Start(&htim3);
   HAL_TIM_Base_Start(&htim4);
-
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 1);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 51);
-
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim4);
+
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 500);
+
+  pot_1.TimerInstance = &htim3;
+  can.hcan = &hcan1;
 
   /* USER CODE END 2 */
 
@@ -268,7 +272,9 @@ int main(void)
 	  for (int i = 0; i <= 4; i++){
 		  val0_100 = val0_100 + fake1[i];
 		  val1_100 = val1_100 + fake1[i];
-	  }
+	  }sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
+	  //print(&huart2, txt);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
 
 
@@ -344,15 +350,21 @@ int main(void)
 
 
 	  if (SCS != 0 || SCS1 != 0){
-		  val0_100 = 0;
-		  val1_100 = 0;
+		  pot_1.val_100 = 0;
+		  pot_2.val_100 = 0;
 		  val2_100 = GPIO_PIN_RESET;
 		  SCS_Send = 1;
 	  }
 
+	  sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
+	  	  //print(&huart2, txt);
+	  	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+
 	  calc_pot_value(&pot_1);
 	  calc_pot_value(&pot_2);
 	  implausibility_check(&pot_1, &pot_2);
+
+
 
 	  //print_Max_Min();
 	  //}
@@ -538,7 +550,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -558,7 +570,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 3600;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 500;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -588,7 +600,7 @@ static void MX_TIM3_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 42666;
+  htim3.Init.Prescaler = 3600;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 1500;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -622,7 +634,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 3600;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 500;
+  htim4.Init.Period = 1000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
   {
@@ -741,6 +753,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/*
 int CAN_Send(int id, uint8_t dataTx[], int size){
 
 	uint32_t mailbox;
@@ -770,44 +783,48 @@ int CAN_Receive(uint8_t *DataRx, int size){
 	int id = RxHeader.StdId;
 
 	return id;
-}
+}*/
 
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	///CALIBRATION CODE///
-		  int idsave = CAN_Receive(RxData, 8);
+		  int idsave = CAN_Receive(&can);
 		  uint8_t CanSendMSG[8];
 
 		  if (idsave == 0xBB){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-			  if ((RxData[0] == 0) && (RxData[1] == 0)){
+			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 0)){
 				  set_min(&pot_1);
 				  set_min(&pot_2);
 				  //CheckControl[0] = 1;
-				  CanSendMSG[0] = 0;
-				  CanSendMSG[1] = 0;
-				  CanSendMSG[2] = 0;
-				  CanSendMSG[3] = 0;
-				  CanSendMSG[4] = 0;
-				  CanSendMSG[5] = 0;
-				  CanSendMSG[6] = 0;
-				  CanSendMSG[7] = 0;
-				  CAN_Send(0xBC, CanSendMSG, 8);
+				  can.dataTx[0] = 0;
+				  can.dataTx[1] = 0;
+				  can.dataTx[2] = 0;
+				  can.dataTx[3] = 0;
+				  can.dataTx[4] = 0;
+				  can.dataTx[5] = 0;
+				  can.dataTx[6] = 0;
+				  can.dataTx[7] = 0;
+				  can.id = 0xBC;
+				  can.size = 8;
+				  CAN_Send(&can);
 				  check = 1;
 			  }
-			  if ((RxData[0] == 0) && (RxData[1] == 1)){
+			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 1)){
 				  set_max(&pot_1);
 				  set_max(&pot_2);
 				  //CheckControl[1] = 1;
-				  CanSendMSG[0] = 0;
-				  CanSendMSG[1] = 1;
-				  CanSendMSG[2] = 0;
-				  CanSendMSG[3] = 0;
-				  CanSendMSG[4] = 0;
-				  CanSendMSG[5] = 0;
-				  CanSendMSG[6] = 0;
-				  CanSendMSG[7] = 0;
-				  CAN_Send(0xBC, CanSendMSG, 8);
+				  can.dataTx[0] = 0;
+				  can.dataTx[1] = 1;
+				  can.dataTx[2] = 0;
+				  can.dataTx[3] = 0;
+				  can.dataTx[4] = 0;
+				  can.dataTx[5] = 0;
+				  can.dataTx[6] = 0;
+				  can.dataTx[7] = 0;
+				  can.id = 0xBC;
+				  can.size = 8;
+				  CAN_Send(&can);
 				  check = 0;
 			  }
 			  //val0rang = abs(valMax0 - valMin0);
@@ -823,36 +840,36 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 
 		if (check != 1){
-		  CanSendMSG[0] = 0x01;
-		  CanSendMSG[1] = pot_1.val_100;
-		  CanSendMSG[2] = pot_2.val_100;
-		  CanSendMSG[3] = 0;
-		  CanSendMSG[4] = 0;
-		  CanSendMSG[5] = 0;
-		  CanSendMSG[6] = SCS_Send;
-		  CanSendMSG[7] = 0;
-		  CAN_Send(0xB0, CanSendMSG, 8);
+
+		  can.dataTx[0] = 0x01;
+		  can.dataTx[1] = pot_1.val_100;
+		  can.dataTx[2] = pot_2.val_100;
+		  can.dataTx[3] = 0;
+		  can.dataTx[4] = 0;
+		  can.dataTx[5] = 0;
+		  can.dataTx[6] = SCS_Send;
+		  can.dataTx[7] = 0;
+		  can.id = 0xB0;
+		  can.size = 8;
+		  CAN_Send(&can);
 		}
 
 
 	}
 	if(htim == &htim4){
-		CanSendMSG[0] = 0x02;
-		CanSendMSG[1] = pc6;
-		CanSendMSG[2] = 0;
-		CanSendMSG[3] = 0;
-		CanSendMSG[4] = 0;
-		CanSendMSG[5] = 0;
-		CanSendMSG[6] = SCS_Send;
-		CanSendMSG[7] = 0;
-		CAN_Send(0xB0, CanSendMSG, 8);
+		can.dataTx[0] = 0x02;
+		can.dataTx[1] = pc6;
+		can.dataTx[2] = 0;
+		can.dataTx[3] = 0;
+		can.dataTx[4] = 0;
+		can.dataTx[5] = 0;
+		can.dataTx[6] = SCS_Send;
+		can.dataTx[7] = 0;
+		can.id = 0xB0;
+		can.size = 8;
+		CAN_Send(&can);
 	}
 }
-
-void print(UART_HandleTypeDef *huart, char* text){
-		HAL_UART_Transmit(huart, (uint8_t*)text, strlen(text), 5);
-		HAL_UART_Transmit(huart, (uint8_t*)"\r\n", 2, 1);
-	}
 
 /* USER CODE END 4 */
 

@@ -57,8 +57,6 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-int CAN_Send(int id, uint8_t dataVal[], int size);
-int CAN_Receive(uint8_t *DataRx, int size);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

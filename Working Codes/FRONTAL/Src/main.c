@@ -75,12 +75,14 @@ extern can_stc can;
 extern imu_stc imu;
 extern enc_stc enc;
 extern pot_stc pot_1;
+
 CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
+char txt[100];
 
-TIM_HandleTypeDef s_TimerInstance = {.Instance = TIM2};
-TIM_HandleTypeDef a_TimerInstance = {.Instance = TIM3};
+TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
+TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
 TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
 TIM_HandleTypeDef a_TimerInstance5 = {.Instance = TIM5};
 TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
@@ -121,19 +123,8 @@ static void MX_NVIC_Init(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
-	// can initialization //
-	can.hcan=&hcan1;
-
-	// imu initialization //
-	imu.GPIOx_InUse=GPIOC;
-	imu.GPIO_Pin_InUse=GPIO_PIN_9;
-	imu.GPIOx_NotInUse=GPIOA;
-	imu.GPIO_Pin_NotInUse=GPIO_PIN_8;
-
-	if(gps_init(&huart1,&gps_main)==0){
-			 //--error--//
-	}
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -170,10 +161,6 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-  valMax0 = 4039;
-  valMin0 = 2503;
-  val0rang = abs(valMax0 - valMin0);
-
 
   sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilter.FilterIdLow = 0;
@@ -194,19 +181,47 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_TIM_Base_Start(&htim2);
-	HAL_TIM_Base_Start(&htim3);
-	HAL_TIM_Base_Start(&htim4);
-	HAL_TIM_Base_Start(&htim5);
-	HAL_TIM_Base_Start(&htim6);
-	HAL_TIM_Base_Start(&htim7);
+  can.hcan=&hcan1;
+  // can initialization //
 
-	__HAL_TIM_SET_COUNTER(&a_TimerInstance, 0);
-	__HAL_TIM_SET_COUNTER(&s_TimerInstance, 0);
-	__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
-	__HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
-	__HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
-	__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 999);
+  // imu initialization //
+  imu.GPIOx_InUse=GPIOC;
+  imu.GPIO_Pin_InUse=GPIO_PIN_9;
+  imu.GPIOx_NotInUse=GPIOA;
+  imu.GPIO_Pin_NotInUse=GPIO_PIN_8;
+
+  if(gps_init(&huart1,&gps_main)==0){
+	  //--error--//
+  }
+
+  pot_1.max = 4039;
+  pot_1.min = 2503;
+  pot_1.range = abs(pot_1.max - pot_1.min);
+
+  enc.interrupt_flag = 0;
+  enc.TimerInstance = &htim3;
+  //enc.htim = &htim2;
+
+  HAL_TIM_Base_Start(&htim2);
+  HAL_TIM_Base_Start(&htim3);
+  HAL_TIM_Base_Start(&htim4);
+  HAL_TIM_Base_Start(&htim5);
+  HAL_TIM_Base_Start(&htim6);
+  HAL_TIM_Base_Start(&htim7);
+
+  HAL_TIM_Base_Start_IT(&htim2);
+  //HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim5);
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
+
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 999);
 
   while (1)
   {
@@ -214,6 +229,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 
@@ -362,7 +378,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -685,7 +701,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
 			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)){
-				  valMin0 = val[0];
+				  set_min(&pot_1);
 				  //CheckControl[0] = 1;
 				  can.dataTx[0] = 2;
 				  can.dataTx[1] = 0;
@@ -695,10 +711,12 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 				  can.dataTx[5] = 0;
 				  can.dataTx[6] = 0;
 				  can.dataTx[7] = 0;
+				  can.id = 0xBC;
+				  can.size = 8;
 				  CAN_Send(&can);
 			  }
 			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
-				  valMax0 = val[0];
+				  set_max(&pot_1);
 				  //CheckControl[1] = 1;
 				  can.dataTx[0] = 2;
 				  can.dataTx[1] = 1;
@@ -708,10 +726,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 				  can.dataTx[5] = 0;
 				  can.dataTx[6] = 0;
 				  can.dataTx[7] = 0;
+				  can.id = 0xBC;
+				  can.size = 8;
 				  CAN_Send(&can);
 
 			  }
-			  val0rang = abs(valMax0 - valMin0);
+			  //val0rang = abs(valMax0 - valMin0);
+			  pot_1.range = abs(pot_1.max - pot_1.min);
 		 }
 }
 
@@ -720,7 +741,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		encoder_tim_interrupt(&enc);
 	}
 	if(htim == &htim4){
-		calc_pot_value(&pot_1);
+	  calc_pot_value(&pot_1);
+	  can.dataTx[0] = 2;
+	  can.dataTx[1] = 1;
+	  can.dataTx[2] = 0;
+	  can.dataTx[3] = 0;
+	  can.dataTx[4] = 0;
+	  can.dataTx[5] = 0;
+	  can.dataTx[6] = 0;
+	  can.dataTx[7] = 0;
+	  can.id = 0xC0;
+	  can.size = 8;
+	  CAN_Send(&can);
 	}
 	if(htim == &htim5){
 		LSMD9S0_gyro_read(&imu);

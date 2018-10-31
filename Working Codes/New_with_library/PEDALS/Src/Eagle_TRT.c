@@ -810,15 +810,19 @@
 	pot_stc pot_1;
 	pot_stc pot_2;
 	pot_stc pot_3;
-	void calc_pot_value(pot_stc *pot_1){
+	void calc_pot_value(pot_stc *pot){
 
-		pot_1->val_100 = (int)100-(abs(pot_1->val - pot_1->min)*100/(pot_1->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
-		if (pot_1->val <= pot_1->min){
-			pot_1->val_100 = 100;
+		shift_array((pot->average), 20, pot->val);
+		pot->val = dynamic_average(pot->average, 20);
+		pot->val_100 = (int)(abs(pot->val - pot->min)*100/(pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
+
+		/*if (pot->val <= pot->min){
+			pot->val_100 = 100;
 		}
-		if (pot_1->val >= pot_1->max){
-			pot_1->val_100 = 0;
-		}
+		if (pot->val >= pot->max){
+			pot->val_100 = 0;
+		}*/
+
 	}
 
 	//Function to check if the two ADC values are approximately the same
@@ -859,18 +863,18 @@
 	//val = array pointer to the potentiometer values
 	//max1 = pointer to the maximum value of the APPS1
 	//max2 = pointer to the maximum value of the APPS2
-	void set_max(pot_stc *pot_1){
+	void set_max(pot_stc *pot){
 
-		pot_1->max = pot_1->val;
+		pot->max = pot->val;
 	}
 
 	//function to set the value of the potentiometer when the pedal is pressed
 	//val = array pointer to the potentiometer values
 	//min1 = pointer to the minimum value of the APPS1
 	//min2 = pointer to the minimum value of the APPS2
-	void set_min(pot_stc *pot_1){
+	void set_min(pot_stc *pot){
 
-		pot_1->min = pot_1->val;
+		pot->min = pot->val;
 	}
 
 #endif

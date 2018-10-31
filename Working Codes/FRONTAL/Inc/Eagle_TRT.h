@@ -68,7 +68,7 @@
 		float wheel_diameter;
 
 		TIM_HandleTypeDef *TimerInstance;
-		TIM_HandleTypeDef *htim;
+		//TIM_HandleTypeDef *htim;
 
 	}enc_stc;
 
@@ -194,7 +194,7 @@ void LSMD9S0_gyro_accel_init();
 	15 //Reserved
 	16 //Reserved
 	17 //Reserved
-	18 NMEA_SEN_MCHN, // PMTKCHN interval – GPS channel status
+	18 NMEA_SEN_MCHN, // PMTKCHN interval ï¿½ GPS channel status
 
 	Supported Frequency Setting
 	0 - Disabled or not supported sentence

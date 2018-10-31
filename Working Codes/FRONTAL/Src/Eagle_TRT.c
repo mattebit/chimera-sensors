@@ -95,6 +95,7 @@
 	uint8_t OUT_Z_H_A_ADD = 0xED;
 
 	imu_stc imu;
+	can_stc can;
 	//gyro initialization function
 	//call this function before requesting data from the sensor
 	//hspi = pointer to the spi port defined
@@ -280,6 +281,22 @@
 		imu->Y_G_axis = imu->Y_G_axis - imu->Y_G_axis_offset;
 		imu->Z_G_axis = LSMD9S0_read(imu);
 		imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
+
+		int16_t val_g_x = imu->Y_G_axis * 100;
+		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
+		int16_t val_g_z = imu->Z_G_axis * 100;
+
+		can.dataRx[0] = 0x04;
+		can.dataRx[1] = val_g_x / 256;
+		can.dataRx[2] = val_g_x % 256;
+		can.dataRx[3] = val_g_y / 256;
+		can.dataRx[4] = val_g_y % 256;
+		can.dataRx[5] = val_g_z / 256;
+		can.dataRx[6] = val_g_z % 256;
+		can.dataRx[7] = 0;
+		can.id = 0xC0;
+		can.size = 8;
+		CAN_Send(&can);
 	}
 
 	///Reading A_axis values
@@ -300,6 +317,22 @@
 		imu->Y_A_axis = imu->Y_A_axis - imu->Y_A_axis_offset;
 		imu->Z_A_axis = LSMD9S0_read(imu);
 		imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+
+		int16_t val_a_x = (0 - imu->Y_A_axis) * 100;
+		int16_t val_a_y = imu->X_A_axis * 100;
+		int16_t val_a_z = imu->Z_A_axis * 100;
+
+		can.dataRx[0] = 0x05;
+		can.dataRx[1] = val_a_x / 256;
+		can.dataRx[2] = val_a_x % 256;
+		can.dataRx[3] = val_a_y / 256;
+		can.dataRx[4] = val_a_y % 256;
+		can.dataRx[5] = val_a_z / 256;
+		can.dataRx[6] = val_a_z % 256;
+		can.dataRx[7] = 0;
+		can.id = 0xC0;
+		can.size = 8;
+		CAN_Send(&can);
 	}
 
 #endif
@@ -611,6 +644,8 @@
 								can.dataTx[5] = (int)gps->longitude_o;
 								can.dataTx[6] = gps->altitude_i / 256;
 								can.dataTx[7] = gps->altitude_i % 256;
+								can.id = 0xD0;
+								can.size = 8;
 								CAN_Send(&can);
 							}
 							else{
@@ -647,6 +682,8 @@
 								can.dataTx[5] = (int)gps->latitude_o;
 								can.dataTx[6] = gps->speed_i / 256;
 								can.dataTx[7] = gps->speed_i % 256;
+								can.id = 0xD0;
+								can.size = 8;
 								CAN_Send(&can);
 								ret=1;
 							}
@@ -748,7 +785,7 @@
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
 			}
 			if(i == 15){												//if it is the last loop cast the sata from binary to decimal
-				int_data = bin_dec(Data,14);
+				int_data = bin_dec(Data,15);
 				int_data = int_data / 45.5055;							//conversions from raw data to angle
 				int_data /= 2;
 			}
@@ -785,6 +822,20 @@
 						enc->average_speed = dynamic_average(enc->speed, 15);
 					}
 					enc->interrupt_flag = 0;
+
+					int16_t speed_Send = enc->average_speed;
+
+					can.dataRx[0] = 0x06;
+					can.dataRx[1] = speed_Send / 256;
+					can.dataRx[2] = speed_Send % 256;
+					can.dataRx[3] = 0;
+					can.dataRx[4] = 0;
+					can.dataRx[5] = 0;
+					can.dataRx[6] = 0;
+					can.dataRx[7] = 0;
+					can.id = 0xD0;
+					can.size = 8;
+					CAN_Send(&can);
 				}
 			}
 		}

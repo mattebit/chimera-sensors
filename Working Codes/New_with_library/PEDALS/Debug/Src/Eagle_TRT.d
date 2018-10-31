@@ -1,4 +1,10 @@
-Src/system_stm32f4xx.o: ../Src/system_stm32f4xx.c \
+Src/Eagle_TRT.o: ../Src/Eagle_TRT.c \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/Eagle_TRT.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/stm32f4xx_hal_conf.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/main.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
+ /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Include/core_cm4.h \
@@ -7,11 +13,6 @@ Src/system_stm32f4xx.o: ../Src/system_stm32f4xx.c \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Include/core_cmFunc.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Include/core_cmSimd.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/stm32f4xx_hal_conf.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/main.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
@@ -31,6 +32,18 @@ Src/system_stm32f4xx.o: ../Src/system_stm32f4xx.c \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/Eagle_TRT.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/stm32f4xx_hal_conf.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/main.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
+
+/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
+
 /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
 
 /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h:
@@ -46,16 +59,6 @@ Src/system_stm32f4xx.o: ../Src/system_stm32f4xx.c \
 /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Include/core_cmSimd.h:
 
 /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h:
-
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
-
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/stm32f4xx_hal_conf.h:
-
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Inc/main.h:
-
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
-
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
 
 /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/New_with_library/PEDALS/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
 
