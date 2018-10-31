@@ -71,24 +71,25 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-extern can_stc can;
-extern imu_stc imu;
-extern enc_stc enc;
-extern pot_stc pot_1;
 
-CAN_FilterTypeDef sFilter;
-uint32_t valMax0, valMin0, val0rang;
-uint32_t ADC_buffer[3], val[3];
-char txt[100];
-
-TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
-TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
+TIM_HandleTypeDef s_TimerInstance = {.Instance = TIM2};
+TIM_HandleTypeDef a_TimerInstance = {.Instance = TIM3};
 TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
 TIM_HandleTypeDef a_TimerInstance5 = {.Instance = TIM5};
 TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
 TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 
-gps_struct gps_main;
+CAN_RxHeaderTypeDef RxHeader;
+CAN_FilterTypeDef sFilter;
+HAL_CAN_StateTypeDef state;
+uint32_t full;
+int val0_100, val1_100;
+uint32_t valMax2, valMin2, val2rang;
+uint32_t ADC_buffer[3], val[3];
+uint8_t CheckControl[4];
+
+char val0[256];
+char value_Error[256];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,10 +110,58 @@ static void MX_TIM7_Init(void);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
+/* Private function prototypes -----------------------------------------------*/
+/*
+ * Error number 1 occur when the board does not receive data from the GPS like if the TX (of the GPS) cable is not connected
+ * Error number 2 occur when the received data cannot be read from the board
+ */
 
+//GPS-->> Board
+//RX -->> D2 = PA10
+//TX -->> D8 = PA9
+
+char requested_data_[50];
+char bufferRX[100];
+char bufferRX_prec[100];
+int len_ = 5;
+char sentences_[5][5] = {{"GPRMA"},{"GPRMC"},{"GPVTG"},{"GPVBW"},{"GPGGA"}};
+int baud = 9600;
+int fix = 0;//if the GPS is connected to satellites is 1 else is 0 if not connected else is -1 if I didn't found the data
+int counter_A = 0;
+int counter_B = 0;
+int Error1 = 0;
+int Error2 = 0;
+
+//$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68
+//sentence example
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	for (int i = 0; i < 1; i++)
+	{
+		val[i] = ADC_buffer[i];
+	}
+}
+
+int Error;
+
+char G_ok[256] = "Gyro is OK!!\r\n";
+char A_ok[256] = "Axel is OK!!\r\n";
+char value_Error[256];
+char value_G[256];
+char value_A[256];
+
+double encoder_speed = 0;
+double array_angles[20];
+
+float x_g_offset = 0, y_g_offset = 0, z_g_offset = 0;
+float x_a_offset = 0, y_a_offset = 0, z_a_offset = 0;
+//float val_g_x, val_g_y, val_g_z;
+//float val_a_x, val_a_y, val_a_z;
+float x_g_axis, y_g_axis, z_g_axis;
+float x_a_axis, y_a_axis, z_a_axis;
 
 /* USER CODE END 0 */
 
@@ -123,8 +172,8 @@ static void MX_NVIC_Init(void);
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
+
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -161,6 +210,31 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+  valMax2 = 4095;
+  valMin2 = 2340;
+  val2rang = abs(valMax2 - valMin2);
+
+  ///GPS///
+
+  GPS_INIT(&huart1);
+  gyro_init(&hspi1);
+  magn_accel_init(&hspi1);
+
+  GPS_Awake();
+
+  double speed = 0;
+  double latitude;
+  double longitude;
+  char txt[20];
+
+  char* char_speed;
+  char* char_latitude;
+  char* char_longitude;
+  char* char_N;
+  char* char_W;
+
+  gyro_calib(&hspi1, &x_g_offset, &y_g_offset, &z_g_offset);
+  accel_calib(&hspi1, &x_a_offset, &y_a_offset, &z_a_offset);
 
   sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilter.FilterIdLow = 0;
@@ -177,30 +251,6 @@ int main(void)
 
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  can.hcan=&hcan1;
-  // can initialization //
-
-  // imu initialization //
-  imu.GPIOx_InUse=GPIOC;
-  imu.GPIO_Pin_InUse=GPIO_PIN_9;
-  imu.GPIOx_NotInUse=GPIOA;
-  imu.GPIO_Pin_NotInUse=GPIO_PIN_8;
-
-  if(gps_init(&huart1,&gps_main)==0){
-	  //--error--//
-  }
-
-  pot_1.max = 4039;
-  pot_1.min = 2503;
-  pot_1.range = abs(pot_1.max - pot_1.min);
-
-  enc.interrupt_flag = 0;
-  enc.TimerInstance = &htim3;
-  //enc.htim = &htim2;
 
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
@@ -209,27 +259,114 @@ int main(void)
   HAL_TIM_Base_Start(&htim6);
   HAL_TIM_Base_Start(&htim7);
 
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance, 0);
+  __HAL_TIM_SET_COUNTER(&s_TimerInstance, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
+
   HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_Base_Start_IT(&htim5);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
 
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 999);
+  /* USER CODE END 2 */
 
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
 
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  Error = 0;
+	  uint8_t CanSendMSG[8];
+	  uint8_t RxData[8];
 
+	  ///Check for Errors
+	  Error = LSMD9S0_check(&hspi1); //IMU IS DISCONNECTED? 0 = 0K ; 1 = G_NOTOK ; 2 = A_NOTOK
+
+	  ///GPS///
+	  //delete all the characters in the buffer
+	  for(int i = 0; i < 100; i++){
+		  bufferRX[i] = '-';
+	  }
+
+	  //receive the data
+	  HAL_UART_Receive(&huart1, (uint8_t*)bufferRX, strlen(bufferRX), 15);
+	  //print(bufferRX);
+
+	  if(Error1 == 0 || Error2 == 0){
+		  //if the data has a known sentence, get the requested data in the right position
+		  switch(Get_Sentence(bufferRX, sentences_, len_)){
+			case 0:										//GPRMA
+				break;
+
+			case 1:										//GPRMC
+				break;
+
+			case 2:										//GPVTG
+				char_speed = Get_Requested_Data(bufferRX, 7, requested_data_);
+				speed = atof(char_speed);
+				speed = speed * 100; //2 decimals
+
+				speed = (int)speed;
+
+
+				int16_t speed_Send = speed;
+
+				//GPS Velocity
+				CanSendMSG[0] = 0x03;
+				CanSendMSG[1] = speed_Send / 256;
+				CanSendMSG[2] = speed_Send % 256;
+				CanSendMSG[3] = 0;
+				CanSendMSG[4] = 0;
+				CanSendMSG[5] = 0;
+				CanSendMSG[6] = Error1;
+				CanSendMSG[7] = 0;
+
+				CAN_Send(&hcan1, 0xD0, CanSendMSG, 8);
+
+				break;
+
+			case 3:										//GPVBW
+				break;
+
+			case 4:
+				/*char_latitude = Get_Requested_Data(2);
+				latitude = atof(char_latitude);
+				latitude = latitude * 10000;
+
+				char_N = Get_Requested_Data(3);
+
+				char_longitude = Get_Requested_Data(4);
+				longitude = atof(char_longitude);
+				longitude = longitude * 10000;
+
+				char_W = Get_Requested_Data(5);
+
+				//sprintf(txt, "%d", (int)latitude);
+
+				if(latitude != 0){
+					//print(txt);
+				}
+				//print(txt);*/
+
+				break;
+
+			default:
+			  break;
+		  }
+
+	  }
+
+	  //sprintf(txt, "%d \t %d \t %d \t %d \t %d", (int)(encoder_speed * 100), (int)(speed*100), (int)val0_100, (int)val[0], (int)y_a_axis);
+	  //print(&huart2, txt);
+
+	  strcpy(bufferRX_prec, bufferRX);
   }
   /* USER CODE END 3 */
 
@@ -314,6 +451,9 @@ static void MX_NVIC_Init(void)
   /* ADC_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(ADC_IRQn);
+  /* TIM2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
   /* TIM7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM7_IRQn);
@@ -323,9 +463,9 @@ static void MX_NVIC_Init(void)
   /* TIM5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM5_IRQn);
-  /* TIM2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 /* ADC1 init function */
@@ -378,7 +518,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -423,7 +563,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 36;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
+  htim2.Init.Period = 2000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -524,7 +664,7 @@ static void MX_TIM5_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 36;
+  htim5.Init.Prescaler = 3600;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim5.Init.Period = 2000;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -579,7 +719,7 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 36;
+  htim7.Init.Prescaler = 3600;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 2000;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
@@ -668,103 +808,88 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PC9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  /*Configure GPIO pins : PC6 PC9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	gps_read_it(huart,&gps_main);
-}
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	///CALIBRATION CODE///
-		  int idsave = CAN_Receive(&can);
+	uint8_t RxData[8];
+		  int idsave = CAN_Receive(&hcan1, RxData, 8);
+		  uint8_t CanSendMSG[8];
 
 		  if (idsave == 0xBB){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)){
-				  set_min(&pot_1);
+			  if ((RxData[0] == 2) && (RxData[1] == 0)){
+				  valMin2 = val[0];
 				  //CheckControl[0] = 1;
-				  can.dataTx[0] = 2;
-				  can.dataTx[1] = 0;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
+				  CanSendMSG[0] = 2;
+				  CanSendMSG[1] = 0;
+				  CanSendMSG[2] = 0;
+				  CanSendMSG[3] = 0;
+				  CanSendMSG[4] = 0;
+				  CanSendMSG[5] = 0;
+				  CanSendMSG[6] = 0;
+				  CanSendMSG[7] = 0;
+				  CAN_Send(&hcan1, 0xBC, CanSendMSG, 8);
 			  }
-			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
-				  set_max(&pot_1);
+			  if ((RxData[0] == 2) && (RxData[1] == 1)){
+				  valMax2 = val[0];
 				  //CheckControl[1] = 1;
-				  can.dataTx[0] = 2;
-				  can.dataTx[1] = 1;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
+				  CanSendMSG[0] = 2;
+				  CanSendMSG[1] = 1;
+				  CanSendMSG[2] = 0;
+				  CanSendMSG[3] = 0;
+				  CanSendMSG[4] = 0;
+				  CanSendMSG[5] = 0;
+				  CanSendMSG[6] = 0;
+				  CanSendMSG[7] = 0;
+				  CAN_Send(&hcan1, 0xBC, CanSendMSG, 8);
 
 			  }
-			  //val0rang = abs(valMax0 - valMin0);
-			  pot_1.range = abs(pot_1.max - pot_1.min);
+			  val2rang = abs(valMax2 - valMin2);
 		 }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim2){
-		encoder_tim_interrupt(&enc);
+		encoder_tim_interrupt(&htim2, array_angles, &encoder_speed, &htim3, &hcan1);
 	}
 	if(htim == &htim4){
-	  calc_pot_value(&pot_1);
-	  can.dataTx[0] = 2;
-	  can.dataTx[1] = 1;
-	  can.dataTx[2] = 0;
-	  can.dataTx[3] = 0;
-	  can.dataTx[4] = 0;
-	  can.dataTx[5] = 0;
-	  can.dataTx[6] = 0;
-	  can.dataTx[7] = 0;
-	  can.id = 0xC0;
-	  can.size = 8;
-	  CAN_Send(&can);
+		read_steering_wheel(&hadc1, 1, valMax2, valMin2, val2rang, ADC_buffer, &hcan1, &val, &val0_100);
 	}
 	if(htim == &htim5){
-		LSMD9S0_gyro_read(&imu);
+		gyro_read(&hspi1, &x_g_axis, &y_g_axis, &z_g_axis, x_g_offset, y_g_offset, z_g_offset, &hcan1);
+		accel_read(&hspi1, &x_a_axis, &y_a_axis, &z_a_axis, x_a_offset, y_a_offset, z_a_offset, &hcan1);
 	}
 	if(htim == &htim7){
-		LSMD9S0_accel_read(&imu);
-	}
-}
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-	pot_1.val = ADC_buffer[0];
+	}
 }
 
 /* USER CODE END 4 */
