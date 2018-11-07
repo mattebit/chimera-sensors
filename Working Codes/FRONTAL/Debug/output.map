@@ -5832,7 +5832,7 @@ OUTPUT(FRONTAL.elf elf32-littlearm)
  .debug_macro   0x0000000000024e68       0x35 Src/system_stm32f4xx.o
  .debug_macro   0x0000000000024e9d       0x58 Src/system_stm32f4xx.o
 
-.debug_line     0x0000000000000000    0x10790
+.debug_line     0x0000000000000000    0x107f9
  .debug_line    0x0000000000000000      0xaeb Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
  .debug_line    0x0000000000000aeb      0xec0 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
  .debug_line    0x00000000000019ab      0xd5c Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.o
@@ -5846,14 +5846,14 @@ OUTPUT(FRONTAL.elf elf32-littlearm)
  .debug_line    0x0000000000008a03     0x1ee6 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
  .debug_line    0x000000000000a8e9      0xe52 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
  .debug_line    0x000000000000b73b     0x1510 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
- .debug_line    0x000000000000cc4b     0x10f4 Src/Eagle_TRT.o
- .debug_line    0x000000000000dd3f      0xbb9 Src/main.o
- .debug_line    0x000000000000e8f8      0xaf2 Src/stm32f4xx_hal_msp.o
- .debug_line    0x000000000000f3ea      0x9e5 Src/stm32f4xx_it.o
- .debug_line    0x000000000000fdcf      0x942 Src/system_stm32f4xx.o
- .debug_line    0x0000000000010711       0x7f startup/startup_stm32f446xx.o
+ .debug_line    0x000000000000cc4b     0x115d Src/Eagle_TRT.o
+ .debug_line    0x000000000000dda8      0xbb9 Src/main.o
+ .debug_line    0x000000000000e961      0xaf2 Src/stm32f4xx_hal_msp.o
+ .debug_line    0x000000000000f453      0x9e5 Src/stm32f4xx_it.o
+ .debug_line    0x000000000000fe38      0x942 Src/system_stm32f4xx.o
+ .debug_line    0x000000000001077a       0x7f startup/startup_stm32f446xx.o
 
-.debug_str      0x0000000000000000    0xd4bf6
+.debug_str      0x0000000000000000    0xd4c4e
  .debug_str     0x0000000000000000    0xcefdf Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
                                       0xcf3fc (size before relaxing)
  .debug_str     0x00000000000cefdf      0x65e Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.o
@@ -5880,17 +5880,17 @@ OUTPUT(FRONTAL.elf elf32-littlearm)
                                       0xcf133 (size before relaxing)
  .debug_str     0x00000000000d2a9f      0x675 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
                                       0xcf0b0 (size before relaxing)
- .debug_str     0x00000000000d3114      0xd24 Src/Eagle_TRT.o
-                                      0xd0123 (size before relaxing)
- .debug_str     0x00000000000d3e38      0xbae Src/main.o
+ .debug_str     0x00000000000d3114      0xd7c Src/Eagle_TRT.o
+                                      0xd0138 (size before relaxing)
+ .debug_str     0x00000000000d3e90      0xbae Src/main.o
                                       0xd1235 (size before relaxing)
- .debug_str     0x00000000000d49e6       0x25 Src/stm32f4xx_hal_msp.o
+ .debug_str     0x00000000000d4a3e       0x25 Src/stm32f4xx_hal_msp.o
                                       0xcf9b0 (size before relaxing)
- .debug_str     0x00000000000d4a0b      0x161 Src/stm32f4xx_it.o
+ .debug_str     0x00000000000d4a63      0x161 Src/stm32f4xx_it.o
                                       0xcf072 (size before relaxing)
- .debug_str     0x00000000000d4b6c       0x5a Src/system_stm32f4xx.o
+ .debug_str     0x00000000000d4bc4       0x5a Src/system_stm32f4xx.o
                                       0xce84c (size before relaxing)
- .debug_str     0x00000000000d4bc6       0x30 startup/startup_stm32f446xx.o
+ .debug_str     0x00000000000d4c1e       0x30 startup/startup_stm32f446xx.o
                                          0x73 (size before relaxing)
 
 .comment        0x0000000000000000       0x7e

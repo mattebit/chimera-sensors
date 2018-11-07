@@ -53,6 +53,9 @@
 
 /* USER CODE BEGIN Includes */
 #include "string.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "inttypes.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -72,16 +75,29 @@ UART_HandleTypeDef huart3;
 /* Private variables ---------------------------------------------------------*/
 CAN_FilterTypeDef sFilter;
 CAN_RxHeaderTypeDef RxHeader;
-int secondsElapsed = 0;
-int cont_rx=0;
-char messagesToWrite[100];
-int time=0;
+
 FIL loggingFile;
 FIL log_names_f;
+
+TCHAR message[256];
+
+static TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
+static TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
+
+int secondsElapsed = 0;
+int cont_rx=0;
+char messagesToWrite[100][256];
+int time=0;
+int printable_time = 0;
 int byteswritten;
 int delta;
 char filename[256] = "abcabc.txt";
 char filename_1[256]="log_names.txt";
+char txt[100];
+
+int mount_ok = 0;
+int msg_counter = 0;
+int msg_index = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,96 +173,106 @@ int main(void)
 	sFilter.FilterActivation = ENABLE;
 	HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
-
-	HAL_TIM_Base_Start_IT(&htim6);
-	HAL_TIM_Base_Start_IT(&htim7);
-
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	HAL_Delay(500);
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	HAL_Delay(500);
 
-	char buffer[256]="starting antenna logging";
+	char buffer[256]="Starting Antenna Logging\r\n";
 	int bytes_read;
 
 	char *pointer;
 	char log_names[256];
-	char res_open_s[50];
-	char txt[100];
 	FRESULT res_open;
-	print(&huart2, "---strating---\r\n");
+
+
+	print(&huart2, "---mounting---\r\n");
 	FRESULT res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
-	HAL_Delay(100);
+
 	if (res_mount == FR_OK) {
 		sprintf(filename_1,"name.txt");
 		res_open=f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-		sprintf(res_open_s,"res_open=%d\r\n",res_open);
-		print(&huart2,res_open_s);
-		print(&huart2, "file opened\r\n");
 		f_read(&log_names_f, log_names, 256, (void*)&bytes_read);
-		print(&huart2, "file read\r\n");
 
-		print(&huart2,"log_name:");
-		print(&huart2,log_names);
-		print(&huart2,"\r\n");
+		print(&huart2, "mounted, opened\r\n");
+
 		char name[256];
-		for(int i = 0; i < 10; i++){
 
-			sprintf(name, "Log_%d", i);
-			print(&huart2,"name:");
-			print(&huart2,name);
-			print(&huart2,"\r\nnumber of bytes read:");
-			char byte_read_s[10];
-			sprintf(byte_read_s,"%d\r\n",bytes_read);
-			print(&huart2,byte_read_s);
-			pointer = strstr(log_names,name);
-		  if(i == 0 && pointer == NULL){
-			print(&huart2,"non ho trovato un cazzo\r\n");
+		for(int i = 0; i < 20; i++){
+
+		sprintf(name, "Log_%d", i);
+
+		pointer = strstr(log_names,name);
+
+		if(i == 0 && pointer == NULL){
+
 			sprintf(filename, "Log_0\r\n");
+
 			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
 			f_close(&log_names_f);
-			print(&huart2,filename);
-			sprintf(filename, "Log_0.txt");
+
+			sprintf(filename, "Log_0.");
+
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
 			f_close(&loggingFile);
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+			print(&huart2, "created -> Log_0\r\n");
+
 			break;
-		  }
-		  if(pointer == NULL){
-			print(&huart2, "not founded\r\n");
+		}
+		if(pointer == NULL){
 			sprintf(filename, "Log_%d\r\n", i);
+
 			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
 			f_close(&log_names_f);
-			sprintf(filename, "Log_%d.txt", i);
-			print(&huart2, filename);
-			print(&huart2,"\r\n");
+
+			sprintf(filename, "Log_%d.", i);
+
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
 			f_close(&loggingFile);
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+			print(&huart2, "created -> ");
+			print(&huart2, filename);
+			print(&huart2, "\r\n");
+
 			break;
-		  }
-		  if(i==9){
-			  print(&huart2, "for cicle finished wrong, creating a default name file\r\n");
-			  sprintf(filename,"default.txt");
-			  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-			  f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-			  f_close(&loggingFile);
-			  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-		  }
+		}
+		if(i==9){
+			sprintf(filename,"default.");
+
+			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+			f_close(&loggingFile);
+			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+			print(&huart2, "created -> ");
+			print(&huart2, filename);
+			print(&huart2, "\r\n");
+		}
 
 
 		}
 
-		print(&huart2, "closed\r\n");
+		mount_ok = 1;
+		print(&huart2, "files closed\r\n");
 	}else {
-
+		mount_ok = 0;
 	}
 
 	HAL_CAN_Start(&hcan1);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+
+	print(&huart2, "Can Init Done");
+
+	HAL_TIM_Base_Start(&htim6);
+	HAL_TIM_Base_Start(&htim7);
+	HAL_TIM_Base_Start_IT(&htim6);
+	HAL_TIM_Base_Start_IT(&htim7);
 
 	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
   /* USER CODE END 2 */
@@ -255,11 +281,26 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(cont_rx==20){
-		  cont_rx=0;
+	  if(msg_counter >= 30){
+		  print(&huart2, "<->\r\n");
+		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6); //10 microseconds needed tocexecute all the if
+		  msg_counter = 0;
+	  	  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
+		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  HAL_TIM_Base_Stop_IT(&htim7);
+		  //6 microseconds needed to close and open
 		  f_close(&loggingFile);
-		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-		  sprintf(txt,"%d\r\n",delta);
+		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_WRITE );
+		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  HAL_TIM_Base_Start_IT(&htim7);
+		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6)-delta;
+		  //sprintf(txt, "%d\r\n", delta);
+          //print(&huart2, txt);
+	  }
+	  if(msg_index >= 0){
+	  	  f_write(&loggingFile,messagesToWrite[msg_index],strlen(messagesToWrite[msg_index]),(void*)&byteswritten);
+	  	  msg_index --;
 	  }
 
 
@@ -406,9 +447,9 @@ static void MX_TIM6_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 36;
+  htim6.Init.Prescaler = 360;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 1000;
+  htim6.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -430,9 +471,9 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 3600;
+  htim7.Init.Prescaler = 45;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 1999;
+  htim7.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -566,13 +607,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	id=CAN_Receive(RxData, 8);
 	cont_rx++;
 	//int time = secondsElapsed * 1000 + __HAL_TIM_GET_COUNTER(&htim6) / 20; //20 ticks for each millisecond
-	time=time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
-	delta=0;
+	printable_time=time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
+	delta=0;/*
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-	delta=__HAL_TIM_GET_COUNTER(&htim6);
+	delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6);
 	sprintf(messagesToWrite, "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
-	delta=__HAL_TIM_GET_COUNTER(&htim6)-delta;
-	f_write(&loggingFile,messagesToWrite,strlen(messagesToWrite),(void*)&byteswritten);
+	delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6)-delta;
+	f_write(&loggingFile,messagesToWrite,strlen(messagesToWrite),(void*)&byteswritten);*/
 	/*if(changedState == 1)
 		{
 			for(int i= 0; i < 5; i++)
@@ -590,6 +631,23 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			secondIndexWrite = (secondIndexWrite + 1) % DIM_ARRAY_MSG_TO_WRITE;
 		}*/
 }
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim7){
+		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
+		msg_counter ++;
+		delta=0;
+		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+
+
+		if(mount_ok == 1){
+			msg_index ++;
+			sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", time, msg_index, 000, 2, 3, 4, 5, 6, 7);
+		}
+
+	}
+}
+
 /*
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
@@ -630,7 +688,7 @@ void _Error_Handler(char *file, int line)
   {
 	  HAL_Delay(500);
 	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-	  HAL_Delay(500);
+	  HAL_Delay(2000);
 	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
   }
   /* USER CODE END Error_Handler_Debug */
