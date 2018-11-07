@@ -86,7 +86,7 @@ static TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 
 int secondsElapsed = 0;
 int cont_rx=0;
-char messagesToWrite[100][256];
+char messagesToWrite[200][256];
 int time=0;
 int printable_time = 0;
 int byteswritten;
@@ -94,6 +94,7 @@ int delta;
 char filename[256] = "abcabc.txt";
 char filename_1[256]="log_names.txt";
 char txt[100];
+int interrupt_flag = 0;
 
 int mount_ok = 0;
 int msg_counter = 0;
@@ -211,7 +212,7 @@ int main(void)
 			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
 			f_close(&log_names_f);
 
-			sprintf(filename, "Log_0.");
+			sprintf(filename, "Log_0.txt");
 
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
@@ -228,7 +229,7 @@ int main(void)
 			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
 			f_close(&log_names_f);
 
-			sprintf(filename, "Log_%d.", i);
+			sprintf(filename, "Log_%d.txt", i);
 
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
@@ -242,7 +243,7 @@ int main(void)
 			break;
 		}
 		if(i==9){
-			sprintf(filename,"default.");
+			sprintf(filename,"default.txt");
 
 			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
@@ -281,18 +282,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(msg_counter >= 30){
+	  if(interrupt_flag == 1){
+		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
+		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  interrupt_flag = 0;
 		  print(&huart2, "<->\r\n");
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6); //10 microseconds needed tocexecute all the if
 		  msg_counter = 0;
-	  	  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
-		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  HAL_TIM_Base_Stop_IT(&htim6);
 		  HAL_TIM_Base_Stop_IT(&htim7);
 		  //6 microseconds needed to close and open
 		  f_close(&loggingFile);
 		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_WRITE );
+
 		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  HAL_TIM_Base_Start_IT(&htim6);
 		  HAL_TIM_Base_Start_IT(&htim7);
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6)-delta;
 		  //sprintf(txt, "%d\r\n", delta);
@@ -447,7 +452,7 @@ static void MX_TIM6_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 360;
+  htim6.Init.Prescaler = 36;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim6.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
@@ -471,7 +476,7 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 45;
+  htim7.Init.Prescaler = 360;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
@@ -607,8 +612,19 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	id=CAN_Receive(RxData, 8);
 	cont_rx++;
 	//int time = secondsElapsed * 1000 + __HAL_TIM_GET_COUNTER(&htim6) / 20; //20 ticks for each millisecond
-	printable_time=time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
-	delta=0;/*
+	//printable_time=time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
+	delta=0;
+
+	if(mount_ok == 1){
+		msg_index ++;
+		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
+		msg_counter ++;
+		//sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", time, msg_index, 000, 2, 3, 4, 5, 6, 7);
+		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
+		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+	}
+
+	/*
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6);
 	sprintf(messagesToWrite, "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
@@ -634,17 +650,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim7){
-		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
-		msg_counter ++;
-		delta=0;
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-
-
-		if(mount_ok == 1){
-			msg_index ++;
-			sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", time, msg_index, 000, 2, 3, 4, 5, 6, 7);
-		}
-
+		interrupt_flag = 1;
 	}
 }
 
