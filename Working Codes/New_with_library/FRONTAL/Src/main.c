@@ -81,6 +81,7 @@ CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
 char txt[100];
+int flag = 0;
 
 TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -211,6 +212,7 @@ int main(void)
   HAL_TIM_Base_Start(&htim5);
   HAL_TIM_Base_Start(&htim6);
   HAL_TIM_Base_Start(&htim7);
+  HAL_TIM_Base_Start(&htim10);
 
   HAL_TIM_Base_Start_IT(&htim2);
   //HAL_TIM_Base_Start_IT(&htim3);
@@ -330,6 +332,9 @@ static void MX_NVIC_Init(void)
   /* TIM2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM1_UP_TIM10_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 }
 
 /* ADC1 init function */
@@ -605,9 +610,9 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 18;
+  htim10.Init.Prescaler = 36;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 10000;
+  htim10.Init.Period = 500;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -757,34 +762,45 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if(htim == &htim2){
-		encoder_tim_interrupt(&enc);
-	}
-	if(htim == &htim4){
-	  calc_pot_value(&pot_1);
-	  can.dataTx[0] = 2;
-	  can.dataTx[1] = 1;
-	  can.dataTx[2] = 0;
-	  can.dataTx[3] = 0;
-	  can.dataTx[4] = 0;
-	  can.dataTx[5] = 0;
-	  can.dataTx[6] = 0;
-	  can.dataTx[7] = 0;
-	  can.id = 0xC0;
-	  can.size = 8;
-	  CAN_Send(&can);
-	}
-	if(htim == &htim5){
 
-		LSMD9S0_gyro_read(&imu);
+	if(htim == &htim10){
+		switch (flag){
+			case 0:
+				encoder_tim_interrupt(&enc);
+				break;
+			case 1:
+				//encoder 2
+				break;
+			case 2:
+				LSMD9S0_accel_read(&imu);
+				break;
+			case 3:
+				LSMD9S0_gyro_read(&imu);
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				calc_pot_value(&pot_1);
 
-	}
-	if(htim == &htim7){
-		__HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
-		LSMD9S0_accel_read(&imu);
-		int time = __HAL_TIM_GET_COUNTER(&a_TimerInstance10);
-		sprintf(txt, "%d\r\n", time);
-		print(&huart2, txt);
+				can.dataTx[0] = 2;
+				can.dataTx[1] = 1;
+				can.dataTx[2] = 0;
+				can.dataTx[3] = 0;
+				can.dataTx[4] = 0;
+				can.dataTx[5] = 0;
+				can.dataTx[6] = 0;
+				can.dataTx[7] = 0;
+				can.id = 0xC0;
+				can.size = 8;
+				CAN_Send(&can);
+
+				flag = 0;
+
+				break;
+		}
+		flag ++;
 	}
 }
 
