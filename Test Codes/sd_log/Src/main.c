@@ -280,9 +280,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  FRESULT closing_result = 0;
   while (1)
   {
-	  if(interrupt_flag == 1){
+	  if(interrupt_flag == 1 && mount_ok == 1){
 		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  interrupt_flag = 0;
@@ -292,13 +293,16 @@ int main(void)
 		  HAL_TIM_Base_Stop_IT(&htim6);
 		  HAL_TIM_Base_Stop_IT(&htim7);
 		  //6 microseconds needed to close and open
-		  f_close(&loggingFile);
+		  closing_result = f_close(&loggingFile);
 		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_WRITE );
 
 		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  HAL_TIM_Base_Start_IT(&htim6);
 		  HAL_TIM_Base_Start_IT(&htim7);
+		  if(closing_result == FR_OK){
+			  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+		  }
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6)-delta;
 		  //sprintf(txt, "%d\r\n", delta);
           //print(&huart2, txt);
@@ -307,6 +311,7 @@ int main(void)
 	  	  f_write(&loggingFile,messagesToWrite[msg_index],strlen(messagesToWrite[msg_index]),(void*)&byteswritten);
 	  	  msg_index --;
 	  }
+
 
 
   /* USER CODE END WHILE */
@@ -478,7 +483,7 @@ static void MX_TIM7_Init(void)
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 360;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 999;
+  htim7.Init.Period = 3999;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -619,9 +624,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		msg_index ++;
 		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
 		msg_counter ++;
-		//sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", time, msg_index, 000, 2, 3, 4, 5, 6, 7);
-		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+		//sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", printable_time, msg_index, 000, 2, 3, 4, 5, 6, 7);
+		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", printable_time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
+		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	}
 
 	/*

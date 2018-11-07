@@ -822,7 +822,7 @@
 						enc->average_speed = dynamic_average(enc->speed, 15);
 					}
 					enc->interrupt_flag = 0;
-
+/*
 					int16_t speed_Send = enc->average_speed;
 
 					can.dataRx[0] = 0x06;
@@ -835,7 +835,7 @@
 					can.dataRx[7] = 0;
 					can.id = 0xD0;
 					can.size = 8;
-					CAN_Send(&can);
+					CAN_Send(&can);*/
 				}
 			}
 		}

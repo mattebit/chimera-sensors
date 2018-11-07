@@ -65,6 +65,7 @@ TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
+TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -87,6 +88,7 @@ TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
 TIM_HandleTypeDef a_TimerInstance5 = {.Instance = TIM5};
 TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
 TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
+TIM_HandleTypeDef a_TimerInstance10 = {.Instance = TIM10};
 
 gps_struct gps_main;
 /* USER CODE END PV */
@@ -106,6 +108,7 @@ static void MX_TIM4_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
+static void MX_TIM10_Init(void);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
@@ -123,7 +126,6 @@ static void MX_NVIC_Init(void);
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
 
@@ -157,6 +159,7 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
+  MX_TIM10_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -215,6 +218,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim5);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
+  HAL_TIM_Base_Start_IT(&htim10);
 
   __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
@@ -378,7 +382,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -596,6 +600,22 @@ static void MX_TIM7_Init(void)
 
 }
 
+/* TIM10 init function */
+static void MX_TIM10_Init(void)
+{
+
+  htim10.Instance = TIM10;
+  htim10.Init.Prescaler = 18;
+  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim10.Init.Period = 10000;
+  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -755,10 +775,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	  CAN_Send(&can);
 	}
 	if(htim == &htim5){
+
 		LSMD9S0_gyro_read(&imu);
+
 	}
 	if(htim == &htim7){
+		__HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		LSMD9S0_accel_read(&imu);
+		int time = __HAL_TIM_GET_COUNTER(&a_TimerInstance10);
+		sprintf(txt, "%d\r\n", time);
+		print(&huart2, txt);
 	}
 }
 

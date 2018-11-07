@@ -59,6 +59,7 @@ CAN_HandleTypeDef hcan1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
@@ -81,6 +82,7 @@ uint32_t ADC_buffer[3], val[3];
 static TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 static TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
 static TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
+static TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 
 CAN_RxHeaderTypeDef RxHeader;
 CAN_FilterTypeDef sFilter;
@@ -108,6 +110,7 @@ static void MX_TIM3_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM7_Init(void);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
@@ -197,6 +200,7 @@ int main(void)
   MX_CAN1_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
+  MX_TIM7_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -223,6 +227,7 @@ int main(void)
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_Base_Start(&htim4);
+  HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim4);
 
@@ -356,13 +361,18 @@ int main(void)
 		  SCS_Send = 1;
 	  }
 
-	  sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
+	  //sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
 	  	  //print(&huart2, txt);
-	  	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
+	  //__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
 	  calc_pot_value(&pot_1);
 	  calc_pot_value(&pot_2);
 	  implausibility_check(&pot_1, &pot_2);
+	  //int time = __HAL_TIM_GET_COUNTER(&a_TimerInstance7);
+	  //sprintf(txt, "%d\r\n", time);
+	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+
 
 
 
@@ -550,7 +560,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -570,7 +580,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 3600;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
+  htim2.Init.Period = 500;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -600,9 +610,9 @@ static void MX_TIM3_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 3600;
+  htim3.Init.Prescaler = 42666;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1500;
+  htim3.Init.Period = 1000;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
@@ -634,7 +644,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 3600;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 1000;
+  htim4.Init.Period = 500;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
   {
@@ -650,6 +660,30 @@ static void MX_TIM4_Init(void)
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM7 init function */
+static void MX_TIM7_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 18;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 10000;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
