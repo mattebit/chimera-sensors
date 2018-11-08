@@ -97,6 +97,9 @@ char txt[100];
 
 int pc6 = 0;
 
+int timer_flag = 0;
+int command_flag = 0;
+
 uint8_t RxData[8];
 /* USER CODE END PV */
 
@@ -130,18 +133,18 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 //PRESS AND RELEASE COMPLEATELY THE ACCELERATOR
 void print_Max_Min(){
 	if(fake_min0 < val[0]){
-		fake_min0 = val[0];
+		fake_min0 = pot_1.val;
 	}
-	if(fake_max0 > val[0]){
-		fake_max0 = val[0];
+	if(fake_max0 > pot_1.val){
+		fake_max0 = pot_1.val;
 	}
-	if(fake_min1 > val[1]){
-		fake_min1 = val[1];
+	if(fake_min1 > pot_2.val){
+		fake_min1 = pot_2.val;
 	}
-	if(fake_max1 < val[1]){
-		fake_max1 = val[1];
+	if(fake_max1 < pot_2.val){
+		fake_max1 = pot_2.val;
 	}
-	sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, val[0], val[1]);
+	sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val);
 	HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 }
 
@@ -155,11 +158,11 @@ void print_Max_Min(){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	pot_1.min = 3370;
-	pot_1.max = 3329;	//released
+	pot_1.min = 4001;
+	pot_1.max = 3872;	//released
 	pot_1.range = abs(pot_1.max - pot_1.min);
-	pot_2.min = 2353;
-	pot_2.max = 2498; //released
+	pot_2.min = 2614;
+	pot_2.max = 2730; //released
 	pot_2.range = abs(pot_2.max - pot_2.min);
 	check = 0;
 	fake_i = 0;
@@ -226,14 +229,14 @@ int main(void)
 
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
-  HAL_TIM_Base_Start(&htim4);
+  //HAL_TIM_Base_Start(&htim4);
   HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_Base_Start_IT(&htim4);
+  //HAL_TIM_Base_Start_IT(&htim4);
 
   __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 500);
+  //__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 500);
 
   pot_1.TimerInstance = &htim3;
   can.hcan = &hcan1;
@@ -269,50 +272,16 @@ int main(void)
 	  if (pc6 != GPIO_PIN_SET && pc6 != GPIO_PIN_RESET){
 		  SCS = 1;
 	  }
+
+	  print_Max_Min();
 /*
-	  val0_100 = 0;
-	  val1_100 = 0;
-	  fake1[fake_i] = (int)100-(abs(val[0] - valMin0)*100/(val0rang)); //val0_100 --> APPS1
-	  fake2[fake_i] = (int)100-(abs(val[1] - valMin1)*100/(val1rang)); //val1_100 --> APPS2
-	  for (int i = 0; i <= 4; i++){
-		  val0_100 = val0_100 + fake1[i];
-		  val1_100 = val1_100 + fake1[i];
-	  }sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
-	  //print(&huart2, txt);
-	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+	  if(command_flag == 1){
+		  HAL_TIM_Base_Stop_IT(&htim2);
+		  HAL_Delay(500);
+		  HAL_TIM_Base_Start_IT(&htim2);
+		  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
 
-
-
-	  val0_100 = val0_100 / 5;
-	  val1_100 = val1_100 / 5;
-	  val0_100 = 100 - val0_100;
-	  val1_100 = 100 - val1_100;
-
-	  if (fake_i >= 4){
-		  fake_i = 0;
-	  }
-	  else{
-		  fake_i = fake_i + 1;
-	  }
-
-	  ///NO POTENTIOMETER CONNECTED///
-	  if(val[0] >= 4096){
-		  SCS = 1;
-	  }
-	  if(val[1] >= 4096){
-		  SCS = 1;
-	  }
-	  if(val[0] <= 0){
-		  SCS = 1;
-	  }
-	  if(val[1] <= 0){
-		  SCS = 1;
-	  }
-	  if(val[0] <= 100){
-		  SCS = 1;
-	  }
-	  if(val[1] <= 100){
-		  SCS = 1;
+		  command_flag = 0;
 	  }*/
 
 
@@ -324,35 +293,6 @@ int main(void)
 	  else if (pc6 == GPIO_PIN_RESET){
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
 	  }
-/*
-	  ///SAFETY RANGES CODE///
-	  if (val0_100 >= 100){
-		  val0_100 = 100;
-	  }
-	  if (val0_100 <= 5){
-		  val0_100 = 0;
-	  }
-
-	  if (val1_100 >= 100){
-		  val1_100 = 100;
-	  }
-	  if (val1_100 <= 5){
-		  val1_100 = 0;
-	  }
-
-
-
-	  ///ERRORS CONTROL CODE///
-	  if(abs(val0_100 - val1_100) >= 10){
-		  if(__HAL_TIM_GET_COUNTER(&s_TimerInstance) - Time1 > 100){
-			  SCS1 = 1;
-		  }
-	  }
-	  else{
-		  Time1 = __HAL_TIM_GET_COUNTER(&s_TimerInstance);
-		  SCS1 = 0;
-	  }*/
-
 
 	  if (SCS != 0 || SCS1 != 0){
 		  pot_1.val_100 = 0;
@@ -361,40 +301,9 @@ int main(void)
 		  SCS_Send = 1;
 	  }
 
-	  //sprintf(txt, "%d \t %d \t %d \t %d \t %d \t %d \t %d \r\n", SCS, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, pot_1.range, pot_2.range);
-	  	  //print(&huart2, txt);
-	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
-
-	  //__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
 	  calc_pot_value(&pot_1);
 	  calc_pot_value(&pot_2);
 	  implausibility_check(&pot_1, &pot_2);
-	  //int time = __HAL_TIM_GET_COUNTER(&a_TimerInstance7);
-	  //sprintf(txt, "%d\r\n", time);
-	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
-
-
-
-
-	  //print_Max_Min();
-	  //}
-
-	  ///DEBUG CODE when in release to change with sending in CANbus///
-	  //if (SCS_Send != 0){
-/*
-	  sprintf(val0, "percent APPS1: %d percent Apps2: %d apps1 %d apps2 %d\r\n", val0_100, val1_100, val[0], val[1]);  //use "%lu" for long, "%d" for int
-	  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-
-
-	  sprintf(value_Error, "SCS: %d  BRK: %d\r\n", SCS_Send, val2_100);
-	  HAL_UART_Transmit(&huart2, (uint8_t*)value_Error, strlen(value_Error), 10);
-	  //}
-	  HAL_Delay(100);*/
-	  /*char msg[256];
-	  	  for(int i = 0; i < 4; i++){
-	  		  sprintf(msg, "msg: %d /r/n", CheckControl[i]);
-	  		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 10);
-	  	  }*/
 
   }
 
@@ -578,9 +487,9 @@ static void MX_TIM2_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 3600;
+  htim2.Init.Prescaler = 360;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 500;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -787,42 +696,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/*
-int CAN_Send(int id, uint8_t dataTx[], int size){
-
-	uint32_t mailbox;
-	uint8_t flag = 0;
-
-	CAN_TxHeaderTypeDef TxHeader;
-	TxHeader.StdId = id;
-	TxHeader.IDE = CAN_ID_STD;
-	TxHeader.RTR = CAN_RTR_DATA;
-	TxHeader.DLC = size;
-	TxHeader.TransmitGlobalTime = DISABLE;
-
-	if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0) == 0){
-		HAL_CAN_AddTxMessage(&hcan1, &TxHeader, dataTx, &mailbox);
-		flag = 1;
-	}
-
-	return flag;
-}
-
-int CAN_Receive(uint8_t *DataRx, int size){
-
-	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0){
-		HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, DataRx);
-	}
-
-	int id = RxHeader.StdId;
-
-	return id;
-}*/
 
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	///CALIBRATION CODE///
 		  int idsave = CAN_Receive(&can);
 		  uint8_t CanSendMSG[8];
+/*
+		  if(idsave == 0x55 || idsave == 0x201){
+			  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
+				  command_flag = 1;
+				  idsave = 0;
+			  }
+		  }
+		  if(idsave == 0xA0 || idsave == 0xAA || idsave == 0x181){
+			  if(can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8){
+				  command_flag = 1;
+				  idsave = 0;
+			  }
+		  }*/
 
 		  if (idsave == 0xBB){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
@@ -869,39 +760,60 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	uint8_t CanSendMSG[8];
+
 	if(htim == &htim2){
+		switch(timer_flag){
+		case 0:
+			can.dataTx[0] = 0x02;
+			can.dataTx[1] = pc6;
+			can.dataTx[2] = 0;
+			can.dataTx[3] = 0;
+			can.dataTx[4] = 0;
+			can.dataTx[5] = 0;
+			can.dataTx[6] = SCS_Send;
+			can.dataTx[7] = 0;
+			can.id = 0xB0;
+			can.size = 8;
+			CAN_Send(&can);
+			timer_flag ++;
+			break;
+		case 1:
+			if (check != 1){
 
-
-		if (check != 1){
-
-		  can.dataTx[0] = 0x01;
-		  can.dataTx[1] = pot_1.val_100;
-		  can.dataTx[2] = pot_2.val_100;
-		  can.dataTx[3] = 0;
-		  can.dataTx[4] = 0;
-		  can.dataTx[5] = 0;
-		  can.dataTx[6] = SCS_Send;
-		  can.dataTx[7] = 0;
-		  can.id = 0xB0;
-		  can.size = 8;
-		  CAN_Send(&can);
+			  can.dataTx[0] = 0x01;
+			  can.dataTx[1] = pot_1.val_100;
+			  can.dataTx[2] = pot_2.val_100;
+			  can.dataTx[3] = 0;
+			  can.dataTx[4] = 0;
+			  can.dataTx[5] = 0;
+			  can.dataTx[6] = SCS_Send;
+			  can.dataTx[7] = 0;
+			  can.id = 0xB0;
+			  can.size = 8;
+			  CAN_Send(&can);
+			  timer_flag ++;
+			}
+			break;
+		case 2:
+			timer_flag ++;
+			break;
+		case 3:
+			timer_flag ++;
+			break;
+		case 4:
+			timer_flag ++;
+			break;
+		case 5:
+			timer_flag ++;
+			break;
+		case 6:
+			timer_flag ++;
+			break;
+		case 7:
+			timer_flag = 0;
+			break;
 		}
 
-
-	}
-	if(htim == &htim4){
-		can.dataTx[0] = 0x02;
-		can.dataTx[1] = pc6;
-		can.dataTx[2] = 0;
-		can.dataTx[3] = 0;
-		can.dataTx[4] = 0;
-		can.dataTx[5] = 0;
-		can.dataTx[6] = SCS_Send;
-		can.dataTx[7] = 0;
-		can.id = 0xB0;
-		can.size = 8;
-		CAN_Send(&can);
 	}
 }
 

@@ -82,6 +82,8 @@ uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
 char txt[100];
 int flag = 0;
+int timer_factor = 4;
+int command_flag = 0;
 
 TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -208,26 +210,27 @@ int main(void)
 
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
-  HAL_TIM_Base_Start(&htim4);
-  HAL_TIM_Base_Start(&htim5);
-  HAL_TIM_Base_Start(&htim6);
-  HAL_TIM_Base_Start(&htim7);
+  //HAL_TIM_Base_Start(&htim4);
+  //HAL_TIM_Base_Start(&htim5);
+  //HAL_TIM_Base_Start(&htim6);
+  //HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start(&htim10);
 
   HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim5);
-  HAL_TIM_Base_Start_IT(&htim6);
-  HAL_TIM_Base_Start_IT(&htim7);
+  HAL_TIM_Base_Start_IT(&htim3);
+  //HAL_TIM_Base_Start_IT(&htim4);
+  //HAL_TIM_Base_Start_IT(&htim5);
+  //HAL_TIM_Base_Start_IT(&htim6);
+  //HAL_TIM_Base_Start_IT(&htim7);
   HAL_TIM_Base_Start_IT(&htim10);
 
   __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance4, 333);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance5, 666);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 999);
+  //__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 0);
+  //__HAL_TIM_SET_COUNTER(&a_TimerInstance5, 0);
+  //__HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
+  //__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
   while (1)
   {
@@ -235,6 +238,14 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+
+	  if(command_flag == 1){
+		  HAL_TIM_Base_Stop_IT(&htim10);
+		  HAL_Delay(500);
+		  HAL_TIM_Base_Start_IT(&htim10);
+		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
+		  command_flag = 0;
+	  }
 
   }
   /* USER CODE END 3 */
@@ -610,7 +621,7 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 36;
+  htim10.Init.Prescaler = 36 * timer_factor;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim10.Init.Period = 500;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -720,45 +731,60 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	///CALIBRATION CODE///
-		  int idsave = CAN_Receive(&can);
+	  int idsave = CAN_Receive(&can);
+	  //201/202
+	  //
 
-		  if (idsave == 0xBB){
-			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
-			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)){
-				  set_min(&pot_1);
-				  //CheckControl[0] = 1;
-				  can.dataTx[0] = 2;
-				  can.dataTx[1] = 0;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
-			  }
-			  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
-				  set_max(&pot_1);
-				  //CheckControl[1] = 1;
-				  can.dataTx[0] = 2;
-				  can.dataTx[1] = 1;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
+	  if(idsave == 0x55 || idsave == 0x201){
+		  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
+			  command_flag = 1;
+			  idsave = 0;
+		  }
+	  }
+	  if(idsave == 0xA0 || idsave == 0xAA || idsave == 0x181){
+		  if(can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8){
+			  command_flag = 1;
+			  idsave = 0;
+		  }
+	  }
 
-			  }
-			  //val0rang = abs(valMax0 - valMin0);
-			  pot_1.range = abs(pot_1.max - pot_1.min);
-		 }
+	  if (idsave == 0xBB){
+		//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
+		  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
+		  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)){
+			  set_min(&pot_1);
+			  //CheckControl[0] = 1;
+			  can.dataTx[0] = 2;
+			  can.dataTx[1] = 0;
+			  can.dataTx[2] = 0;
+			  can.dataTx[3] = 0;
+			  can.dataTx[4] = 0;
+			  can.dataTx[5] = 0;
+			  can.dataTx[6] = 0;
+			  can.dataTx[7] = 0;
+			  can.id = 0xBC;
+			  can.size = 8;
+			  CAN_Send(&can);
+		  }
+		  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
+			  set_max(&pot_1);
+			  //CheckControl[1] = 1;
+			  can.dataTx[0] = 2;
+			  can.dataTx[1] = 1;
+			  can.dataTx[2] = 0;
+			  can.dataTx[3] = 0;
+			  can.dataTx[4] = 0;
+			  can.dataTx[5] = 0;
+			  can.dataTx[6] = 0;
+			  can.dataTx[7] = 0;
+			  can.id = 0xBC;
+			  can.size = 8;
+			  CAN_Send(&can);
+
+		  }
+		  //val0rang = abs(valMax0 - valMin0);
+		  pot_1.range = abs(pot_1.max - pot_1.min);
+	 }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
@@ -767,25 +793,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		switch (flag){
 			case 0:
 				encoder_tim_interrupt(&enc);
+				flag ++;
 				break;
 			case 1:
 				//encoder 2
+				flag ++;
 				break;
 			case 2:
 				LSMD9S0_accel_read(&imu);
+				flag ++;
 				break;
 			case 3:
 				LSMD9S0_gyro_read(&imu);
+				flag ++;
 				break;
 			case 4:
+				flag ++;
 				break;
 			case 5:
+				flag ++;
 				break;
 			case 6:
+				flag ++;
 				calc_pot_value(&pot_1);
 
 				can.dataTx[0] = 2;
-				can.dataTx[1] = 1;
+				can.dataTx[1] = pot_1.val_100;
 				can.dataTx[2] = 0;
 				can.dataTx[3] = 0;
 				can.dataTx[4] = 0;
@@ -795,12 +828,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				can.id = 0xC0;
 				can.size = 8;
 				CAN_Send(&can);
-
+				break;
+			case 7:
 				flag = 0;
-
 				break;
 		}
-		flag ++;
+
 	}
 }
 
