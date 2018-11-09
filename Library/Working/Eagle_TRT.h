@@ -92,7 +92,7 @@
 	void set_min(pot_stc*);
 
 #endif
-	
+
 int bin_dec(int* bin, int size);
 double Power(int base, int expn);
 void shift_array(double *array, int size, double data);
