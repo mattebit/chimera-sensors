@@ -199,61 +199,61 @@ int main(void)
 
 		char name[256];
 
-		for(int i = 0; i < 20; i++){
+		for(int i = 0; i < 100; i++){
 
-		sprintf(name, "Log_%d", i);
+			sprintf(name, "Log_%d", i);
 
-		pointer = strstr(log_names,name);
+			pointer = strstr(log_names,name);
 
-		if(i == 0 && pointer == NULL){
+			if(i == 0 && pointer == NULL){
 
-			sprintf(filename, "Log_0\r\n");
+				sprintf(filename, "Log_0\r\n");
 
-			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-			f_close(&log_names_f);
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
 
-			sprintf(filename, "Log_0.txt");
+				sprintf(filename, "Log_0.txt");
 
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-			f_close(&loggingFile);
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 
-			print(&huart2, "created -> Log_0\r\n");
+				print(&huart2, "created -> Log_0\r\n");
 
-			break;
-		}
-		if(pointer == NULL){
-			sprintf(filename, "Log_%d\r\n", i);
+				break;
+			}
+			if(pointer == NULL){
+				sprintf(filename, "Log_%d\r\n", i);
 
-			f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-			f_close(&log_names_f);
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
 
-			sprintf(filename, "Log_%d.txt", i);
+				sprintf(filename, "Log_%d.txt", i);
 
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-			f_close(&loggingFile);
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 
-			print(&huart2, "created -> ");
-			print(&huart2, filename);
-			print(&huart2, "\r\n");
+				print(&huart2, "created -> ");
+				print(&huart2, filename);
+				print(&huart2, "\r\n");
 
-			break;
-		}
-		if(i==9){
-			sprintf(filename,"default.txt");
+				break;
+			}
+			if(i==9){
+				sprintf(filename,"default.txt");
 
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-			f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-			f_close(&loggingFile);
-			f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
 
-			print(&huart2, "created -> ");
-			print(&huart2, filename);
-			print(&huart2, "\r\n");
-		}
+				print(&huart2, "created -> ");
+				print(&huart2, filename);
+				print(&huart2, "\r\n");
+			}
 
 
 		}
@@ -284,8 +284,8 @@ int main(void)
   while (1)
   {
 	  if(interrupt_flag == 1 && mount_ok == 1){
-		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
-		  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
+		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  interrupt_flag = 0;
 		  print(&huart2, "<->\r\n");
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6); //10 microseconds needed tocexecute all the if
@@ -296,8 +296,8 @@ int main(void)
 		  closing_result = f_close(&loggingFile);
 		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_WRITE );
 
-		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
-		  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+		  //HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+		  //HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  HAL_TIM_Base_Start_IT(&htim6);
 		  HAL_TIM_Base_Start_IT(&htim7);
 		  if(closing_result == FR_OK){
@@ -457,7 +457,7 @@ static void MX_TIM6_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 36;
+  htim6.Init.Prescaler = 3600;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim6.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
