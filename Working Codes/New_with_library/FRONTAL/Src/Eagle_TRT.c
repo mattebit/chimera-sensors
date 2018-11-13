@@ -286,14 +286,14 @@
 		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
 		int16_t val_g_z = imu->Z_G_axis * 100;
 
-		can.dataRx[0] = 0x04;
-		can.dataRx[1] = val_g_x / 256;
-		can.dataRx[2] = val_g_x % 256;
-		can.dataRx[3] = val_g_y / 256;
-		can.dataRx[4] = val_g_y % 256;
-		can.dataRx[5] = val_g_z / 256;
-		can.dataRx[6] = val_g_z % 256;
-		can.dataRx[7] = 0;
+		can.dataTx[0] = 0x04;
+		can.dataTx[1] = val_g_x / 256;
+		can.dataTx[2] = val_g_x % 256;
+		can.dataTx[3] = val_g_y / 256;
+		can.dataTx[4] = val_g_y % 256;
+		can.dataTx[5] = val_g_z / 256;
+		can.dataTx[6] = val_g_z % 256;
+		can.dataTx[7] = 0;
 		can.id = 0xC0;
 		can.size = 8;
 		CAN_Send(&can);
@@ -322,14 +322,14 @@
 		int16_t val_a_y = imu->X_A_axis * 100;
 		int16_t val_a_z = imu->Z_A_axis * 100;
 
-		can.dataRx[0] = 0x05;
-		can.dataRx[1] = val_a_x / 256;
-		can.dataRx[2] = val_a_x % 256;
-		can.dataRx[3] = val_a_y / 256;
-		can.dataRx[4] = val_a_y % 256;
-		can.dataRx[5] = val_a_z / 256;
-		can.dataRx[6] = val_a_z % 256;
-		can.dataRx[7] = 0;
+		can.dataTx[0] = 0x05;
+		can.dataTx[1] = val_a_x / 256;
+		can.dataTx[2] = val_a_x % 256;
+		can.dataTx[3] = val_a_y / 256;
+		can.dataTx[4] = val_a_y % 256;
+		can.dataTx[5] = val_a_z / 256;
+		can.dataTx[6] = val_a_z % 256;
+		can.dataTx[7] = 0;
 		can.id = 0xC0;
 		can.size = 8;
 		CAN_Send(&can);
@@ -815,7 +815,6 @@
 			else{
 				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
 					enc->refresh=1000;
-					enc->wheel_diameter=0.4064;
 					double Speed = get_speed_encoder(enc);
 					if(abs(Speed - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
 						shift_array(enc->speed, 15, Speed);
@@ -823,19 +822,21 @@
 					}
 					enc->interrupt_flag = 0;
 
+
 					int16_t speed_Send = enc->average_speed;
 
-					can.dataRx[0] = 0x06;
-					can.dataRx[1] = speed_Send / 256;
-					can.dataRx[2] = speed_Send % 256;
-					can.dataRx[3] = 0;
-					can.dataRx[4] = 0;
-					can.dataRx[5] = 0;
-					can.dataRx[6] = 0;
-					can.dataRx[7] = 0;
+					can.dataTx[0] = 0x06;
+					can.dataTx[1] = speed_Send / 256;
+					can.dataTx[2] = speed_Send % 256;
+					can.dataTx[3] = 0;
+					can.dataTx[4] = 0;
+					can.dataTx[5] = 0;
+					can.dataTx[6] = 0;
+					can.dataTx[7] = 0;
 					can.id = 0xD0;
 					can.size = 8;
 					CAN_Send(&can);
+
 				}
 			}
 		}

@@ -206,6 +206,8 @@ int main(void)
 
   enc.interrupt_flag = 0;
   enc.TimerInstance = &htim3;
+  enc.average_speed = 0;
+  enc.wheel_diameter = 0.4064;
   //enc.htim = &htim2;
 
   HAL_TIM_Base_Start(&htim2);
@@ -238,14 +240,14 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+/*
 	  if(command_flag == 1){
 		  HAL_TIM_Base_Stop_IT(&htim10);
 		  HAL_Delay(500);
 		  HAL_TIM_Base_Start_IT(&htim10);
 		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		  command_flag = 0;
-	  }
+	  }*/
 
   }
   /* USER CODE END 3 */
@@ -621,9 +623,9 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 36 * timer_factor;
+  htim10.Init.Prescaler = 36;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 500;
+  htim10.Init.Period = 500 * timer_factor;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -793,28 +795,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		switch (flag){
 			case 0:
 				encoder_tim_interrupt(&enc);
-				flag ++;
 				break;
 			case 1:
 				//encoder 2
-				flag ++;
 				break;
 			case 2:
 				LSMD9S0_accel_read(&imu);
-				flag ++;
 				break;
 			case 3:
 				LSMD9S0_gyro_read(&imu);
-				flag ++;
 				break;
 			case 4:
-				flag ++;
 				break;
 			case 5:
-				flag ++;
 				break;
 			case 6:
-				flag ++;
 				calc_pot_value(&pot_1);
 
 				can.dataTx[0] = 2;
@@ -830,8 +825,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				CAN_Send(&can);
 				break;
 			case 7:
-				flag = 0;
 				break;
+		}
+		if(flag == 7){
+			flag = 0;
+		}
+		else{
+			flag  ++;
 		}
 
 	}
