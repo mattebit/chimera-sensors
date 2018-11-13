@@ -10,7 +10,7 @@
 
 //----------------ENCODER----------------//
 /*
- *To use encoder functions you have to initialize two timers, one for the clock and one to generate an interrupt
+ *To use encoder functions you have to initialize two timers, one for the clock and one to generate an interrupt 
  *To get the rotational speed of the encoder, you can setup the interrupt timer and call 'encoder_tim_interrupt()';
  *you have to declare a variable and pass it as argument to the encoder_tim_interrupt() function.
  *The porpouse of that variable is to switch from the three phases needed to calculate the rotational speed.
