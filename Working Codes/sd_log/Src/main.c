@@ -95,10 +95,20 @@ char filename[256] = "abcabc.txt";
 char filename_1[256]="log_names.txt";
 char txt[100];
 int interrupt_flag = 0;
+int max_files = 100;
 
 int mount_ok = 0;
 int msg_counter = 0;
 int msg_index = 0;
+
+char buffer[256]="Starting Antenna Logging\r\n";
+int bytes_read;
+
+char *pointer;
+char log_names[356];
+FRESULT res_open;
+FRESULT res_mount;
+int successfull_opening = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -179,96 +189,21 @@ int main(void)
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	HAL_Delay(500);
 
-	char buffer[256]="Starting Antenna Logging\r\n";
-	int bytes_read;
-
-	char *pointer;
-	char log_names[256];
-	FRESULT res_open;
-
 
 	print(&huart2, "---mounting---\r\n");
-	FRESULT res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
+	res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
 
-	if (res_mount == FR_OK) {
-		sprintf(filename_1,"name.txt");
-		res_open=f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-		f_read(&log_names_f, log_names, 256, (void*)&bytes_read);
+	HAL_Delay(10);
 
-		print(&huart2, "mounted, opened\r\n");
-
-		char name[256];
-
-		for(int i = 0; i < 100; i++){
-
-			sprintf(name, "Log_%d", i);
-
-			pointer = strstr(log_names,name);
-
-			if(i == 0 && pointer == NULL){
-
-				sprintf(filename, "Log_0\r\n");
-
-				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-				f_close(&log_names_f);
-
-				sprintf(filename, "Log_0.txt");
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> Log_0\r\n");
-
-				break;
-			}
-			if(pointer == NULL){
-				sprintf(filename, "Log_%d\r\n", i);
-
-				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-				f_close(&log_names_f);
-
-				sprintf(filename, "Log_%d.txt", i);
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> ");
-				print(&huart2, filename);
-				print(&huart2, "\r\n");
-
-				break;
-			}
-			if(i==9){
-				sprintf(filename,"default.txt");
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> ");
-				print(&huart2, filename);
-				print(&huart2, "\r\n");
-			}
-
-
-		}
-
-		mount_ok = 1;
-		print(&huart2, "files closed\r\n");
-	}else {
-		mount_ok = 0;
+	while(successfull_opening != 1){
+		init_sd();
 	}
 
 	HAL_CAN_Start(&hcan1);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
-	print(&huart2, "Can Init Done");
+	print(&huart2, "Can Init Done\r\n");
 
 	HAL_TIM_Base_Start(&htim6);
 	HAL_TIM_Base_Start(&htim7);
@@ -625,7 +560,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
 		msg_counter ++;
 		//sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", printable_time, msg_index, 000, 2, 3, 4, 5, 6, 7);
-		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", printable_time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
+		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", printable_time, id, RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	}
 
@@ -682,6 +617,95 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		secondsElapsed++;
 	}
   }*/
+
+void init_sd(){
+	if (res_mount == FR_OK) {
+		sprintf(filename_1,"name");
+		res_open=f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+		f_read(&log_names_f, log_names, 256, (void*)&bytes_read);
+
+		print(&huart2, "mounted, opened\r\n");
+
+		sprintf(txt, "%s\r\n", log_names);
+		print(&huart2, txt);
+
+		char name[256];
+
+		f_close(&log_names_f);
+		f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+		for(int i = 0; i < max_files; i++){
+
+			sprintf(name, "log_%d ", i);
+
+			pointer = strstr(log_names, name);
+
+
+
+			if(i == max_files){
+				sprintf(filename,"default.txt");
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "created -> default.txt\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+
+			if(i == 0 && pointer == NULL){
+
+				sprintf(filename, "log_0 \t\r\n");
+
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
+
+				sprintf(filename, "Log_0.txt");
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "\r\ncreated -> Log_0\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+			if(pointer == NULL){
+				sprintf(filename, "log_%d \t\r\n", i);
+
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
+
+				sprintf(filename, "Log_%d.txt", i);
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "\r\ncreated -> ");
+				print(&huart2, filename);
+				print(&huart2, "\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+		}
+
+		mount_ok = 1;
+		print(&huart2, "files closed\r\n");
+	}else {
+		mount_ok = 0;
+	}
+}
 
 /* USER CODE END 4 */
 

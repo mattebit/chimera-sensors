@@ -273,7 +273,7 @@ int main(void)
 		  SCS = 1;
 	  }
 
-	  print_Max_Min();
+	  //print_Max_Min();
 /*
 	  if(command_flag == 1){
 		  HAL_TIM_Base_Stop_IT(&htim2);
@@ -487,9 +487,9 @@ static void MX_TIM2_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 360;
+  htim2.Init.Prescaler = 36;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
+  htim2.Init.Period = 5000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -778,8 +778,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			timer_flag ++;
 			break;
 		case 1:
+			timer_flag ++;
+			break;
+		case 2:
+			timer_flag ++;
+			break;
+		case 3:
 			if (check != 1){
-
 			  can.dataTx[0] = 0x01;
 			  can.dataTx[1] = pot_1.val_100;
 			  can.dataTx[2] = pot_2.val_100;
@@ -793,12 +798,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			  CAN_Send(&can);
 			  timer_flag ++;
 			}
-			break;
-		case 2:
-			timer_flag ++;
-			break;
-		case 3:
-			timer_flag ++;
 			break;
 		case 4:
 			timer_flag ++;

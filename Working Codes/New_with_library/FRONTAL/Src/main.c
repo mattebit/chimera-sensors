@@ -82,8 +82,9 @@ uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
 char txt[100];
 int flag = 0;
-int timer_factor = 4;
+int timer_factor = 3;
 int command_flag = 0;
+int steer_flag = 0;
 
 TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -208,6 +209,7 @@ int main(void)
   enc.TimerInstance = &htim3;
   enc.average_speed = 0;
   enc.wheel_diameter = 0.4064;
+  enc.refresh = htim10.Init.Prescaler * timer_factor;
   //enc.htim = &htim2;
 
   HAL_TIM_Base_Start(&htim2);
@@ -625,7 +627,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 36;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 500 * timer_factor;
+  htim10.Init.Period = 300 * timer_factor;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -797,32 +799,40 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				encoder_tim_interrupt(&enc);
 				break;
 			case 1:
-				//encoder 2
+				encoder_tim_interrupt(&enc);
 				break;
 			case 2:
-				LSMD9S0_accel_read(&imu);
+				encoder_tim_interrupt(&enc);
 				break;
 			case 3:
-				LSMD9S0_gyro_read(&imu);
+				LSMD9S0_accel_read(&imu);
 				break;
 			case 4:
+				LSMD9S0_gyro_read(&imu);
 				break;
 			case 5:
 				break;
 			case 6:
-				calc_pot_value(&pot_1);
 
-				can.dataTx[0] = 2;
-				can.dataTx[1] = pot_1.val_100;
-				can.dataTx[2] = 0;
-				can.dataTx[3] = 0;
-				can.dataTx[4] = 0;
-				can.dataTx[5] = 0;
-				can.dataTx[6] = 0;
-				can.dataTx[7] = 0;
-				can.id = 0xC0;
-				can.size = 8;
-				CAN_Send(&can);
+				if(steer_flag == 0){
+					calc_pot_value(&pot_1);
+
+					can.dataTx[0] = 2;
+					can.dataTx[1] = pot_1.val_100;
+					can.dataTx[2] = 0;
+					can.dataTx[3] = 0;
+					can.dataTx[4] = 0;
+					can.dataTx[5] = 0;
+					can.dataTx[6] = 0;
+					can.dataTx[7] = 0;
+					can.id = 0xC0;
+					can.size = 8;
+					CAN_Send(&can);
+					steer_flag = 1;
+				}
+				else{
+					steer_flag = 0;
+				}
 				break;
 			case 7:
 				break;

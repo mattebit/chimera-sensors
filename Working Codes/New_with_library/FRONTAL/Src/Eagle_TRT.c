@@ -814,7 +814,6 @@
 			}
 			else{
 				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
-					enc->refresh=1000;
 					double Speed = get_speed_encoder(enc);
 					if(abs(Speed - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
 						shift_array(enc->speed, 15, Speed);

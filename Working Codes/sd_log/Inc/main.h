@@ -67,6 +67,7 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
+void init_sd();
 
 /* USER CODE END Private defines */
 
