@@ -82,7 +82,7 @@ uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
 char txt[100];
 int flag = 0;
-int timer_factor = 3;
+int timer_factor = 2;
 int command_flag = 0;
 int steer_flag = 0;
 
@@ -120,6 +120,8 @@ static void MX_NVIC_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+int steer_enc_prescaler;
+
 
 /* USER CODE END 0 */
 
@@ -209,7 +211,10 @@ int main(void)
   enc.TimerInstance = &htim3;
   enc.average_speed = 0;
   enc.wheel_diameter = 0.4064;
-  enc.refresh = htim10.Init.Prescaler * timer_factor;
+  enc.refresh = htim10.Init.Period * timer_factor;
+  enc.data_size = 14;
+  enc.clock_period = (36 / htim3.Init.Prescaler);
+
   //enc.htim = &htim2;
 
   HAL_TIM_Base_Start(&htim2);
@@ -236,6 +241,11 @@ int main(void)
   //__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
+  steer_enc_prescaler = htim10.Init.Period * timer_factor;
+  steer_enc_prescaler /= 8;
+  steer_enc_prescaler /= 20;
+  steer_enc_prescaler += 3;
+
   while (1)
   {
 
@@ -250,6 +260,9 @@ int main(void)
 		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		  command_flag = 0;
 	  }*/
+
+	  sprintf(txt, "%d\r\n", (int)(enc.angle1*100));
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
   }
   /* USER CODE END 3 */
@@ -802,6 +815,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				encoder_tim_interrupt(&enc);
 				break;
 			case 2:
+				can.dataRx[7] = steer_enc_prescaler;
 				encoder_tim_interrupt(&enc);
 				break;
 			case 3:

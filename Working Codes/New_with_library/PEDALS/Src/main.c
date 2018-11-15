@@ -100,6 +100,8 @@ int pc6 = 0;
 int timer_flag = 0;
 int command_flag = 0;
 
+int steer_wheel_prescaler;
+
 uint8_t RxData[8];
 /* USER CODE END PV */
 
@@ -241,6 +243,11 @@ int main(void)
   pot_1.TimerInstance = &htim3;
   can.hcan = &hcan1;
 
+  steer_wheel_prescaler = htim2.Init.Period;
+  steer_wheel_prescaler /= 8;
+  steer_wheel_prescaler /= 20;
+  steer_wheel_prescaler += 2;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -304,6 +311,9 @@ int main(void)
 	  calc_pot_value(&pot_1);
 	  calc_pot_value(&pot_2);
 	  implausibility_check(&pot_1, &pot_2);
+
+	  sprintf(txt, "%d\r\n", pot_1.val_100);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
   }
 
@@ -489,7 +499,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 36;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 5000;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -762,12 +772,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 	if(htim == &htim2){
+
 		switch(timer_flag){
 		case 0:
 			can.dataTx[0] = 0x02;
 			can.dataTx[1] = pc6;
 			can.dataTx[2] = 0;
-			can.dataTx[3] = 0;
+			can.dataTx[3] = steer_wheel_prescaler;
 			can.dataTx[4] = 0;
 			can.dataTx[5] = 0;
 			can.dataTx[6] = SCS_Send;
@@ -788,7 +799,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			  can.dataTx[0] = 0x01;
 			  can.dataTx[1] = pot_1.val_100;
 			  can.dataTx[2] = pot_2.val_100;
-			  can.dataTx[3] = 0;
+			  can.dataTx[3] = steer_wheel_prescaler;
 			  can.dataTx[4] = 0;
 			  can.dataTx[5] = 0;
 			  can.dataTx[6] = SCS_Send;

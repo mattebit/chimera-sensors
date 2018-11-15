@@ -747,51 +747,48 @@
 	enc_stc enc;
 	double read_encoder(enc_stc *enc){
 
-		int clock_loop = 16;
-		double int_data = 0;
-		int clock_period = 2;
-		int Data[50];
+		enc->clock_period = 2;
+		int Data[enc->data_size];
 
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
-		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
-		}
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);	//clock was high: reset to low
-		for(int i = 0; i < clock_loop; i++){
+
+		for(int i = 0; i <= enc->data_size; i++){
+
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
-			}
-			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET && i <= 15){	//reading the data input
-				Data[i] = 1;
-			}
-			else{
-				Data[i] = 0;
-			}
-			if(i == clock_loop-1){												//if it is the last loop set the clock pin to high, else set to low
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 20 microsecond like from datasheet
-				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= 40){
+			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
+			if(i < enc->data_size){
+				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){	//reading the data input
+					Data[i] = 1;
 				}
+				else{
+					Data[i] = 0;
+				}
+
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
+				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
 			}
 			else{
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-			}
-			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
-			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
-			}
-			if(i == 15){												//if it is the last loop cast the sata from binary to decimal
-				int_data = bin_dec(Data,15);
-				int_data = int_data / 45.5055;							//conversions from raw data to angle
-				int_data /= 2;
+				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){
+					enc->error_flag = 1;
+				}
+				else{
+					enc->error_flag = 0;
+				}
+
+				enc->converted_data = bin_dec(Data, enc->data_size);
+				enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
+				enc->converted_data /= 2;
 			}
 		}
 
-		return int_data;
+		return enc->converted_data;
 	}
 
 	//interrupt function of tim 2
@@ -804,40 +801,38 @@
 
 
 		if(enc->interrupt_flag == 0){									//every 3 times request the angle from encoder
-			enc->angles_array[0] = read_encoder(enc);
-			enc->interrupt_flag ++;
+			enc->angle0 = read_encoder(enc);
 		}
 		else{
 			if(enc->interrupt_flag == 1){									//every 3 times request the angle from encoder
-				enc->angles_array[1] = read_encoder(enc);
-				enc->interrupt_flag++;
+				enc->angle1 = read_encoder(enc);
 			}
 			else{
 				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
-					double Speed = get_speed_encoder(enc);
-					if(abs(Speed - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
-						shift_array(enc->speed, 15, Speed);
-						enc->average_speed = dynamic_average(enc->speed, 15);
-					}
-					enc->interrupt_flag = 0;
+					get_speed_encoder(enc);
 
-
-					int16_t speed_Send = enc->average_speed;
+					uint8_t speed_Send = enc->average_speed;
 
 					can.dataTx[0] = 0x06;
-					can.dataTx[1] = speed_Send / 256;
-					can.dataTx[2] = speed_Send % 256;
+					can.dataTx[1] = (int)speed_Send;
+					//can.dataTx[2] = speed_Send % 256;
+					can.dataTx[2] = 0;
 					can.dataTx[3] = 0;
 					can.dataTx[4] = 0;
 					can.dataTx[5] = 0;
 					can.dataTx[6] = 0;
-					can.dataTx[7] = 0;
 					can.id = 0xD0;
 					can.size = 8;
 					CAN_Send(&can);
-
+					can.dataTx[7] = 0;
 				}
 			}
+		}
+		if(enc->interrupt_flag == 2){
+			enc->interrupt_flag = 0;
+		}
+		else{
+			enc->interrupt_flag ++;
 		}
 	}
 
@@ -846,7 +841,7 @@
 	//angle1 = previous angle calculated
 	//refresh = delta-time from the two calculations, express it in microseconds
 	//wheel_diameter = diameter of the wheel expressed meters
-	double get_speed_encoder(enc_stc* enc){
+	void get_speed_encoder(enc_stc* enc){
 
 		double meters_per_second = 0;
 		double dt = 0;
@@ -855,7 +850,10 @@
 		meters_per_second = ((enc->angle0 - enc->angle1)/360)*3.14159265359*(enc->wheel_diameter);			//calculating the speed using the circumference arc
 		meters_per_second /= dt;
 
-		return meters_per_second;
+		if(abs(meters_per_second - enc->speed[8]) <= abs(enc->speed[8] * 20)){			//exclude the wrong speeds
+			shift_array(enc->speed, 15, meters_per_second);
+			enc->average_speed = dynamic_average(enc->speed, 15);
+		}
 	}
 
 	pot_stc pot_1;
