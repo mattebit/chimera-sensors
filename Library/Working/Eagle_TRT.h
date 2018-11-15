@@ -58,23 +58,27 @@
 #include "stm32f4xx_hal_tim.h"
 	typedef struct{
 
-		int interrupt_flag;
-		double angles_array[20];
-		double speed[20];
-		double average_speed;
-		float angle0;
-		float angle1;
-		int refresh;
-		float wheel_diameter;
+		int refresh;										//time between the two calculations of the angles
+		int data_size;										//bits sent from the sensor. exclude the error flag
+		int error_flag;										//return value if the encoder has errors
+		int interrupt_flag;									//flag to switch from angles to speed calculations
+		int clock_period;									//period of the clock generated
 
-		TIM_HandleTypeDef *TimerInstance;
-		TIM_HandleTypeDef *htim;
+		float angle0;										//first angle calculated
+		float angle1;										//second angle calculated
+		float wheel_diameter;								//
+
+		double speed[20];									//array to store lasts speed
+		double average_speed;								//filtered speed
+		double converted_data;								//angle data
+
+		TIM_HandleTypeDef *TimerInstance;					//instance to the timer used to generate the clock
 
 	}enc_stc;
 
 	double read_encoder(enc_stc*);
 	void encoder_tim_interrupt(enc_stc*);
-	double get_speed_encoder(enc_stc*);
+	void get_speed_encoder(enc_stc*);
 
 	typedef struct{
 
@@ -92,7 +96,7 @@
 	void set_min(pot_stc*);
 
 #endif
-
+	
 int bin_dec(int* bin, int size);
 double Power(int base, int expn);
 void shift_array(double *array, int size, double data);
@@ -194,7 +198,7 @@ void LSMD9S0_gyro_accel_init();
 	15 //Reserved
 	16 //Reserved
 	17 //Reserved
-	18 NMEA_SEN_MCHN, // PMTKCHN interval – GPS channel status
+	18 NMEA_SEN_MCHN, // PMTKCHN interval ï¿½ GPS channel status
 
 	Supported Frequency Setting
 	0 - Disabled or not supported sentence
