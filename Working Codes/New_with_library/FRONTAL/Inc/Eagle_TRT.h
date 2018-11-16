@@ -8,6 +8,7 @@
 #include "stdint.h"
 #include "stdlib.h"
 #include "string.h"
+#include "math.h"
 
 //----------------GPS----------------//
 #ifdef HAL_UART_MODULE_ENABLED
@@ -63,11 +64,13 @@
 		int error_flag;										//return value if the encoder has errors
 		int interrupt_flag;									//flag to switch from angles to speed calculations
 		int clock_period;									//period of the clock generated
+		int Data[20];
+		int steer_enc_prescaler;
 
-		float angle0;										//first angle calculated
-		float angle1;										//second angle calculated
-		float wheel_diameter;								//
+		float wheel_diameter;
 
+		double angle0;										//first angle calculated
+		double angle1;										//second angle calculated
 		double speed[20];									//array to store lasts speed
 		double average_speed;								//filtered speed
 		double converted_data;								//angle data

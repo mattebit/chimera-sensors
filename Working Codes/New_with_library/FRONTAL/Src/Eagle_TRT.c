@@ -739,6 +739,9 @@
 #ifdef HAL_TIM_MODULE_ENABLED
 #include "stm32f4xx_hal_tim.h"
 
+	extern UART_HandleTypeDef huart2;
+	extern char txt;
+
 	//function to request data from encoder via SSI communication
 	//this function is called from the interrupt callback of the timer that you are using for the encoder
 	//the tim used for this function must be initialized at most at 2 microsecond per tick
@@ -748,28 +751,27 @@
 	double read_encoder(enc_stc *enc){
 
 		enc->clock_period = 2;
-		int Data[enc->data_size];
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);	//clock was high: reset to low
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
 
 		for(int i = 0; i <= enc->data_size; i++){
 
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 			if(i < enc->data_size){
 				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){	//reading the data input
-					Data[i] = 1;
+					enc->Data[i] = 1;
 				}
 				else{
-					Data[i] = 0;
+					enc->Data[i] = 0;
 				}
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
@@ -782,9 +784,11 @@
 					enc->error_flag = 0;
 				}
 
-				enc->converted_data = bin_dec(Data, enc->data_size);
+				enc->converted_data = bin_dec(enc->Data, enc->data_size);
 				enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
 				enc->converted_data /= 2;
+				//sprintf(txt, "%d", (int)(enc->converted_data * 100));
+				//HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 			}
 		}
 
@@ -814,20 +818,21 @@
 					uint8_t speed_Send = enc->average_speed;
 
 					can.dataTx[0] = 0x06;
-					can.dataTx[1] = (int)speed_Send;
-					//can.dataTx[2] = speed_Send % 256;
+					can.dataTx[1] = speed_Send / 256;
+					can.dataTx[2] = speed_Send % 256;
 					can.dataTx[2] = 0;
 					can.dataTx[3] = 0;
 					can.dataTx[4] = 0;
 					can.dataTx[5] = 0;
 					can.dataTx[6] = 0;
+					can.dataTx[7] = enc->steer_enc_prescaler;
 					can.id = 0xD0;
 					can.size = 8;
 					CAN_Send(&can);
-					can.dataTx[7] = 0;
 				}
 			}
 		}
+
 		if(enc->interrupt_flag == 2){
 			enc->interrupt_flag = 0;
 		}
@@ -843,17 +848,24 @@
 	//wheel_diameter = diameter of the wheel expressed meters
 	void get_speed_encoder(enc_stc* enc){
 
+		char text[100];
 		double meters_per_second = 0;
 		double dt = 0;
 
-		dt = enc->refresh / 1000000;
-		meters_per_second = ((enc->angle0 - enc->angle1)/360)*3.14159265359*(enc->wheel_diameter);			//calculating the speed using the circumference arc
-		meters_per_second /= dt;
+		dt = enc->refresh;
 
-		if(abs(meters_per_second - enc->speed[8]) <= abs(enc->speed[8] * 20)){			//exclude the wrong speeds
-			shift_array(enc->speed, 15, meters_per_second);
-			enc->average_speed = dynamic_average(enc->speed, 15);
-		}
+		enc->angle0 *= 100;
+		enc->angle1 *= 100;
+
+		meters_per_second = ((enc->angle1 - enc->angle0)/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
+		meters_per_second /= dt;
+		meters_per_second *= 10000;
+		meters_per_second = round(meters_per_second)/100;
+
+		//if(abs(meters_per_second - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
+		shift_array(enc->speed, 15, meters_per_second);
+		enc->average_speed = dynamic_average(enc->speed, 15);
+		//}
 	}
 
 	pot_stc pot_1;

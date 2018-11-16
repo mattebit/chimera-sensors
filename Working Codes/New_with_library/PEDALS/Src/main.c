@@ -246,7 +246,7 @@ int main(void)
   steer_wheel_prescaler = htim2.Init.Period;
   steer_wheel_prescaler /= 8;
   steer_wheel_prescaler /= 20;
-  steer_wheel_prescaler += 2;
+  steer_wheel_prescaler += 4;
 
   /* USER CODE END 2 */
 

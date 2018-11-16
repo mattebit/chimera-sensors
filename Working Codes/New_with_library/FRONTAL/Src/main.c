@@ -1,6 +1,6 @@
 
 /**
-  *****************************************************************************
+  ******************************************************************************
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
@@ -203,15 +203,21 @@ int main(void)
 	  //--error--//
   }
 
+  steer_enc_prescaler = htim3.Init.Period;
+  steer_enc_prescaler /= 3;
+  steer_enc_prescaler /= 20;
+  steer_enc_prescaler += 40;
+  enc.steer_enc_prescaler = steer_enc_prescaler;
+
   pot_1.max = 4039;
   pot_1.min = 2503;
   pot_1.range = abs(pot_1.max - pot_1.min);
 
   enc.interrupt_flag = 0;
-  enc.TimerInstance = &htim3;
+  enc.TimerInstance = &a_TimerInstance3;
   enc.average_speed = 0;
-  enc.wheel_diameter = 0.4064;
-  enc.refresh = htim10.Init.Period * timer_factor;
+  enc.wheel_diameter = 4064;
+  enc.refresh = 2000;
   enc.data_size = 14;
   enc.clock_period = (36 / htim3.Init.Prescaler);
 
@@ -222,15 +228,15 @@ int main(void)
   //HAL_TIM_Base_Start(&htim4);
   //HAL_TIM_Base_Start(&htim5);
   //HAL_TIM_Base_Start(&htim6);
-  //HAL_TIM_Base_Start(&htim7);
+  HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start(&htim10);
 
   HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_Base_Start_IT(&htim3);
+  //HAL_TIM_Base_Start_IT(&htim3);
   //HAL_TIM_Base_Start_IT(&htim4);
   //HAL_TIM_Base_Start_IT(&htim5);
   //HAL_TIM_Base_Start_IT(&htim6);
-  //HAL_TIM_Base_Start_IT(&htim7);
+  HAL_TIM_Base_Start_IT(&htim7);
   HAL_TIM_Base_Start_IT(&htim10);
 
   __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
@@ -238,13 +244,8 @@ int main(void)
   //__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 0);
   //__HAL_TIM_SET_COUNTER(&a_TimerInstance5, 0);
   //__HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
-  //__HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
-
-  steer_enc_prescaler = htim10.Init.Period * timer_factor;
-  steer_enc_prescaler /= 8;
-  steer_enc_prescaler /= 20;
-  steer_enc_prescaler += 3;
 
   while (1)
   {
@@ -260,10 +261,8 @@ int main(void)
 		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		  command_flag = 0;
 	  }*/
-
-	  sprintf(txt, "%d\r\n", (int)(enc.angle1*100));
-	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
-
+	  sprintf(txt, "y:%d\r\n", (int)(enc.average_speed));
+		HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
   }
   /* USER CODE END 3 */
 
@@ -363,6 +362,9 @@ static void MX_NVIC_Init(void)
   /* TIM1_UP_TIM10_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+  /* USART1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
 /* ADC1 init function */
@@ -640,7 +642,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 36;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 300 * timer_factor;
+  htim10.Init.Period = 500;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -721,10 +723,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PC9 */
   GPIO_InitStruct.Pin = GPIO_PIN_9;
@@ -735,22 +744,23 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	gps_read_it(huart,&gps_main);
+	if(huart == &huart1){
+		gps_read_it(huart,&gps_main);
+	}
 }
+
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	///CALIBRATION CODE///
 	  int idsave = CAN_Receive(&can);
 	  //201/202
-	  //
 
 	  if(idsave == 0x55 || idsave == 0x201){
 		  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
@@ -809,14 +819,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim10){
 		switch (flag){
 			case 0:
-				encoder_tim_interrupt(&enc);
+
 				break;
 			case 1:
-				encoder_tim_interrupt(&enc);
+				//encoder_tim_interrupt(&enc);
 				break;
 			case 2:
-				can.dataRx[7] = steer_enc_prescaler;
-				encoder_tim_interrupt(&enc);
+				//encoder_tim_interrupt(&enc);
 				break;
 			case 3:
 				LSMD9S0_accel_read(&imu);
@@ -857,7 +866,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		else{
 			flag  ++;
 		}
+	}
 
+	if(htim == &htim7){
+		encoder_tim_interrupt(&enc);
 	}
 }
 
