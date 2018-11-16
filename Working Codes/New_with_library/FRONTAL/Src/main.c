@@ -217,8 +217,8 @@ int main(void)
   enc.TimerInstance = &a_TimerInstance3;
   enc.average_speed = 0;
   enc.wheel_diameter = 4064;
-  enc.refresh = 2000;
-  enc.data_size = 14;
+  enc.refresh = 1000;
+  enc.data_size = 15;
   enc.clock_period = (36 / htim3.Init.Prescaler);
 
   //enc.htim = &htim2;
@@ -261,7 +261,13 @@ int main(void)
 		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		  command_flag = 0;
 	  }*/
-	  sprintf(txt, "y:%d\r\n", (int)(enc.average_speed));
+	  if(enc.average_speed < -450000){
+		  //sprintf(txt, "y:%d %d %d\r\n", (int)(enc.angle0*1000), (int)(enc.angle1*1000), (int)((enc.angle1 - enc.angle0)*1000));
+		  //sprintf(txt, "y:%d %d %d\r\n", (int)(enc.average_speed), (int)enc.angle1, (int)enc.angle0);
+	  }
+	  sprintf(txt, "y:%d\r\n", (int)enc.average_speed);
+	  //sprintf(txt, "y:%d\r\n", (int)(enc.converted_data));
+	  //sprintf(txt, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\r\n", enc.Data[0], enc.Data[1], enc.Data[2], enc.Data[3], enc.Data[4], enc.Data[5], enc.Data[6], enc.Data[7], enc.Data[8], enc.Data[9], enc.Data[10], enc.Data[11], enc.Data[12], enc.Data[13], enc.Data[14], enc.error_flag);
 		HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
   }
   /* USER CODE END 3 */
@@ -499,7 +505,7 @@ static void MX_TIM3_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 18;
+  htim3.Init.Prescaler = 36;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65500;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -620,7 +626,7 @@ static void MX_TIM7_Init(void)
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 36;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 2000;
+  htim7.Init.Period = 1000;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -754,6 +760,12 @@ static void MX_GPIO_Init(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart == &huart1){
 		gps_read_it(huart,&gps_main);
+	}
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart == &huart2){
+		print_it(&huart2);
 	}
 }
 

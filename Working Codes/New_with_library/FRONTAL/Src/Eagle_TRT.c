@@ -757,6 +757,15 @@
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
 
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
+		}
+
 		for(int i = 0; i <= enc->data_size; i++){
 
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
@@ -777,6 +786,13 @@
 
 			}
 			else{
+
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
+				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+
 				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){
 					enc->error_flag = 1;
 				}
@@ -815,7 +831,9 @@
 				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
 					get_speed_encoder(enc);
 
-					uint8_t speed_Send = enc->average_speed;
+					enc->average_speed *= 10;
+
+					uint16_t speed_Send = enc->average_speed;
 
 					can.dataTx[0] = 0x06;
 					can.dataTx[1] = speed_Send / 256;
@@ -846,10 +864,11 @@
 	//angle1 = previous angle calculated
 	//refresh = delta-time from the two calculations, express it in microseconds
 	//wheel_diameter = diameter of the wheel expressed meters
+	int cont_retro=0,avanti=0,indietro=0;
 	void get_speed_encoder(enc_stc* enc){
 
 		char text[100];
-		double meters_per_second = 0;
+		long double meters_per_second = 0;
 		double dt = 0;
 
 		dt = enc->refresh;
@@ -860,12 +879,53 @@
 		meters_per_second = ((enc->angle1 - enc->angle0)/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
 		meters_per_second /= dt;
 		meters_per_second *= 10000;
-		meters_per_second = round(meters_per_second)/100;
+		meters_per_second = round(meters_per_second)/1000;
+		meters_per_second *= 3.6;
 
-		//if(abs(meters_per_second - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
-		shift_array(enc->speed, 15, meters_per_second);
-		enc->average_speed = dynamic_average(enc->speed, 15);
+		enc->angle0 /= 100;
+		enc->angle1 /= 100;
+
+		/*
+		if(meters_per_second<0){
+			cont_retro++;
+		}else{
+			cont_retro=0;
+		}
+		if(cont_retro<500 && meters_per_second<0){
+			meters_per_second=abs(meters_per_second);
+		}
+		if(meters_per_second>=enc->average_speed*2 && enc->average_speed!=0){
+			meters_per_second=enc->average_speed;
+		}*/
+		/*
+		if(meters_per_second<0){
+			cont_retro++;
+		}else{
+			cont_retro=0;
+		}
+		if(cont_retro < 50 && meters_per_second<0){
+			meters_per_second=abs(meters_per_second);
+		}*/
+/*
+		if(meters_per_second - enc->average_speed > 100 || meters_per_second - enc->average_speed < -100){
+			meters_per_second = enc->average_speed;
+		}*/
+
+		if((enc->angle0 < 4 && enc->angle1 > 355) || (enc->angle1 < 4 && enc->angle0 > 355)){
+
+		}
+		else{
+			shift_array(enc->speed, 15, meters_per_second);
+			enc->average_speed = dynamic_average(enc->speed, 15);
+			enc->average_speed=meters_per_second;
+		}
+		//if((enc->angle0 < 355 || enc->angle1 > 5) || (enc->angle1 < 355 || enc->angle0 > 5)){
+		//if(abs(meters_per_second) < (enc->average_speed * 10) && enc->speed[8] >= 0){
+		//if(abs(meters_per_second - enc->speed[14]) <= enc->speed[14]*10){
+
 		//}
+		//}
+
 	}
 
 	pot_stc pot_1;
@@ -975,6 +1035,39 @@ void shift_array(double *array, int size, double data){
 		array[i-1] = array[i];
 	}
 	array[size-1] = data;
+}
+
+double speed_filter(double * data, int size){
+	double min = 100000000000000;
+	double max = -min;
+	double sum = 0;
+	double average = 0;
+	int index_1;
+	int index_2;
+	int average_members = 0;
+
+	for(int i = 0; i < size; i++){
+		if(data[i] < min){
+			min = data[i];
+			index_1 = i;
+		}
+
+		if(data[i] > max){
+			max = data[i];
+			index_2 = i;
+		}
+	}
+
+	for(int i = 0; i < size; i++){
+		if(i != index_1 || i != index_2){
+			sum += data[i];
+			average_members ++;
+		}
+	}
+	average = sum / average_members;
+
+	return average;
+
 }
 
 //function that calculate the average of all the numbers in one array

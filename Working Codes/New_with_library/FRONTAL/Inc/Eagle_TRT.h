@@ -71,9 +71,9 @@
 
 		double angle0;										//first angle calculated
 		double angle1;										//second angle calculated
-		double speed[20];									//array to store lasts speed
-		double average_speed;								//filtered speed
-		double converted_data;								//angle data
+		long double speed[20];									//array to store lasts speed
+		long double average_speed;								//filtered speed
+		long double converted_data;								//angle data
 
 		TIM_HandleTypeDef *TimerInstance;					//instance to the timer used to generate the clock
 
@@ -103,6 +103,7 @@
 int bin_dec(int* bin, int size);
 double Power(int base, int expn);
 void shift_array(double *array, int size, double data);
+double speed_filter(double * data, int size);
 double dynamic_average(double *array, int size);
 
 //----------------IMU----------------//
