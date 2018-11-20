@@ -10,7 +10,7 @@
 
 //----------------ENCODER----------------//
 /*
- *To use encoder functions you have to initialize two timers, one for the clock and one to generate an interrupt 
+ *To use encoder functions you have to initialize two timers, one for the clock and one to generate an interrupt
  *To get the rotational speed of the encoder, you can setup the interrupt timer and call 'encoder_tim_interrupt()';
  *you have to declare a variable and pass it as argument to the encoder_tim_interrupt() function.
  *The porpouse of that variable is to switch from the three phases needed to calculate the rotational speed.
@@ -930,14 +930,15 @@
 
 	pot_stc pot_1;
 	pot_stc pot_2;
-	void calc_pot_value(pot_stc *pot_1){
+pot_stc pot_3;
+void calc_pot_value(pot_stc *pot) {
 
-		pot_1->val_100 = (int)100-(abs(pot_1->val - pot_1->min)*100/(pot_1->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
-		if (pot_1->val <= pot_1->min){
-			pot_1->val_100 = 100;
+	pot->val_100 = (int) 100 - (abs(pot->val - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
+	if (pot->val <= pot->min) {
+		pot->val_100 = 100;
 		}
-		if (pot_1->val >= pot_1->max){
-			pot_1->val_100 = 0;
+	if (pot->val >= pot->max) {
+		pot->val_100 = 0;
 		}
 	}
 
