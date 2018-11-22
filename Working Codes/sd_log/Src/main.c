@@ -222,7 +222,9 @@ int main(void)
 		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  interrupt_flag = 0;
-		  print(&huart2, "<->\r\n");
+		  char time_str[20];
+		  sprintf(time_str,"%d\r\n",printable_time);
+		  print(&huart2, time_str);
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6); //10 microseconds needed tocexecute all the if
 		  msg_counter = 0;
 		  //HAL_TIM_Base_Stop_IT(&htim6);
