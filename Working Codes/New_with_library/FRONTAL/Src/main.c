@@ -212,15 +212,15 @@ int main(void)
 	  //--error--//
   }
 
+  pot_3.max = 4039;
+  pot_3.min = 2503;
+  pot_3.range = abs(pot_3.max - pot_3.min);
+
   steer_enc_prescaler = htim3.Init.Period;
   steer_enc_prescaler /= 3;
   steer_enc_prescaler /= 20;
   steer_enc_prescaler += 40;
   enc.steer_enc_prescaler = steer_enc_prescaler;
-
-	pot_3.max = 4039;
-	pot_3.min = 2503;
-	pot_3.range = abs(pot_3.max - pot_3.min);
 
   enc.interrupt_flag = 0;
   enc.TimerInstance = &a_TimerInstance3;
@@ -229,6 +229,12 @@ int main(void)
   enc.refresh = 1000;
   enc.data_size = 15;
   enc.clock_period = (36 / htim3.Init.Prescaler);
+
+  enc.GPIO_X_clock = GPIOC;
+  enc.GPIO_PIN_clock = GPIO_PIN_6;
+
+  enc.GPIO_X_data = GPIOC;
+  enc.GPIO_PIN_data = GPIO_PIN_8;
 
   //enc.htim = &htim2;
 
@@ -267,13 +273,9 @@ int main(void)
 		  HAL_TIM_Base_Stop_IT(&htim10);
 		  HAL_Delay(500);
 		  HAL_TIM_Base_Start_IT(&htim10);
-		  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 		  command_flag = 0;
 	  }*/
-	  if(enc.average_speed < -450000){
-		  //sprintf(txt, "y:%d %d %d\r\n", (int)(enc.angle0*1000), (int)(enc.angle1*1000), (int)((enc.angle1 - enc.angle0)*1000));
-		  //sprintf(txt, "y:%d %d %d\r\n", (int)(enc.average_speed), (int)enc.angle1, (int)enc.angle0);
-	  }
+
 	  sprintf(txt, "y:%d\r\n", (int)enc.average_speed);
 	  //sprintf(txt, "y:%d\r\n", (int)(enc.converted_data));
 	  //sprintf(txt, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\r\n", enc.Data[0], enc.Data[1], enc.Data[2], enc.Data[3], enc.Data[4], enc.Data[5], enc.Data[6], enc.Data[7], enc.Data[8], enc.Data[9], enc.Data[10], enc.Data[11], enc.Data[12], enc.Data[13], enc.Data[14], enc.error_flag);
@@ -633,9 +635,9 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 36;
+  htim7.Init.Prescaler = 3600;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 2000;
+  htim7.Init.Period = 60;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -655,9 +657,9 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 36;
+  htim10.Init.Prescaler = 3600;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 50000;
+  htim10.Init.Period = 140;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -786,13 +788,11 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	  if(idsave == 0x55 || idsave == 0x201){
 		  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
 			  command_flag = 1;
-			  idsave = 0;
 		  }
 	  }
 	  if(idsave == 0xA0 || idsave == 0xAA || idsave == 0x181){
 		  if(can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8){
 			  command_flag = 1;
-			  idsave = 0;
 		  }
 	  }
 
@@ -843,16 +843,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 				break;
 			case 1:
-				//encoder_tim_interrupt(&enc);
+				////encoder_tim_interrupt(&enc);
 				break;
 			case 2:
 				//encoder_tim_interrupt(&enc);
 				break;
 			case 3:
-				LSMD9S0_accel_read(&imu);
+				//LSMD9S0_accel_read(&imu);
 				break;
 			case 4:
-				LSMD9S0_gyro_read(&imu);
+				//LSMD9S0_gyro_read(&imu);
 				break;
 			case 5:
 				break;
@@ -862,7 +862,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				calc_pot_value(&pot_3);
 
 					can.dataTx[0] = 2;
-				can.dataTx[1] = pot_3.val_100;
+					can.dataTx[1] = pot_3.val_100;
 					can.dataTx[2] = 0;
 					can.dataTx[3] = 0;
 					can.dataTx[4] = 0;

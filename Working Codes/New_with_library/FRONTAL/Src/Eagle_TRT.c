@@ -752,48 +752,48 @@
 
 		enc->clock_period = 2;
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
+		HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
+		HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);	//clock set to high to request the bit
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
+		HAL_GPIO_WritePin(enc->GPIO_PIN_clock, enc->GPIO_X_clock, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
 
 		for(int i = 0; i <= enc->data_size; i++){
 
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
+			HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);	//clock set to high to request the bit
 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 			if(i < enc->data_size){
-				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){	//reading the data input
+				if(HAL_GPIO_ReadPin(enc->GPIO_X_data, enc->GPIO_PIN_data) == GPIO_PIN_SET){	//reading the data input
 					enc->Data[i] = 1;
 				}
 				else{
 					enc->Data[i] = 0;
 				}
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);
 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 			}
 			else{
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);
 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);
 
-				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){
+				if(HAL_GPIO_ReadPin(enc->GPIO_X_data, enc->GPIO_PIN_data) == GPIO_PIN_SET){
 					enc->error_flag = 1;
 				}
 				else{
@@ -1030,7 +1030,7 @@ double Power(int base, int expn){
 //array = array to be shifted
 //size = size of the array
 //data = value to be added in the last position of the array
-void shift_array(double *array, int size, double data){
+void shift_array(long double *array, int size, double data){
 
 	for(int i = 1; i < size; i++){
 		array[i-1] = array[i];
@@ -1072,7 +1072,7 @@ double speed_filter(double * data, int size){
 }
 
 //function that calculate the average of all the numbers in one array
-double dynamic_average(double *array, int size){
+double dynamic_average(long double *array, int size){
 
 	double sum = 0;
 	double average = 0;
