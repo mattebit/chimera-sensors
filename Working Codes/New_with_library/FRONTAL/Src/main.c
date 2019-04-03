@@ -10,7 +10,7 @@
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
-  * COPYRIGHT(c) 2018 STMicroelectronics
+  * COPYRIGHT(c) 2019 STMicroelectronics
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -79,6 +79,7 @@ extern pot_stc pot_1;
 extern pot_stc pot_2;
 extern pot_stc pot_3;
 
+
 CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
@@ -127,6 +128,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   pot_1.val = ADC_buffer[0];
   pot_2.val = ADC_buffer[1];
   pot_3.val = ADC_buffer[2];
+  /*int txt_1[100];
+  sprintf(txt_1, "sterzo: %d %d %d\r\n", pot_1.val, pot_2.val, pot_3.val);
+  HAL_UART_Transmit(&huart2, (uint8_t*)txt_1, strlen(txt_1), 10);*/
 }
 
 int steer_enc_prescaler;
@@ -207,14 +211,14 @@ int main(void)
   imu.GPIO_Pin_InUse=GPIO_PIN_9;
   imu.GPIOx_NotInUse=GPIOA;
   imu.GPIO_Pin_NotInUse=GPIO_PIN_8;
+  imu.hspi = &hspi1;
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+
 
   if(gps_init(&huart1,&gps_main)==0){
 	  //--error--//
   }
-
-  pot_3.max = 4039;
-  pot_3.min = 2503;
-  pot_3.range = abs(pot_3.max - pot_3.min);
 
   steer_enc_prescaler = htim3.Init.Period;
   steer_enc_prescaler /= 3;
@@ -222,21 +226,22 @@ int main(void)
   steer_enc_prescaler += 40;
   enc.steer_enc_prescaler = steer_enc_prescaler;
 
+	pot_2.max = 4060;
+	pot_2.min = 2350;
+	pot_2.range = abs(pot_2.max - pot_2.min);
+
+  enc.dx_wheel = 0;
   enc.interrupt_flag = 0;
   enc.TimerInstance = &a_TimerInstance3;
   enc.average_speed = 0;
   enc.wheel_diameter = 4064;
   enc.refresh = 1000;
-  enc.data_size = 15;
+  enc.data_size = 14;
   enc.clock_period = (36 / htim3.Init.Prescaler);
 
-  enc.GPIO_X_clock = GPIOC;
-  enc.GPIO_PIN_clock = GPIO_PIN_6;
-
-  enc.GPIO_X_data = GPIOC;
-  enc.GPIO_PIN_data = GPIO_PIN_8;
-
   //enc.htim = &htim2;
+
+
 
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
@@ -247,7 +252,7 @@ int main(void)
   HAL_TIM_Base_Start(&htim10);
 
   HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim3);
   //HAL_TIM_Base_Start_IT(&htim4);
   //HAL_TIM_Base_Start_IT(&htim5);
   //HAL_TIM_Base_Start_IT(&htim6);
@@ -262,24 +267,27 @@ int main(void)
   __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
   __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
+  //HAL_Delay(1000);
+  LSMD9S0_accel_init(&imu);
+  LSMD9S0_gyro_init(&imu);
+  LSMD9S0_check(&imu);
+
+
+
   while (1)
   {
 
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-/*
-	  if(command_flag == 1){
-		  HAL_TIM_Base_Stop_IT(&htim10);
-		  HAL_Delay(500);
-		  HAL_TIM_Base_Start_IT(&htim10);
-		  command_flag = 0;
-	  }*/
 
-	  sprintf(txt, "y:%d\r\n", (int)enc.average_speed);
-	  //sprintf(txt, "y:%d\r\n", (int)(enc.converted_data));
-	  //sprintf(txt, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\r\n", enc.Data[0], enc.Data[1], enc.Data[2], enc.Data[3], enc.Data[4], enc.Data[5], enc.Data[6], enc.Data[7], enc.Data[8], enc.Data[9], enc.Data[10], enc.Data[11], enc.Data[12], enc.Data[13], enc.Data[14], enc.error_flag);
-		HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+/*
+	  //sprintf(txt, "%d\r\n", (int)enc.average_speed);
+	  sprintf(txt, "%d\t%d\t%d\r\n", (int)imu.X_A_axis, (int)imu.Y_A_axis, (int)imu.Z_A_axis);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);*/
+	  HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
+
+
   }
   /* USER CODE END 3 */
 
@@ -635,9 +643,9 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 3600;
+  htim7.Init.Prescaler = 36;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 60;
+  htim7.Init.Period = 2000;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -657,9 +665,9 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 3600;
+  htim10.Init.Prescaler = 36;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 140;
+  htim10.Init.Period = 500;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -745,11 +753,20 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PC6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PC9 */
@@ -761,9 +778,16 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
@@ -788,11 +812,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 	  if(idsave == 0x55 || idsave == 0x201){
 		  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
 			  command_flag = 1;
+			  idsave = 0;
 		  }
 	  }
 	  if(idsave == 0xA0 || idsave == 0xAA || idsave == 0x181){
 		  if(can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8){
 			  command_flag = 1;
+			  idsave = 0;
 		  }
 	  }
 
@@ -812,7 +838,10 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  can.dataTx[7] = 0;
 			  can.id = 0xBC;
 			  can.size = 8;
-			  CAN_Send(&can);
+			  for(int i = 0; i < 200; i++){
+			  //HAL_Delay(50);
+				  CAN_Send(&can);
+			  }
 		  }
 		  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
 			set_max(&pot_3);
@@ -827,7 +856,10 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  can.dataTx[7] = 0;
 			  can.id = 0xBC;
 			  can.size = 8;
-			  CAN_Send(&can);
+			  //HAL_Delay(50);
+			  for(int i = 0; i < 200; i++){
+				  CAN_Send(&can);
+			  }
 
 		  }
 		  //val0rang = abs(valMax0 - valMin0);
@@ -843,26 +875,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 				break;
 			case 1:
-				////encoder_tim_interrupt(&enc);
+				//encoder_tim_interrupt(&enc);
+				LSMD9S0_accel_read(&imu);
 				break;
 			case 2:
 				//encoder_tim_interrupt(&enc);
 				break;
 			case 3:
-				//LSMD9S0_accel_read(&imu);
 				break;
 			case 4:
-				//LSMD9S0_gyro_read(&imu);
+				LSMD9S0_gyro_read(&imu);
 				break;
 			case 5:
 				break;
 			case 6:
 
 				if(steer_flag == 0){
-				calc_pot_value(&pot_3);
+				calc_pot_value(&pot_2);
 
 					can.dataTx[0] = 2;
-					can.dataTx[1] = pot_3.val_100;
+					can.dataTx[1] = pot_2.val_100;
 					can.dataTx[2] = 0;
 					can.dataTx[3] = 0;
 					can.dataTx[4] = 0;

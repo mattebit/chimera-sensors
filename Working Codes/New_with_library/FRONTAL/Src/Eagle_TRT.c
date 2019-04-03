@@ -57,6 +57,9 @@
 #ifdef HAL_SPI_MODULE_ENABLED
 #include "stm32f4xx_hal_spi.h"
 
+	extern TIM_HandleTypeDef htim2;
+	extern UART_HandleTypeDef huart2;
+
 	///IMU VARIABLES///
 	uint8_t ZERO=0x00;
 	uint8_t WHO_AM_I_G = 0x8F;
@@ -80,19 +83,19 @@
 	uint8_t CTRL_REG7_XM_ADD = 0x26;
 	uint8_t CTRL_REG7_XM_VAL = 0x00;
 
-	uint8_t OUT_X_L_G_ADD = 0xE8;
-	uint8_t OUT_X_H_G_ADD = 0xE9;
-	uint8_t OUT_Y_L_G_ADD = 0xEA;
-	uint8_t OUT_Y_H_G_ADD = 0xEB;
-	uint8_t OUT_Z_L_G_ADD = 0xEC;
-	uint8_t OUT_Z_H_G_ADD = 0xED;
+	uint8_t OUT_X_L_G_ADD = 0xA8;
+	uint8_t OUT_X_H_G_ADD = 0xA9;
+	uint8_t OUT_Y_L_G_ADD = 0xAA;
+	uint8_t OUT_Y_H_G_ADD = 0xAB;
+	uint8_t OUT_Z_L_G_ADD = 0xAC;
+	uint8_t OUT_Z_H_G_ADD = 0xAD;
 
-	uint8_t OUT_X_L_A_ADD = 0xE8;
-	uint8_t OUT_X_H_A_ADD = 0xE9;
-	uint8_t OUT_Y_L_A_ADD = 0xEA;
-	uint8_t OUT_Y_H_A_ADD = 0xEB;
-	uint8_t OUT_Z_L_A_ADD = 0xEC;
-	uint8_t OUT_Z_H_A_ADD = 0xED;
+	uint8_t OUT_X_L_A_ADD = 0xA8;
+	uint8_t OUT_X_H_A_ADD = 0xA9;
+	uint8_t OUT_Y_L_A_ADD = 0xAA;
+	uint8_t OUT_Y_H_A_ADD = 0xAB;
+	uint8_t OUT_Z_L_A_ADD = 0xAC;
+	uint8_t OUT_Z_H_A_ADD = 0xAD;
 
 	imu_stc imu;
 	can_stc can;
@@ -101,60 +104,56 @@
 	//hspi = pointer to the spi port defined
 	void LSMD9S0_gyro_init(imu_stc* imu){
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_VAL, 1, 10); ///Writing 0b00001111 to enable PowerMode and x,y,z axis
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_VAL, 1, 10); ///Writing 0b00010000 to set full-scale selection to 500dps
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+
+		HAL_UART_Transmit(&huart2, (uint8_t*)"inizializzazione_g fatta\r\n", 26, 10);
 	}
 
 	//accelerometer and magnetometer initialization
 	//call this function before requesting data from the sensor
 	//hspi = pointer to the spi port defined
-	void LSMD9S0_gyro_accel_init(imu_stc* imu){
+	void LSMD9S0_accel_init(imu_stc* imu){
 
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_VAL, 1, 10); ///Writing 0b10100111 to enable 1600Hz and x,y,z axis
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_VAL, 1, 10); ///Writing 0b00001000 to set +/-4g range for axel axis
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_VAL, 1, 10); ///Writing 0b01110000 to set high resolution for magn and 50Hz
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_VAL, 1, 10); ///Writing 0b00100000 to set +/-4 gauss range for magn axis
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_ADD, 1, 10); ///Writing the address
 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_VAL, 1, 10); ///Writing 0b00000000 to set continuos conversion for magn axis
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+
+		HAL_UART_Transmit(&huart2, (uint8_t*)"inizializzazione_a fatta\r\n", 26, 10);
 	}
 
 	//this function is used to calibrate the gyroscope
@@ -162,60 +161,80 @@
 	//X_G_axis_offset = gyroscope x axis offset value that changes after executing this function
 	//Y_G_axis_offset = gyroscope y axis offset value that changes after executing this function
 	//Z_G_axis_offset = gyroscope z axis offset value that changes after executing this function
-	void LSMD9S0_gyro_calib(imu_stc* imu){
+	/*void LSMD9S0_gyro_calib(imu_stc* imu){
 
 		imu->kp = 0.0175;
 
 		imu->X_G_axis_offset = LSM9DS0_calib(imu);
 		imu->Y_G_axis_offset = LSM9DS0_calib(imu);
 		imu->Z_G_axis_offset = LSM9DS0_calib(imu);
-	}
+	}*/
 
 	//this function is used to calibrate the accelerometer
 	//hspi = pointer to the spi port defined
 	//X_A_axis_offset = accelerometer x axis offset value that changes after executing this function
 	//Y_A_axis_offset = accelerometer y axis offset value that changes after executing this function
 	//Z_A_axis_offset = accelerometer z axis offset value that changes after executing this function
-	void LSMD9S0_accel_calib(imu_stc* imu){
+	/*void LSMD9S0_accel_calib(imu_stc* imu){
 
 		imu->kp = 0.00119782; ///0.000122 * 9,81
 
 		imu->X_A_axis_offset = LSM9DS0_calib(imu);
 		imu->Y_A_axis_offset = LSM9DS0_calib(imu);
 		imu->Z_A_axis_offset = LSM9DS0_calib(imu);
-	}
+	}*/
 
 	float LSMD9S0_read(imu_stc* imu){
 
 		uint8_t OUT_L_VAL;
 		uint8_t OUT_H_VAL;
 
+		//__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		//while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
+		//}
+
 		///READING ROTATION
-		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
-		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_SET); ///CS_NotInUse to 1
+		//HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
+		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
 		HAL_SPI_Transmit(imu->hspi, &(imu->REG_L), 1, 10); ///Writing LOW address
 		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_L_VAL, 1, 10); ///Saving LOW data
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
-		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_RESET); ///CS_NotInUse to 0
+		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 
+
+		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
-		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_SET); ///CS_NotInUse to 1
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
 		HAL_SPI_Transmit(imu->hspi, &(imu->REG_H), 1, 10); ///Writing HIGH address
 		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_H_VAL, 1, 10); ///Saving HIGH data
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
-		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_RESET); ///CS_NotInUse to 0
+		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+
+
 
 		///CALCULATING ROTATION
-		float axis = OUT_H_VAL << 8 | OUT_L_VAL;	///Calculating axis value shifting and using a logic OR
+		float axis = (OUT_H_VAL << 8) | OUT_L_VAL;	///Calculating axis value shifting and using a logic OR
 		if (axis > 32767){ ///Generating positive and negative value of rotation
 			axis = axis - 65536;
 		}
-		axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
+		//axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
+		/*char imu_str_1[100];
+		int imu_val_ret = OUT_H_VAL << 8 | OUT_L_VAL;
+
+		sprintf(imu_str_1,"gyro: %d\n\r",imu_val_ret);
+		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
 
 		return axis;
 	}
 
-	float LSM9DS0_calib(imu_stc* imu){
+	/*float LSM9DS0_calib(imu_stc* imu){
 
 		float axis_cal;
 		float sum_cal = 0.0000;
@@ -227,37 +246,48 @@
 		axis_cal = sum_cal / 10000;
 
 		return axis_cal;
-	}
+	}*/
 
 	int LSMD9S0_check(imu_stc* imu){
 
 		int check = 0;
 
-		///GYRO IS WORKING
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET); ///CS_XM to 1
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_G, 1, 10); ///Writing on register ----> (uint8_t*) it's the cast of the pointer to WHO_AM_I_G (giving by &variable)
-		HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_G_VAL, 1, 10); ///Reading from register sending a 0x00
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); ///CS_G to 1
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET); ///CS_XM to 0
-
 		///AXEL/MAGN ARE WORKING
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); ///CS_G to 1
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_XM, 1, 10); ///Writing on register ----> (uint8_t*) it's the cast of the pointer to WHO_AM_I_XM (giving by &variable)
-		HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_XM_VAL, 1, 10); ///Reading from register sending a 0x00
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET); ///CS_XM to 1
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
+		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_XM, 1, 10); ///Writing on register ----> (uint8_t*) it's the cast of the pointer to WHO_AM_I_G (giving by &variable)
+		//HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_XM_VAL, 1, 10); ///Reading from register sending a 0x00
+		HAL_SPI_Receive(imu->hspi, (uint8_t*)&WHO_AM_I_XM_VAL, 1, 10);
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+
+		///GYRO IS WORKING
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
+		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_G, 1, 10); ///Writing on register ----> (uint8_t*) it's the cast of the pointer to WHO_AM_I_G (giving by &variable)
+		//HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_G_VAL, 1, 10); ///Reading from register sending a 0x00
+		HAL_SPI_Receive(imu->hspi, (uint8_t*)&WHO_AM_I_G_VAL, 1, 10);
+		htim2.Instance->CNT=0; //set counter to 0
+		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+
+
+
+		char imu_str[100];
+
+		//sprintf(imu_str,"Test with %d and %d\r\n%d, %d\r\n",WHO_AM_I_G,WHO_AM_I_XM,WHO_AM_I_G_VAL,WHO_AM_I_XM_VAL);
+		//HAL_UART_Transmit(&huart2, (uint8_t*)imu_str, strlen(imu_str), 10);
 
 		///AXEL/GYRO STATUS
-		if (WHO_AM_I_G_VAL != 212){
+		if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73)){
 			check = 1;
-		}
-		if (WHO_AM_I_XM_VAL != 212){
-			check = 2;
-		}
-		if ((WHO_AM_I_G_VAL != 212) & (WHO_AM_I_XM_VAL != 212)){
-			check = 3;
+			HAL_UART_Transmit(&huart2, (uint8_t*)"imu int correct\r\n", 17, 10);
+		}else{
+			check = 0;
+			HAL_UART_Transmit(&huart2, (uint8_t*)"imu int failed\r\n", 16, 10);
 		}
 
 		return check;
@@ -275,16 +305,36 @@
 
 		imu->kp = 0.0175;
 
-		imu->X_G_axis = LSMD9S0_read(imu);
-		imu->X_G_axis = imu->X_G_axis - imu->X_G_axis_offset;
-		imu->Y_G_axis = LSMD9S0_read(imu);
-		imu->Y_G_axis = imu->Y_G_axis - imu->Y_G_axis_offset;
-		imu->Z_G_axis = LSMD9S0_read(imu);
-		imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
+		imu->GPIOx_InUse=GPIOA;
+		imu->GPIO_Pin_InUse=GPIO_PIN_8;
 
-		int16_t val_g_x = imu->Y_G_axis * 100;
+		imu->REG_H = OUT_X_H_G_ADD;
+		imu->REG_L = OUT_X_L_G_ADD;
+		imu->X_G_axis = LSMD9S0_read(imu);
+		//imu->X_G_axis = imu->X_G_axis - imu->X_G_axis_offset;
+
+		imu->REG_H = OUT_Y_H_G_ADD;
+		imu->REG_L = OUT_Y_L_G_ADD;
+		imu->Y_G_axis = LSMD9S0_read(imu);
+		//imu->Y_G_axis = imu->Y_G_axis - imu->Y_G_axis_offset;
+
+		imu->REG_H = OUT_Z_H_G_ADD;
+		imu->REG_L = OUT_Z_L_G_ADD;
+		imu->Z_G_axis = LSMD9S0_read(imu);
+		//imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
+
+		/*int16_t val_g_x = imu->Y_G_axis * 100;
 		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
-		int16_t val_g_z = imu->Z_G_axis * 100;
+		int16_t val_g_z = imu->Z_G_axis * 100;*/
+
+		int val_g_x = (int)imu->X_G_axis/10;
+		int val_g_y = (int)imu->Y_G_axis/10;
+		int val_g_z = (int)imu->Z_G_axis/10;
+
+		/*char imu_str_1[100];
+
+		sprintf(imu_str_1,"gyro: %d %d %d\n\r", val_g_x, val_g_y, val_g_z);
+		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
 
 		can.dataTx[0] = 0x04;
 		can.dataTx[1] = val_g_x / 256;
@@ -311,16 +361,33 @@
 
 		imu->kp= 0.00119782; ///0.000122 * 9,81
 
-		imu->X_A_axis = LSMD9S0_read(imu);
-		imu->X_A_axis = imu->X_A_axis - imu->X_A_axis_offset;
-		imu->Y_A_axis = LSMD9S0_read(imu);
-		imu->Y_A_axis = imu->Y_A_axis - imu->Y_A_axis_offset;
-		imu->Z_A_axis = LSMD9S0_read(imu);
-		imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+		imu->GPIOx_InUse=GPIOC;
+		imu->GPIO_Pin_InUse=GPIO_PIN_9;
 
-		int16_t val_a_x = (0 - imu->Y_A_axis) * 100;
-		int16_t val_a_y = imu->X_A_axis * 100;
-		int16_t val_a_z = imu->Z_A_axis * 100;
+		imu->REG_H = OUT_X_H_A_ADD;
+		imu->REG_L = OUT_X_L_A_ADD;
+		imu->X_A_axis = LSMD9S0_read(imu);
+
+		//imu->X_A_axis = imu->X_A_axis - imu->X_A_axis_offset;
+
+		imu->REG_H = OUT_Y_H_A_ADD;
+		imu->REG_L = OUT_Y_L_A_ADD;
+		imu->Y_A_axis = LSMD9S0_read(imu);
+		//imu->Y_A_axis = imu->Y_A_axis - imu->Y_A_axis_offset;
+
+		imu->REG_H = OUT_Z_H_A_ADD;
+		imu->REG_L = OUT_Z_L_A_ADD;
+		imu->Z_A_axis = LSMD9S0_read(imu);
+		//imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+
+		uint16_t val_a_x = (int)imu->Y_A_axis/10;
+		uint16_t val_a_y = (int)imu->X_A_axis/10;
+		uint16_t val_a_z = (int)imu->Z_A_axis/10;
+/*
+		char imu_str_1[100];
+
+		sprintf(imu_str_1,"%d\t%d\t%d\n\r", val_a_x, val_a_y, val_a_z);
+		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
 
 		can.dataTx[0] = 0x05;
 		can.dataTx[1] = val_a_x / 256;
@@ -333,6 +400,7 @@
 		can.id = 0xC0;
 		can.size = 8;
 		CAN_Send(&can);
+
 	}
 
 #endif
@@ -752,48 +820,48 @@
 
 		enc->clock_period = 2;
 
-		HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);	//clock was high: reset to low
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
-
-		HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);	//clock set to high to request the bit
+/*
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-		HAL_GPIO_WritePin(enc->GPIO_PIN_clock, enc->GPIO_X_clock, GPIO_PIN_RESET);	//clock was high: reset to low
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
 		}
-
+*/
 		for(int i = 0; i <= enc->data_size; i++){
 
-			HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);	//clock set to high to request the bit
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 			if(i < enc->data_size){
-				if(HAL_GPIO_ReadPin(enc->GPIO_X_data, enc->GPIO_PIN_data) == GPIO_PIN_SET){	//reading the data input
+				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){	//reading the data input
 					enc->Data[i] = 1;
 				}
 				else{
 					enc->Data[i] = 0;
 				}
 
-				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 			}
 			else{
 
-				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-				HAL_GPIO_WritePin(enc->GPIO_X_clock, enc->GPIO_PIN_clock, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
 
-				if(HAL_GPIO_ReadPin(enc->GPIO_X_data, enc->GPIO_PIN_data) == GPIO_PIN_SET){
+				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){
 					enc->error_flag = 1;
 				}
 				else{
@@ -803,8 +871,6 @@
 				enc->converted_data = bin_dec(enc->Data, enc->data_size);
 				enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
 				enc->converted_data /= 2;
-				//sprintf(txt, "%d", (int)(enc->converted_data * 100));
-				//HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 			}
 		}
 
@@ -838,7 +904,6 @@
 					can.dataTx[0] = 0x06;
 					can.dataTx[1] = speed_Send / 256;
 					can.dataTx[2] = speed_Send % 256;
-					can.dataTx[2] = 0;
 					can.dataTx[3] = 0;
 					can.dataTx[4] = 0;
 					can.dataTx[5] = 0;
@@ -870,13 +935,21 @@
 		char text[100];
 		long double meters_per_second = 0;
 		double dt = 0;
+		double d_angle;
 
 		dt = enc->refresh;
 
 		enc->angle0 *= 100;
 		enc->angle1 *= 100;
 
-		meters_per_second = ((enc->angle1 - enc->angle0)/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
+		if(enc->dx_wheel == 1){
+			d_angle = enc->angle1 - enc->angle0;
+		}
+		else{
+			d_angle = enc->angle0 - enc->angle1;
+		}
+
+		meters_per_second = (d_angle/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
 		meters_per_second /= dt;
 		meters_per_second *= 10000;
 		meters_per_second = round(meters_per_second)/1000;
@@ -1030,7 +1103,7 @@ double Power(int base, int expn){
 //array = array to be shifted
 //size = size of the array
 //data = value to be added in the last position of the array
-void shift_array(long double *array, int size, double data){
+void shift_array(long double *array, int size, long double data){
 
 	for(int i = 1; i < size; i++){
 		array[i-1] = array[i];

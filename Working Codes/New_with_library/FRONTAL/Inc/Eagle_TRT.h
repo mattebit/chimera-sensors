@@ -34,11 +34,8 @@
 		char time[11]; //time string
 		char fix_status;
 	}gps_struct;
-
 	int gps_read_it(UART_HandleTypeDef *huart, gps_struct* gps);
 	int gps_init(UART_HandleTypeDef* huart, gps_struct * gps);
-
-
 	///---queue---///
 	typedef struct
 	{
@@ -47,14 +44,11 @@
 	  char * elem[40];
 	  char stringa[50];
 	}queue;
-
 	enum retval { FAIL, OK };
 	void init (queue *);
 	int push(char *,queue *);
 	int pop(char  *,queue *);
 	///---end queue---///
-
-
 	int print(UART_HandleTypeDef *huart,char * text_print_function);
 	void print_it(UART_HandleTypeDef *huart);
 
@@ -63,7 +57,6 @@
 //----------------ENCODER----------------//
 #ifdef HAL_TIM_MODULE_ENABLED
 #include "stm32f4xx_hal_tim.h"
-
 	typedef struct{
 
 		int refresh;										//time between the two calculations of the angles
@@ -73,6 +66,7 @@
 		int clock_period;									//period of the clock generated
 		int Data[20];
 		int steer_enc_prescaler;
+		int dx_wheel;										//1 if the encoder stc is for the right wheel
 
 		float wheel_diameter;
 
@@ -82,12 +76,6 @@
 		long double average_speed;								//filtered speed
 		long double converted_data;								//angle data
 
-		GPIO_TypeDef* GPIO_X_clock;
-		uint16_t GPIO_PIN_clock;
-
-		GPIO_TypeDef* GPIO_X_data;
-		uint16_t GPIO_PIN_data;
-
 		TIM_HandleTypeDef *TimerInstance;					//instance to the timer used to generate the clock
 
 	}enc_stc;
@@ -95,7 +83,6 @@
 	double read_encoder(enc_stc*);
 	void encoder_tim_interrupt(enc_stc*);
 	void get_speed_encoder(enc_stc*);
-
 
 	typedef struct{
 
@@ -107,26 +94,23 @@
 
 		TIM_HandleTypeDef *TimerInstance;
 	}pot_stc;
-
 	int implausibility_check(pot_stc*, pot_stc*);
 	void calc_pot_value(pot_stc*);
 	void set_max(pot_stc*);
 	void set_min(pot_stc*);
 
-
 #endif
 	
 int bin_dec(int* bin, int size);
 double Power(int base, int expn);
-void shift_array(long double *array, int size, double data);
+void shift_array(long double *array, int size, long double data);
 double speed_filter(double * data, int size);
 double dynamic_average(long double *array, int size);
 
 //----------------IMU----------------//
 #ifdef HAL_SPI_MODULE_ENABLED
 #include "stm32f4xx_hal_spi.h"
-
-typedef struct{
+	typedef struct{
 		float X_G_axis;
 		float Y_G_axis;
 		float Z_G_axis;
@@ -160,17 +144,14 @@ typedef struct{
 	float LSM9DS0_calib(imu_stc*);
 	void LSMD9S0_gyro_read(imu_stc*);
 	void LSMD9S0_accel_read(imu_stc*);
-
-
+	void LSMD9S0_gyro_init();
+	void LSMD9S0_accel_init();
 #endif
 
-void LSMD9S0_gyro_init();
-void LSMD9S0_gyro_accel_init();
 
 //----------------CAN----------------//
 #ifdef HAL_CAN_MODULE_ENABLED
 #include "stm32f4xx_hal_can.h"
-
 	typedef struct{
 
 		int id;
@@ -184,8 +165,6 @@ void LSMD9S0_gyro_accel_init();
 
 	int CAN_Send(can_stc*);
 	int CAN_Receive(can_stc*);
-
-
 #endif
 
 
