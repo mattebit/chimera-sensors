@@ -74,6 +74,7 @@ UART_HandleTypeDef huart3;
 CAN_FilterTypeDef sFilter;
 CAN_RxHeaderTypeDef RxHeader;
 
+int a=0;
 
 int cont_rx=0;
 char messagesToWrite[200][256];
@@ -89,6 +90,14 @@ static TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
 static TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 
 int interrupt_flag = 0;
+
+uint8_t huart_rx[50];
+char msg_can_to_send[50];
+int cont_msg_can_to_send;
+int flag_rx=0;
+int cont_huart_rx;
+int cont_length_num;
+
 
 /* USER CODE END PV */
 
@@ -164,22 +173,27 @@ int main(void)
 	sFilter.FilterScale  = CAN_FILTERSCALE_16BIT;
 	sFilter.FilterActivation = ENABLE;
 	HAL_CAN_ConfigFilter(&hcan1, &sFilter);
+	HAL_UART_Transmit(&huart2, (uint8_t*)"can init done_1\r\n", 17, 5);
+	HAL_UART_Transmit(&huart3, (uint8_t*)"start_1\r\n", 9, 5);
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+	HAL_Delay(500);
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+	HAL_Delay(500);
 
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-	HAL_Delay(500);
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-	HAL_Delay(500);
-	print(&huart2,"diocane entra\r\n");
-	HAL_Delay(500);
 	HAL_CAN_Start(&hcan1);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
-	print(&huart2, "Can Init Done");
+	HAL_UART_Transmit(&huart2, (uint8_t*)"can init done\r\n", 15, 5);
+	HAL_UART_Transmit(&huart3, (uint8_t*)"start\r\n", 7, 5);
+
 	HAL_TIM_Base_Start(&htim6);
 	HAL_TIM_Base_Start(&htim7);
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim7);
+
+
+	HAL_UART_Receive_IT(&huart2,huart_rx, 1);
 
   /* USER CODE END 2 */
 
@@ -187,9 +201,40 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  a++;
+	  HAL_Delay(1);
 	  //print(&huart2,"ciao\r\n");
 	  //HAL_Delay(10);
 	  //HAL_UART_Transmit(&huart2, (uint8_t*)"ciao\r\n", 7, 5);
+	  if(flag_rx == 1){
+		  flag_rx = 0;
+		  HAL_UART_Transmit(&huart2, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
+		  HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 5);
+		  uint32_t mailbox;
+		  uint8_t messaggio_can[8];
+		  char can_id[] = {msg_can_to_send[0], msg_can_to_send[1], msg_can_to_send[2],'\0'};
+		  int zero = (int)('0');
+		  messaggio_can[0] = ((int)(msg_can_to_send[4])-zero)*100+((int)(msg_can_to_send[5])-zero)*10+((int)(msg_can_to_send[6])-zero);
+		  messaggio_can[1] = ((int)(msg_can_to_send[8])-zero)*100+((int)(msg_can_to_send[9])-zero)*10+((int)(msg_can_to_send[10])-zero);
+		  messaggio_can[2] = ((int)(msg_can_to_send[12])-zero)*100+((int)(msg_can_to_send[13])-zero)*10+((int)(msg_can_to_send[14])-zero);
+		  messaggio_can[3] = ((int)(msg_can_to_send[16])-zero)*100+((int)(msg_can_to_send[17])-zero)*10+((int)(msg_can_to_send[18])-zero);
+		  messaggio_can[4] = ((int)(msg_can_to_send[20])-zero)*100+((int)(msg_can_to_send[21])-zero)*10+((int)(msg_can_to_send[22])-zero);
+		  messaggio_can[5] = ((int)(msg_can_to_send[24])-zero)*100+((int)(msg_can_to_send[25])-zero)*10+((int)(msg_can_to_send[26])-zero);
+		  messaggio_can[6] = ((int)(msg_can_to_send[26])-zero)*100+((int)(msg_can_to_send[29])-zero)*10+((int)(msg_can_to_send[30])-zero);
+		  messaggio_can[7] = ((int)(msg_can_to_send[30])-zero)*100+((int)(msg_can_to_send[31])-zero)*10+((int)(msg_can_to_send[34])-zero);
+
+		  CAN_TxHeaderTypeDef TxHeader;
+		  TxHeader.StdId = atoi(can_id);
+		  TxHeader.IDE = CAN_ID_STD;
+		  TxHeader.RTR = CAN_RTR_DATA;
+		  TxHeader.DLC = 8;
+		  TxHeader.TransmitGlobalTime = DISABLE;
+
+		  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0) == 0){
+			  HAL_CAN_AddTxMessage(&hcan1, &TxHeader, messaggio_can, &mailbox);
+		  }
+		  HAL_UART_Receive_IT(&huart2,huart_rx, 1);
+	  }
 
   /* USER CODE END WHILE */
 
@@ -476,6 +521,56 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+int CAN_Send(char *msg_can){
+
+		uint32_t mailbox;
+		uint8_t flag = 0;
+
+		char msg_id[3];
+		msg_id[0] = msg_can[0];
+		msg_id[1] = msg_can[1];
+		msg_id[2] = '\0';
+
+		CAN_TxHeaderTypeDef TxHeader;
+		TxHeader.StdId = (uint32_t)atoi(msg_id);
+		TxHeader.IDE = CAN_ID_STD;
+		TxHeader.RTR = CAN_RTR_DATA;
+		TxHeader.DLC = 8;
+		TxHeader.TransmitGlobalTime = DISABLE;
+
+		uint8_t data_to_send[8];
+		int j=0;
+		for(int i = 0; i < 50 || msg_can[i+2] == '\0'; i++){
+			if(msg_can[i+2] == '\t' || msg_can[i+2] == ' '){// founded separation
+				if(msg_can[i+4] == '\t' || msg_can[i+4] == ' '){ //one space number
+					data_to_send[j] = msg_can[i+3]-(int)('0');
+					i = i+1;
+				}else if(msg_can[i+5] == '\t' || msg_can[i+5] == ' '){ //two space number
+					char num[3];
+					num[0] = msg_can[i+3];
+					num[1] = msg_can[i+4];
+					num[2] = '0';
+					data_to_send[j] = atoi(num);
+					i = i+2;
+				}else if(msg_can[i+6] == '\t' || msg_can[i+6] == ' '){ //three space number
+					char num[4];
+					num[0] = msg_can[i+3];
+					num[1] = msg_can[i+4];
+					num[2] = msg_can[i+5];
+					num[3] = '0';
+					data_to_send[j] = atoi(num);
+					i = i+3;
+				}
+			}
+		}
+
+		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0) == 0){
+			HAL_CAN_AddTxMessage(&hcan1, &TxHeader, data_to_send, &mailbox);
+			flag = 1;
+		}
+
+		return flag;
+	}
 int CAN_Receive(uint8_t *DataRx, int size){
 
 	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0){
@@ -512,8 +607,51 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		msg_index=0;
 	}
 }
+/*
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	print_it(huart);
+}*/
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+
+	if(huart_rx[0]=='-'){
+		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
+		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
+		flag_rx=1;
+		msg_can_to_send[cont_huart_rx] = '\0';
+		cont_huart_rx = 0;
+		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
+		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
+	}else{
+		msg_can_to_send[cont_huart_rx] = (char)huart_rx[0];
+		cont_huart_rx++;
+		HAL_UART_Receive_IT(&huart2,huart_rx, 1);
+	}
+
+	/*if(huart_rx[0] == ' ' || huart_rx[0] == '\t'){
+		if(cont_length_num == 2){
+			msg_can_to_send[cont_huart_rx] = msg_can_to_send[cont_huat_rx-1];
+			msg_can_to_send[cont_huart_rx-1]='0';
+			cont_huart_rx+=1;
+		}else if(cont_length_num == 3){
+			msg_can_to_send[cont_huart_rx] = msg_can_to_send[cont_huart_rx-2];
+			msg_can_to_send[cont_huart_rx-1]='0';
+			msg_can_to_send[cont_huart_rx-2]='0';
+			cont_huart_rx+=2;
+		}
+		cont_length_num = 0;
+	}else{
+		//if(cont_huart_rx == 26)
+		msg_can_to_send[cont_huart_rx] = (char)huart_rx[0];
+		cont_huart_rx++;
+		cont_length_num++;
+	}
+	if(cont_huart_rx >= 27){
+		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
+		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
+		cont_length_num = 0;
+		cont_huart_rx = 0;
+		flag_rx = 1;
+	}*/
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim7){
