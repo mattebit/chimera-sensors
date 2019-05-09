@@ -1053,18 +1053,18 @@ void calc_pot_value(pot_stc *pot) {
 	//val = array pointer to the potentiometer values
 	//max1 = pointer to the maximum value of the APPS1
 	//max2 = pointer to the maximum value of the APPS2
-	void set_max(pot_stc *pot_1){
+	void set_max(pot_stc *pot){
 
-		pot_1->max = pot_1->val;
+		pot->max = pot->val;
 	}
 
 	//function to set the value of the potentiometer when the pedal is pressed
 	//val = array pointer to the potentiometer values
 	//min1 = pointer to the minimum value of the APPS1
 	//min2 = pointer to the minimum value of the APPS2
-	void set_min(pot_stc *pot_1){
+	void set_min(pot_stc *pot){
 
-		pot_1->min = pot_1->val;
+		pot->min = pot->val;
 	}
 
 #endif
