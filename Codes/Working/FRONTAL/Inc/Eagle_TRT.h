@@ -68,6 +68,8 @@
 		int steer_enc_prescaler;
 		int dx_wheel;										//1 if the encoder stc is for the right wheel
 
+		int speed_sign;
+
 		float wheel_diameter;
 
 		double angle0;										//first angle calculated
@@ -124,6 +126,24 @@ double dynamic_average(long double *array, int size);
 		float X_A_axis_offset;
 		float Y_A_axis_offset;
 		float Z_A_axis_offset;
+
+		long double X_A_axis_array[20];
+		long double Y_A_axis_array[20];
+		long double Z_A_axis_array[20];
+
+		long double X_G_axis_array[20];
+		long double Y_G_axis_array[20];
+		long double Z_G_axis_array[20];
+
+		int x_a_sign;
+		int y_a_sign;
+		int z_a_sign;
+
+		int x_g_sign;
+		int y_g_sign;
+		int z_g_sign;
+
+		int error_flag;
 
 		float kp;
 

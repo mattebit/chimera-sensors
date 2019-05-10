@@ -225,9 +225,9 @@
 			axis = axis - 65536;
 		}
 		//axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
+
 		/*char imu_str_1[100];
 		int imu_val_ret = OUT_H_VAL << 8 | OUT_L_VAL;
-
 		sprintf(imu_str_1,"gyro: %d\n\r",imu_val_ret);
 		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
 
@@ -284,10 +284,10 @@
 		///AXEL/GYRO STATUS
 		if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73)){
 			check = 1;
-			HAL_UART_Transmit(&huart2, (uint8_t*)"imu int correct\r\n", 17, 10);
+			//HAL_UART_Transmit(&huart2, (uint8_t*)"imu int correct\r\n", 17, 10);
 		}else{
 			check = 0;
-			HAL_UART_Transmit(&huart2, (uint8_t*)"imu int failed\r\n", 16, 10);
+			//HAL_UART_Transmit(&huart2, (uint8_t*)"imu int failed\r\n", 16, 10);
 		}
 
 		return check;
@@ -323,30 +323,51 @@
 		imu->Z_G_axis = LSMD9S0_read(imu);
 		//imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
 
+		///AXEL/GYRO STATUS
+		if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73)){
+			imu->error_flag = 0;
+		}else{
+			imu->error_flag = 1;
+		}
+
 		/*int16_t val_g_x = imu->Y_G_axis * 100;
 		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
 		int16_t val_g_z = imu->Z_G_axis * 100;*/
 
-		int val_g_x = (int)imu->X_G_axis/10;
-		int val_g_y = (int)imu->Y_G_axis/10;
-		int val_g_z = (int)imu->Z_G_axis/10;
+		shift_array(imu->X_G_axis_array, 20, imu->X_G_axis);
+		shift_array(imu->Y_G_axis_array, 20, imu->Y_G_axis);
+		shift_array(imu->Z_G_axis_array, 20, imu->Z_G_axis);
+
+		imu->X_G_axis = dynamic_average(imu->X_G_axis_array, 20);
+		imu->Y_G_axis = dynamic_average(imu->Y_G_axis_array, 20);
+		imu->Z_G_axis = dynamic_average(imu->Z_G_axis_array, 20);
+
+		if(imu->X_G_axis >= 0){
+			imu->x_g_sign = 0;
+		}
+		else{
+			imu->x_g_sign = 1;
+			imu->X_G_axis *= -1;
+		}
+		if(imu->Y_G_axis >= 0){
+			imu->y_g_sign = 0;
+		}
+		else{
+			imu->y_g_sign = 1;
+			imu->Y_G_axis *= -1;
+		}
+		if(imu->Z_G_axis >= 0){
+			imu->z_g_sign = 0;
+		}
+		else{
+			imu->z_g_sign = 1;
+			imu->Z_G_axis *= -1;
+		}
 
 		/*char imu_str_1[100];
 
-		sprintf(imu_str_1,"gyro: %d %d %d\n\r", val_g_x, val_g_y, val_g_z);
+		sprintf(imu_str_1,"gyro: %d %d %d\n\r", (int)imu->X_G_axis, (int)imu->Y_G_axis, (int)imu->Z_G_axis);
 		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
-
-		can.dataTx[0] = 0x04;
-		can.dataTx[1] = val_g_x / 256;
-		can.dataTx[2] = val_g_x % 256;
-		can.dataTx[3] = val_g_y / 256;
-		can.dataTx[4] = val_g_y % 256;
-		can.dataTx[5] = val_g_z / 256;
-		can.dataTx[6] = val_g_z % 256;
-		can.dataTx[7] = 0;
-		can.id = 0xC0;
-		can.size = 8;
-		CAN_Send(&can);
 	}
 
 	///Reading A_axis values
@@ -380,26 +401,52 @@
 		imu->Z_A_axis = LSMD9S0_read(imu);
 		//imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
 
-		uint16_t val_a_x = (int)imu->Y_A_axis/10;
-		uint16_t val_a_y = (int)imu->X_A_axis/10;
-		uint16_t val_a_z = (int)imu->Z_A_axis/10;
+		shift_array(imu->X_A_axis_array, 20, imu->X_A_axis);
+		shift_array(imu->Y_A_axis_array, 20, imu->Y_A_axis);
+		shift_array(imu->Z_A_axis_array, 20, imu->Z_A_axis);
+
+		imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 20);
+		imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 20);
+		imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 20);
 /*
-		char imu_str_1[100];
+		if(imu->X_A_axis >= 0){
+			imu->x_a_sign = 0;
+		}
+		else{
+			imu->x_a_sign = 1;
+			imu->X_A_axis *= -1;
+		}
+		if(imu->Y_A_axis >= 0){
+			imu->y_a_sign = 0;
+		}
+		else{
+			imu->y_a_sign = 1;
+			imu->Y_A_axis *= -1;
+		}
+		if(imu->Z_A_axis >= 0){
+			imu->z_a_sign = 0;
+		}
+		else{
+			imu->z_a_sign = 1;
+			imu->Z_A_axis *= -1;
+		}*/
+
+		/*char imu_str_1[100];
 
 		sprintf(imu_str_1,"%d\t%d\t%d\n\r", val_a_x, val_a_y, val_a_z);
 		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
-
-		can.dataTx[0] = 0x05;
-		can.dataTx[1] = val_a_x / 256;
-		can.dataTx[2] = val_a_x % 256;
-		can.dataTx[3] = val_a_y / 256;
-		can.dataTx[4] = val_a_y % 256;
-		can.dataTx[5] = val_a_z / 256;
-		can.dataTx[6] = val_a_z % 256;
+/*
+		can.dataTx[0] = 0x06;
+		can.dataTx[1] = (uint8_t)val_a_z / 256;
+		can.dataTx[2] = (uint8_t)val_a_z % 256;
+		can.dataTx[3] = imu->z_a_sign;			//y and x accelerometer data are swapped, x and y sign no
+		can.dataTx[4] = 0;
+		can.dataTx[5] = 0;
+		can.dataTx[6] = 0;			//y and x accelerometer data are swapped, x and y sign no
 		can.dataTx[7] = 0;
 		can.id = 0xC0;
 		can.size = 8;
-		CAN_Send(&can);
+		CAN_Send(&can);*/
 
 	}
 
@@ -899,15 +946,22 @@
 
 					enc->average_speed *= 10;
 
+					if(enc->average_speed < 0){
+						enc->average_speed *= -1;
+						enc->speed_sign = 1;
+					}else{
+						enc->speed_sign = 0;
+					}
+
 					uint16_t speed_Send = enc->average_speed;
 
 					can.dataTx[0] = 0x06;
 					can.dataTx[1] = speed_Send / 256;
 					can.dataTx[2] = speed_Send % 256;
-					can.dataTx[3] = 0;
+					can.dataTx[3] = enc->speed_sign;
 					can.dataTx[4] = 0;
 					can.dataTx[5] = 0;
-					can.dataTx[6] = 0;
+					can.dataTx[6] = enc->error_flag;
 					can.dataTx[7] = enc->steer_enc_prescaler;
 					can.id = 0xD0;
 					can.size = 8;
@@ -1003,10 +1057,10 @@
 
 	pot_stc pot_1;
 	pot_stc pot_2;
-pot_stc pot_3;
+	pot_stc pot_3;
 void calc_pot_value(pot_stc *pot) {
 
-	pot->val_100 = (int) 100 - (abs(pot->val - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
+	pot->val_100 = round(100 - (abs(pot->val - pot->min) * 100 / (pot->range))); //val0_100 -->STEER --> 0 = SX | 100 = DX
 	if (pot->val <= pot->min) {
 		pot->val_100 = 100;
 		}

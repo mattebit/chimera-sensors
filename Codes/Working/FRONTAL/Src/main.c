@@ -6,7 +6,7 @@
   ******************************************************************************
   ** This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether 
+  * USER CODE END. Other portions of this file, whether
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
@@ -83,11 +83,13 @@ extern pot_stc pot_3;
 CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
 uint32_t ADC_buffer[3], val[3];
-char txt[100];
+char txt[200];
 int flag = 0;
+int multiplier = 1;
 int timer_factor = 2;
 int command_flag = 0;
 int steer_flag = 0;
+int cal_flag = 0;
 
 TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -230,7 +232,7 @@ int main(void)
 	pot_2.min = 2350;
 	pot_2.range = abs(pot_2.max - pot_2.min);
 
-  enc.dx_wheel = 0;
+  enc.dx_wheel = 1;
   enc.interrupt_flag = 0;
   enc.TimerInstance = &a_TimerInstance3;
   enc.average_speed = 0;
@@ -287,6 +289,12 @@ int main(void)
 	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);*/
 	  HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
 
+	  //sprintf(txt, "%d\t%d\t%d\t%d\t%d\r\n", (int)pot_2.max, (int)pot_2.min, (int)pot_2.val, (int)pot_2.val_100, (int)pot_2.range);
+	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+	  //HAL_Delay(100);
+	  char txt_mul [100];
+	  sprintf(txt_mul,"%d\r\n", multiplier);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt_mul, strlen(txt_mul), 10);
 
   }
   /* USER CODE END 3 */
@@ -303,13 +311,13 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
 
-    /**Configure the main internal regulator output voltage 
+    /**Configure the main internal regulator output voltage
     */
   __HAL_RCC_PWR_CLK_ENABLE();
 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /**Initializes the CPU, AHB and APB busses clocks 
+    /**Initializes the CPU, AHB and APB busses clocks
     */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
@@ -325,7 +333,7 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Initializes the CPU, AHB and APB busses clocks 
+    /**Initializes the CPU, AHB and APB busses clocks
     */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -339,11 +347,11 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Configure the Systick interrupt time 
+    /**Configure the Systick interrupt time
     */
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
-    /**Configure the Systick 
+    /**Configure the Systick
     */
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
@@ -398,7 +406,7 @@ static void MX_ADC1_Init(void)
 
   ADC_ChannelConfTypeDef sConfig;
 
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
     */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -417,7 +425,7 @@ static void MX_ADC1_Init(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
     */
   sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = 1;
@@ -714,10 +722,10 @@ static void MX_USART2_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
@@ -729,9 +737,9 @@ static void MX_DMA_Init(void)
 
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
+/** Configure pins as
+        * Analog
+        * Input
         * Output
         * EVENT_OUT
         * EXTI
@@ -826,7 +834,8 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 		  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
 		  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)){
-			set_min(&pot_3);
+			set_min(&pot_2);
+			  cal_flag = 1;
 			  //CheckControl[0] = 1;
 			  can.dataTx[0] = 2;
 			  can.dataTx[1] = 0;
@@ -844,7 +853,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  }
 		  }
 		  if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)){
-			set_max(&pot_3);
+			set_max(&pot_2);
+			cal_flag = 0;
+
 			  //CheckControl[1] = 1;
 			  can.dataTx[0] = 2;
 			  can.dataTx[1] = 1;
@@ -860,75 +871,125 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  for(int i = 0; i < 200; i++){
 				  CAN_Send(&can);
 			  }
-
 		  }
 		  //val0rang = abs(valMax0 - valMin0);
-		pot_3.range = abs(pot_3.max - pot_3.min);
+		pot_2.range = abs(pot_2.max - pot_2.min);
+		int max_tmp = pot_2.max;
+		int min_tmp = pot_2.min;
+		if (max_tmp > min_tmp){
+			pot_2.max = max_tmp;
+			pot_2.min = min_tmp;
+		}
+		if (max_tmp < min_tmp){
+			pot_2.max = min_tmp;
+			pot_2.min = max_tmp;
+		}
 	 }
 
 	 //TIMER Interrupt setup via CAN Message
-	 if(idsave == 10 && can.dataRx[0] == 1){
-		 //Change the timer prescaler/period
-		 //timer used to generate interrupts is htim10
-		 int prescaler, period;
+	 if(idsave == 195 && can.dataRx[0] == 1){
 
-		 prescaler  = can.dataRx[1] * 256;
+		 multiplier = can.dataRx[1]*256 + can.dataRx[2];
+
+		 /*prescaler  = can.dataRx[1] * 256;
 		 prescaler += can.dataRx[2];
 		 htim10.Init.Prescaler = prescaler;
 
 		 period  = can.dataRx[3] * 256;
 		 period += can.dataRx[4];
 		 htim10.Init.Period = period;
+
+		 HAL_TIM_Base_Start(&htim10);
+		 HAL_TIM_Base_Start_IT(&htim10);*/
 	 }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 	if(htim == &htim10){
-		switch (flag){
-			case 0:
+		if(flag == 1 *multiplier){
+			//encoder_tim_interrupt(&enc);
+			LSMD9S0_accel_read(&imu);
 
-				break;
-			case 1:
-				//encoder_tim_interrupt(&enc);
-				LSMD9S0_accel_read(&imu);
-				break;
-			case 2:
-				//encoder_tim_interrupt(&enc);
-				break;
-			case 3:
-				break;
-			case 4:
-				LSMD9S0_gyro_read(&imu);
-				break;
-			case 5:
-				break;
-			case 6:
+			uint16_t val_a_x = (int)imu.Y_A_axis/10;
+			uint16_t val_a_y = (int)imu.X_A_axis/10;
+			uint16_t val_a_z = (int)imu.Z_A_axis/10;
 
-				if(steer_flag == 0){
-					calc_pot_value(&pot_2);
+			can.dataTx[0] = 0x05;
+			can.dataTx[1] = (uint8_t)val_a_x / 256;
+			can.dataTx[2] = (uint8_t)val_a_x % 256;
+			can.dataTx[3] = (uint8_t)val_a_y / 256;
+			can.dataTx[4] = (uint8_t)val_a_y % 256;
+			can.dataTx[5] = (uint8_t)val_a_z / 256;
+			can.dataTx[6] = (uint8_t)val_a_z % 256;
+			can.dataTx[7] = 0;
+			can.id = 0xC0;
+			can.size = 8;
+			CAN_Send(&can);
 
-					can.dataTx[0] = 2;
-					can.dataTx[1] = pot_2.val_100;
-					can.dataTx[2] = 0;
-					can.dataTx[3] = 0;
-					can.dataTx[4] = 0;
-					can.dataTx[5] = 0;
-					can.dataTx[6] = 0;
-					can.dataTx[7] = 0;
-					can.id = 0xC0;
-					can.size = 8;
-					CAN_Send(&can);
-					steer_flag = 1;
-				}
-				else{
-					steer_flag = 0;
-				}
-				break;
-			case 7:
-				break;
+		}else if (flag == 2 * multiplier){
+			//encoder_tim_interrupt(&enc);
+		}else if (flag == 3 * multiplier){
+
+		}else if (flag == 4 * multiplier){
+
+			LSMD9S0_gyro_read(&imu);
+
+			int val_g_x = (int)imu.X_G_axis/100;
+			int val_g_y = (int)imu.Y_G_axis/100;
+
+			can.dataTx[0] = 0x03;
+			can.dataTx[1] = val_g_x / 256;
+			can.dataTx[2] = val_g_x % 256;
+			can.dataTx[3] = imu.x_g_sign;
+			can.dataTx[4] = val_g_y / 256;
+			can.dataTx[5] = val_g_y % 256;
+			can.dataTx[6] = imu.x_g_sign;
+			can.dataTx[7] = 0;
+			can.id = 0xC0;
+			can.size = 8;
+			CAN_Send(&can);
+
+		}else if (flag == 5 * multiplier){
+
+
+
+		}else if (flag == 6 * multiplier){
+			int val_g_z = (int)imu.Z_G_axis/100;
+
+			can.dataTx[0] = 0x04;
+			can.dataTx[1] = val_g_z / 256;
+			can.dataTx[2] = val_g_z % 256;
+			can.dataTx[3] = imu.z_g_sign;
+			can.dataTx[4] = 0;
+			can.dataTx[5] = 0;
+			can.dataTx[6] = 0;
+			can.dataTx[7] = imu.error_flag;
+			can.id = 0xC0;
+			can.size = 8;
+			CAN_Send(&can);
+		}else if (flag == 7 * multiplier){
+			if(steer_flag == 0 && cal_flag == 0){
+				calc_pot_value(&pot_2);
+
+				can.dataTx[0] = 2;
+				can.dataTx[1] = pot_2.val_100;
+				can.dataTx[2] = 0;
+				can.dataTx[3] = 0;
+				can.dataTx[4] = 0;
+				can.dataTx[5] = 0;
+				can.dataTx[6] = 0;
+				can.dataTx[7] = 0;
+				can.id = 0xC0;
+				can.size = 8;
+				CAN_Send(&can);
+				steer_flag = 1;
+			}
+			else{
+				steer_flag = 0;
+			}
 		}
-		if(flag == 7){
+		if(flag >= (7 * multiplier)){
 			flag = 0;
 		}
 		else{
@@ -970,7 +1031,7 @@ void _Error_Handler(char *file, int line)
   * @retval None
   */
 void assert_failed(uint8_t* file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
