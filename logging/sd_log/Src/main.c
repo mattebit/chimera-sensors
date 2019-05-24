@@ -6,41 +6,41 @@
   ******************************************************************************
   * This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether 
+  * USER CODE END. Other portions of this file, whether
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
-  * Copyright (c) 2018 STMicroelectronics International N.V. 
+  * Copyright (c) 2018 STMicroelectronics International N.V.
   * All rights reserved.
   *
-  * Redistribution and use in source and binary forms, with or without 
+  * Redistribution and use in source and binary forms, with or without
   * modification, are permitted, provided that the following conditions are met:
   *
-  * 1. Redistribution of source code must retain the above copyright notice, 
+  * 1. Redistribution of source code must retain the above copyright notice,
   *    this list of conditions and the following disclaimer.
   * 2. Redistributions in binary form must reproduce the above copyright notice,
   *    this list of conditions and the following disclaimer in the documentation
   *    and/or other materials provided with the distribution.
-  * 3. Neither the name of STMicroelectronics nor the names of other 
-  *    contributors to this software may be used to endorse or promote products 
+  * 3. Neither the name of STMicroelectronics nor the names of other
+  *    contributors to this software may be used to endorse or promote products
   *    derived from this software without specific written permission.
-  * 4. This software, including modifications and/or derivative works of this 
+  * 4. This software, including modifications and/or derivative works of this
   *    software, must execute solely and exclusively on microcontroller or
   *    microprocessor devices manufactured by or for STMicroelectronics.
-  * 5. Redistribution and use of this software other than as permitted under 
-  *    this license is void and will automatically terminate your rights under 
-  *    this license. 
+  * 5. Redistribution and use of this software other than as permitted under
+  *    this license is void and will automatically terminate your rights under
+  *    this license.
   *
-  * THIS SOFTWARE IS PROVIDED BY STMICROELECTRONICS AND CONTRIBUTORS "AS IS" 
-  * AND ANY EXPRESS, IMPLIED OR STATUTORY WARRANTIES, INCLUDING, BUT NOT 
-  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+  * THIS SOFTWARE IS PROVIDED BY STMICROELECTRONICS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS, IMPLIED OR STATUTORY WARRANTIES, INCLUDING, BUT NOT
+  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
   * PARTICULAR PURPOSE AND NON-INFRINGEMENT OF THIRD PARTY INTELLECTUAL PROPERTY
-  * RIGHTS ARE DISCLAIMED TO THE FULLEST EXTENT PERMITTED BY LAW. IN NO EVENT 
+  * RIGHTS ARE DISCLAIMED TO THE FULLEST EXTENT PERMITTED BY LAW. IN NO EVENT
   * SHALL STMICROELECTRONICS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
   * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, 
-  * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+  * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
   * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
   * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
@@ -95,10 +95,20 @@ char filename[256] = "abcabc.txt";
 char filename_1[256]="log_names.txt";
 char txt[100];
 int interrupt_flag = 0;
+int max_files = 100;
 
 int mount_ok = 0;
 int msg_counter = 0;
 int msg_index = 0;
+
+char buffer[256]="Starting Antenna Logging\r\n";
+int bytes_read;
+
+char *pointer;
+char log_names[356];
+FRESULT res_open;
+FRESULT res_mount;
+int successfull_opening = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -179,96 +189,21 @@ int main(void)
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	HAL_Delay(500);
 
-	char buffer[256]="Starting Antenna Logging\r\n";
-	int bytes_read;
-
-	char *pointer;
-	char log_names[256];
-	FRESULT res_open;
-
 
 	print(&huart2, "---mounting---\r\n");
-	FRESULT res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
+	res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
 
-	if (res_mount == FR_OK) {
-		sprintf(filename_1,"name.txt");
-		res_open=f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-		f_read(&log_names_f, log_names, 256, (void*)&bytes_read);
+	HAL_Delay(10);
 
-		print(&huart2, "mounted, opened\r\n");
-
-		char name[256];
-
-		for(int i = 0; i < 100; i++){
-
-			sprintf(name, "Log_%d", i);
-
-			pointer = strstr(log_names,name);
-
-			if(i == 0 && pointer == NULL){
-
-				sprintf(filename, "Log_0\r\n");
-
-				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-				f_close(&log_names_f);
-
-				sprintf(filename, "Log_0.txt");
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> Log_0\r\n");
-
-				break;
-			}
-			if(pointer == NULL){
-				sprintf(filename, "Log_%d\r\n", i);
-
-				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
-				f_close(&log_names_f);
-
-				sprintf(filename, "Log_%d.txt", i);
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> ");
-				print(&huart2, filename);
-				print(&huart2, "\r\n");
-
-				break;
-			}
-			if(i==9){
-				sprintf(filename,"default.txt");
-
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
-				f_close(&loggingFile);
-				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
-
-				print(&huart2, "created -> ");
-				print(&huart2, filename);
-				print(&huart2, "\r\n");
-			}
-
-
-		}
-
-		mount_ok = 1;
-		print(&huart2, "files closed\r\n");
-	}else {
-		mount_ok = 0;
+	while(successfull_opening != 1){
+		init_sd();
 	}
 
 	HAL_CAN_Start(&hcan1);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
-	print(&huart2, "Can Init Done");
+	print(&huart2, "Can Init Done\r\n");
 
 	HAL_TIM_Base_Start(&htim6);
 	HAL_TIM_Base_Start(&htim7);
@@ -287,19 +222,21 @@ int main(void)
 		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  //HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
 		  interrupt_flag = 0;
-		  print(&huart2, "<->\r\n");
+		  char time_str[20];
+		  sprintf(time_str,"%d\r\n",printable_time);
+		  print(&huart2, time_str);
 		  //delta=__HAL_TIM_GET_COUNTER(&a_TimerInstance6); //10 microseconds needed tocexecute all the if
 		  msg_counter = 0;
-		  HAL_TIM_Base_Stop_IT(&htim6);
-		  HAL_TIM_Base_Stop_IT(&htim7);
+		  //HAL_TIM_Base_Stop_IT(&htim6);
+		  //HAL_TIM_Base_Stop_IT(&htim7);
 		  //6 microseconds needed to close and open
 		  closing_result = f_close(&loggingFile);
 		  f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_WRITE );
 
 		  //HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
 		  //HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
-		  HAL_TIM_Base_Start_IT(&htim6);
-		  HAL_TIM_Base_Start_IT(&htim7);
+		  //HAL_TIM_Base_Start_IT(&htim6);
+		  //HAL_TIM_Base_Start_IT(&htim7);
 		  if(closing_result == FR_OK){
 			  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 		  }
@@ -334,13 +271,13 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
-    /**Configure the main internal regulator output voltage 
+    /**Configure the main internal regulator output voltage
     */
   __HAL_RCC_PWR_CLK_ENABLE();
 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /**Initializes the CPU, AHB and APB busses clocks 
+    /**Initializes the CPU, AHB and APB busses clocks
     */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
@@ -356,14 +293,14 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Initializes the CPU, AHB and APB busses clocks 
+    /**Initializes the CPU, AHB and APB busses clocks
     */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
@@ -378,11 +315,11 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Configure the Systick interrupt time 
+    /**Configure the Systick interrupt time
     */
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
-    /**Configure the Systick 
+    /**Configure the Systick
     */
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
@@ -457,9 +394,9 @@ static void MX_TIM6_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 3600;
+  htim6.Init.Prescaler = 72;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 999;
+  htim6.Init.Period = 1000;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -481,9 +418,9 @@ static void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 360;
+  htim7.Init.Prescaler = 3600;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 3999;
+	htim7.Init.Period = 999;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -536,10 +473,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
@@ -554,9 +491,9 @@ static void MX_DMA_Init(void)
 
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
+/** Configure pins as
+        * Analog
+        * Input
         * Output
         * EVENT_OUT
         * EXTI
@@ -625,7 +562,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 		printable_time = time*1000+ __HAL_TIM_GET_COUNTER(&htim6);
 		msg_counter ++;
 		//sprintf(messagesToWrite[msg_index], "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\r\n", printable_time, msg_index, 000, 2, 3, 4, 5, 6, 7);
-		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", printable_time, id,RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
+		sprintf(messagesToWrite[msg_index], "%d\t%d\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\r\n", printable_time, id, RxData[0], RxData[1], RxData[2], RxData[3], RxData[4], RxData[5], RxData[6], RxData[7]);
 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 	}
 
@@ -683,6 +620,97 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
   }*/
 
+void init_sd(){
+	if(res_mount != FR_OK){
+		print(&huart2, "---mounting---\r\n");
+		res_mount = f_mount(&SDFatFS, (TCHAR const*)SDPath, 0);
+	}
+	if (res_mount == FR_OK) {
+		sprintf(filename_1, "name.txt");
+		res_open=f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+		f_read(&log_names_f, log_names, 256, (void*)&bytes_read);
+
+		print(&huart2, "mounted, opened\r\n");
+
+		sprintf(txt, "%s\r\n", log_names);
+		print(&huart2, txt);
+
+		char name[256];
+
+		f_close(&log_names_f);
+		f_open(&log_names_f, (TCHAR const*)&filename_1, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+		for(int i = 0; i < max_files; i++){
+
+			sprintf(name, "log_%d ", i);
+
+			pointer = strstr(log_names, name);
+
+			if(i == max_files){
+				sprintf(filename,"default.txt");
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "created -> default.txt\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+
+			if(i == 0 && pointer == NULL){
+
+				sprintf(filename, "log_0 \t\r\n");
+
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
+
+				sprintf(filename, "Log_0.txt");
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "\r\ncreated -> Log_0\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+			if(pointer == NULL){
+				sprintf(filename, "log_%d \t\r\n", i);
+
+				f_write(&log_names_f, filename, strlen(filename), (void*)&byteswritten);
+				f_close(&log_names_f);
+
+				sprintf(filename, "Log_%d.txt", i);
+
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+				f_write(&loggingFile, buffer, strlen(buffer), (void*)&byteswritten);
+				f_close(&loggingFile);
+				f_open(&loggingFile, (TCHAR const*)&filename, FA_OPEN_APPEND | FA_OPEN_ALWAYS | FA_READ | FA_WRITE );
+
+				print(&huart2, "\r\ncreated -> ");
+				print(&huart2, filename);
+				print(&huart2, "\r\n");
+
+				successfull_opening = 1;
+
+				break;
+			}
+		}
+
+		mount_ok = 1;
+		print(&huart2, "files closed\r\n");
+	}else {
+		mount_ok = 0;
+	}
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -714,7 +742,7 @@ void _Error_Handler(char *file, int line)
   * @retval None
   */
 void assert_failed(uint8_t* file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
