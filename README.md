@@ -24,7 +24,6 @@ clonare un github da internet
 
 -git clone 'url'   //clona una repo tramite il link
 
-
 -git add .   //aggiungo nella fase di commit tutti i file nella repo
 
 -git add 'file'    //aggiungo nella fase di commit solo i file selezionati
