@@ -1,17 +1,16 @@
-#!/urs/bin/env python
+#!/urs/bin/env python1
 
 import serial
 import serial.tools.list_ports as lst
 import time
 
-#info = lst.comports()
+info = lst.comports()
 
 ser = serial.Serial()
 
 def find_Stm():
-    info = lst.comports()
     for port in info:
-        if(port.product != None and port.product.find("STM32") != -1):
+        if(port.product.find("STM32") != -1):
             return port.device
     return 0
 
@@ -41,18 +40,20 @@ def message_counter(messages, msg):
 
     return messages
 
-def analize_data(data):
+def analize_data(time, data):
     total_msg = 0
     for couple in data:
         total_msg += couple[1]
 
     percentages = []
+    average_frequency = []
 
     for couple in data:
         percent = (couple[1] / total_msg) * 100
         percentages.append((couple[0], percent))
-
-    return total_msg, percentages
+        average_frequency.append(couple[1] / time)
+    
+    return total_msg, percentages, average_frequency
 
 
 if __name__ == "__main__":
@@ -62,9 +63,9 @@ if __name__ == "__main__":
     else:
             print("no STM32 Detected, Exit_Program")
             exit(0)
-
+    
     message_list = []
-    analisys_duration = 1
+    analisys_duration = 10
 
     print("Start analizing CAN messages")
     start_time = time.time()
@@ -75,7 +76,7 @@ if __name__ == "__main__":
 
     print("Enlapsed " + str(analisys_duration) + " seconds\n\n")
 
-    total, list_percent = analize_data(message_list)
+    total, list_percent, list_freq = analize_data(analisys_duration, message_list)
 
     total_lines = 50
     span = 5
@@ -100,14 +101,14 @@ if __name__ == "__main__":
     # CAN SPEED
     CAN_Speed = bytes_transmitted / analisys_duration
     CAN_Speed = round(CAN_Speed, 3)
-    txt = "CAN Speed"
+    txt = "CAN Speed" 
     print(txt + " " * int(total_lines- len(txt) - span) + str(CAN_Speed) + " Mb/s")
     print("-"*total_lines)
 
     # AVERAGE TIME DELTA
     average_delta = analisys_duration / total
     average_delta = round(average_delta * 1000, 4)
-    txt = "Average time delta"
+    txt = "Average time delta" 
     print(txt + " " * int(total_lines- len(txt) - span) + str(average_delta) + " ms")
     print("-"*total_lines)
 
@@ -121,8 +122,8 @@ if __name__ == "__main__":
     print("\n")
     print("id Percentual in total messages")
 
-    print("\tID\tPERCENT")
-    for idx in list_percent:
-        print ("\t" + str(idx[0]) + "\t" + str(round(idx[1], 4)))
+    print("\tID\tPERCENT (%) \t\tFREQUENCY (Hz)(n°msg/s)")
+    for i in range(len(list_percent)):
+        print ("\t" + str(list_percent[i][0]) + "\t" + str(round(list_percent[i][1], 4)) + "\t\t\t" + str(list_freq[i]))
 
 ser.close()
