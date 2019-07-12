@@ -1,16 +1,17 @@
-#!/urs/bin/env python3
+#!/urs/bin/env python
 
 import serial
 import serial.tools.list_ports as lst
 import time
 
-info = lst.comports()
+#info = lst.comports()
 
 ser = serial.Serial()
 
 def find_Stm():
+    info = lst.comports()
     for port in info:
-        if(port.product.find("STM32") != -1):
+        if(port.product != None and port.product.find("STM32") != -1):
             return port.device
     return 0
 
@@ -50,7 +51,7 @@ def analize_data(data):
     for couple in data:
         percent = (couple[1] / total_msg) * 100
         percentages.append((couple[0], percent))
-    
+
     return total_msg, percentages
 
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     else:
             print("no STM32 Detected, Exit_Program")
             exit(0)
-    
+
     message_list = []
     analisys_duration = 1
 
@@ -99,14 +100,14 @@ if __name__ == "__main__":
     # CAN SPEED
     CAN_Speed = bytes_transmitted / analisys_duration
     CAN_Speed = round(CAN_Speed, 3)
-    txt = "CAN Speed" 
+    txt = "CAN Speed"
     print(txt + " " * int(total_lines- len(txt) - span) + str(CAN_Speed) + " Mb/s")
     print("-"*total_lines)
 
     # AVERAGE TIME DELTA
     average_delta = analisys_duration / total
     average_delta = round(average_delta * 1000, 4)
-    txt = "Average time delta" 
+    txt = "Average time delta"
     print(txt + " " * int(total_lines- len(txt) - span) + str(average_delta) + " ms")
     print("-"*total_lines)
 
