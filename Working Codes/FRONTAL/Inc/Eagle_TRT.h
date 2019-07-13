@@ -68,12 +68,17 @@
 		int steer_enc_prescaler;
 		int dx_wheel;										//1 if the encoder stc is for the right wheel
 
+		long int wheel_rotation;
+		float Km;
+
 		int speed_sign;
 
 		float wheel_diameter;
 
 		double angle0;										//first angle calculated
 		double angle1;										//second angle calculated
+		double angle0_prec;
+		double angle1_prec;
 		long double speed[20];									//array to store lasts speed
 		long double average_speed;								//filtered speed
 		long double converted_data;								//angle data

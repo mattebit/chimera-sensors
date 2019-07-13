@@ -83,6 +83,7 @@
 	uint8_t CTRL_REG7_XM_ADD = 0x26;
 	uint8_t CTRL_REG7_XM_VAL = 0x00;
 
+
 	uint8_t OUT_X_L_G_ADD = 0xA8;
 	uint8_t OUT_X_H_G_ADD = 0xA9;
 	uint8_t OUT_Y_L_G_ADD = 0xAA;
@@ -194,36 +195,35 @@
 		//}
 
 		///READING ROTATION
-		//HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
-		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
-		htim2.Instance->CNT=0; //set counter to 0
-		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
-		HAL_SPI_Transmit(imu->hspi, &(imu->REG_L), 1, 10); ///Writing LOW address
-		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_L_VAL, 1, 10); ///Saving LOW data
-		htim2.Instance->CNT=0; //set counter to 0
-		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
-		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
-		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); 					///CS_InUse to 0
+		htim2.Instance->CNT=0; 																		//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
 
+		HAL_SPI_Transmit(imu->hspi, &(imu->REG_L), 1, 10); 											///Writing LOW address
+		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_L_VAL, 1, 10); 									///Saving LOW data
 
-		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
-		htim2.Instance->CNT=0; //set counter to 0
-		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
-		HAL_SPI_Transmit(imu->hspi, &(imu->REG_H), 1, 10); ///Writing HIGH address
-		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_H_VAL, 1, 10); ///Saving HIGH data
-		htim2.Instance->CNT=0; //set counter to 0
-		while(htim2.Instance->CNT<=20){} //delay (must be >5ns)
-		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
-		//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+		htim2.Instance->CNT=0; 																	//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
+		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); 					///CS_InUse to 1
+
+		htim2.Instance->CNT=0; 																		//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
+		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); 					///CS_InUse to 0
+
+		HAL_SPI_Transmit(imu->hspi, &(imu->REG_H), 1, 10); 											///Writing HIGH address
+		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_H_VAL, 1, 10); 									///Saving HIGH data
+
+		htim2.Instance->CNT=0; 																		//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
+
+		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); 					///CS_InUse to 1
 
 
 
 		///CALCULATING ROTATION
-		float axis = (OUT_H_VAL << 8) | OUT_L_VAL;	///Calculating axis value shifting and using a logic OR
-		if (axis > 32767){ ///Generating positive and negative value of rotation
-			axis = axis - 65536;
-		}
+		uint32_t value = (OUT_H_VAL << 8) | OUT_L_VAL;	///Calculating axis value shifting and using a logic OR
+		float axis = value;
+
 		//axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
 
 		/*char imu_str_1[100];
@@ -333,14 +333,28 @@
 		/*int16_t val_g_x = imu->Y_G_axis * 100;
 		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
 		int16_t val_g_z = imu->Z_G_axis * 100;*/
+/*
+		imu->X_G_axis -= 32768;
+		imu->Y_G_axis -= 32768;
+		imu->Z_G_axis -= 32768;
 
-		shift_array(imu->X_G_axis_array, 20, imu->X_G_axis);
-		shift_array(imu->Y_G_axis_array, 20, imu->Y_G_axis);
-		shift_array(imu->Z_G_axis_array, 20, imu->Z_G_axis);
+		if(imu->X_G_axis < 0){
+			imu->X_G_axis += 32768;
+		}
+		if(imu->Y_G_axis < 0){
+			imu->Y_G_axis += 32768;
+		}
+		if(imu->Z_G_axis < 0){
+			imu->Z_G_axis += 32768;
+		}*/
 
-		imu->X_G_axis = dynamic_average(imu->X_G_axis_array, 20);
-		imu->Y_G_axis = dynamic_average(imu->Y_G_axis_array, 20);
-		imu->Z_G_axis = dynamic_average(imu->Z_G_axis_array, 20);
+		shift_array(imu->X_G_axis_array, 10, imu->X_G_axis);
+		shift_array(imu->Y_G_axis_array, 10, imu->Y_G_axis);
+		shift_array(imu->Z_G_axis_array, 10, imu->Z_G_axis);
+
+		imu->X_G_axis = dynamic_average(imu->X_G_axis_array, 10);
+		imu->Y_G_axis = dynamic_average(imu->Y_G_axis_array, 10);
+		imu->Z_G_axis = dynamic_average(imu->Z_G_axis_array, 10);
 
 		if(imu->X_G_axis >= 0){
 			imu->x_g_sign = 0;
@@ -400,14 +414,28 @@
 		imu->REG_L = OUT_Z_L_A_ADD;
 		imu->Z_A_axis = LSMD9S0_read(imu);
 		//imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+/*
+		imu->X_A_axis -= 32768;
+		imu->Y_A_axis -= 32768;
+		imu->Z_A_axis -= 32768;
 
-		shift_array(imu->X_A_axis_array, 20, imu->X_A_axis);
-		shift_array(imu->Y_A_axis_array, 20, imu->Y_A_axis);
-		shift_array(imu->Z_A_axis_array, 20, imu->Z_A_axis);
+		if(imu->X_A_axis < 0){
+			imu->X_A_axis += 32768;
+		}
+		if(imu->Y_A_axis < 0){
+			imu->Y_A_axis += 32768;
+		}
+		if(imu->Z_A_axis < 0){
+			imu->Z_A_axis += 32768;
+		}*/
 
-		imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 20);
-		imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 20);
-		imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 20);
+		shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
+		shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
+		shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
+
+		imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
+		imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
+		imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);
 /*
 		if(imu->X_A_axis >= 0){
 			imu->x_a_sign = 0;
@@ -430,23 +458,6 @@
 			imu->z_a_sign = 1;
 			imu->Z_A_axis *= -1;
 		}*/
-
-		/*char imu_str_1[100];
-
-		sprintf(imu_str_1,"%d\t%d\t%d\n\r", val_a_x, val_a_y, val_a_z);
-		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
-/*
-		can.dataTx[0] = 0x06;
-		can.dataTx[1] = (uint8_t)val_a_z / 256;
-		can.dataTx[2] = (uint8_t)val_a_z % 256;
-		can.dataTx[3] = imu->z_a_sign;			//y and x accelerometer data are swapped, x and y sign no
-		can.dataTx[4] = 0;
-		can.dataTx[5] = 0;
-		can.dataTx[6] = 0;			//y and x accelerometer data are swapped, x and y sign no
-		can.dataTx[7] = 0;
-		can.id = 0xC0;
-		can.size = 8;
-		CAN_Send(&can);*/
 
 	}
 
@@ -869,57 +880,37 @@
 
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
-		}
-/*
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
-		}
-*/
-		for(int i = 0; i <= enc->data_size; i++){
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
+		for (int i = 0; i < enc->data_size; i++){
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-			if(i < enc->data_size){
-				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){	//reading the data input
-					enc->Data[i] = 1;
-				}
-				else{
-					enc->Data[i] = 0;
-				}
+			enc->Data[i] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
-				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
-
-			}
-			else{
-
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
-				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
-
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
-
-				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET){
-					enc->error_flag = 1;
-				}
-				else{
-					enc->error_flag = 0;
-				}
-
-				enc->converted_data = bin_dec(enc->Data, enc->data_size);
-				enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
-				enc->converted_data /= 2;
-			}
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
+			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 		}
+
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+
+		enc->error_flag = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
+
+		enc->converted_data = bin_dec(enc->Data, enc->data_size);
+		enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
+		enc->converted_data /= 2;
 
 		return enc->converted_data;
 	}
@@ -934,10 +925,12 @@
 
 
 		if(enc->interrupt_flag == 0){									//every 3 times request the angle from encoder
+			enc->angle0_prec = enc->angle0;
 			enc->angle0 = read_encoder(enc);
 		}
 		else{
 			if(enc->interrupt_flag == 1){									//every 3 times request the angle from encoder
+				enc->angle1_prec = enc->angle1;
 				enc->angle1 = read_encoder(enc);
 			}
 			else{
@@ -952,25 +945,11 @@
 					}else{
 						enc->speed_sign = 0;
 					}
-
-					uint16_t speed_Send = enc->average_speed;
-
-					can.dataTx[0] = 0x06;
-					can.dataTx[1] = speed_Send / 256;
-					can.dataTx[2] = speed_Send % 256;
-					can.dataTx[3] = enc->speed_sign;
-					can.dataTx[4] = 0;
-					can.dataTx[5] = 0;
-					can.dataTx[6] = enc->error_flag;
-					can.dataTx[7] = enc->steer_enc_prescaler;
-					can.id = 0xD0;
-					can.size = 8;
-					CAN_Send(&can);
 				}
 			}
 		}
 
-		if(enc->interrupt_flag == 2){
+		if(enc->interrupt_flag >= 2){
 			enc->interrupt_flag = 0;
 		}
 		else{
@@ -1005,37 +984,27 @@
 
 		meters_per_second = (d_angle/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
 		meters_per_second /= dt;
-		meters_per_second *= 10000;
-		meters_per_second = round(meters_per_second)/1000;
+		meters_per_second = round((meters_per_second*1000))/1000;
 		meters_per_second *= 3.6;
 
 		enc->angle0 /= 100;
 		enc->angle1 /= 100;
 
-		/*
-		if(meters_per_second<0){
-			cont_retro++;
-		}else{
-			cont_retro=0;
+		if(enc->average_speed < 0.5 || enc->average_speed > 0.5){
+			if((enc->angle0_prec <= 361 && enc->angle0_prec > 350) && (enc->angle0 >= -1 && enc->angle0 < 10)){
+				enc->wheel_rotation ++;
+				enc->Km += enc->wheel_diameter/1000;
+			}
+			if((enc->angle0_prec >= -1 && enc->angle0_prec < 10) && (enc->angle0 <= 361 && enc->angle0 > 350)){
+				enc->wheel_rotation ++;
+				enc->Km += (3.14 * enc->wheel_diameter)/1000;
+			}
 		}
-		if(cont_retro<500 && meters_per_second<0){
-			meters_per_second=abs(meters_per_second);
-		}
-		if(meters_per_second>=enc->average_speed*2 && enc->average_speed!=0){
-			meters_per_second=enc->average_speed;
-		}*/
-		/*
-		if(meters_per_second<0){
-			cont_retro++;
-		}else{
-			cont_retro=0;
-		}
-		if(cont_retro < 50 && meters_per_second<0){
-			meters_per_second=abs(meters_per_second);
-		}*/
+
 /*
-		if(meters_per_second - enc->average_speed > 100 || meters_per_second - enc->average_speed < -100){
-			meters_per_second = enc->average_speed;
+		if(((enc->angle0 < 360 && enc->angle0 > 350) && (enc->angle1 > 0 && enc->angle1 < 10)) || ((enc->angle1 < 360 && enc->angle1 > 350) && (enc->angle0 > 0 && enc->angle0 < 10))){
+			enc->wheel_rotation ++;
+			enc->Km += enc->wheel_diameter/1000;
 		}*/
 
 		if((enc->angle0 < 4 && enc->angle1 > 355) || (enc->angle1 < 4 && enc->angle0 > 355)){
@@ -1046,26 +1015,19 @@
 			enc->average_speed = dynamic_average(enc->speed, 15);
 			enc->average_speed=meters_per_second;
 		}
-		//if((enc->angle0 < 355 || enc->angle1 > 5) || (enc->angle1 < 355 || enc->angle0 > 5)){
-		//if(abs(meters_per_second) < (enc->average_speed * 10) && enc->speed[8] >= 0){
-		//if(abs(meters_per_second - enc->speed[14]) <= enc->speed[14]*10){
-
-		//}
-		//}
-
 	}
 
 	pot_stc pot_1;
 	pot_stc pot_2;
 	pot_stc pot_3;
-void calc_pot_value(pot_stc *pot) {
+	void calc_pot_value(pot_stc *pot) {
 
-	pot->val_100 = round(100 - (abs(pot->val - pot->min) * 100 / (pot->range))); //val0_100 -->STEER --> 0 = SX | 100 = DX
-	if (pot->val <= pot->min) {
-		pot->val_100 = 100;
+		pot->val_100 = round(100 - (abs(pot->val - pot->min) * 100 / (pot->range))); //val0_100 -->STEER --> 0 = SX | 100 = DX
+		if (pot->val <= pot->min) {
+			pot->val_100 = 100;
 		}
-	if (pot->val >= pot->max) {
-		pot->val_100 = 0;
+		if (pot->val >= pot->max) {
+			pot->val_100 = 0;
 		}
 	}
 

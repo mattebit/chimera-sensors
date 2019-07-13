@@ -232,14 +232,16 @@ int main(void)
 	pot_2.min = 2350;
 	pot_2.range = abs(pot_2.max - pot_2.min);
 
-  enc.dx_wheel = 1;
+  enc.dx_wheel = 0;
   enc.interrupt_flag = 0;
   enc.TimerInstance = &a_TimerInstance3;
   enc.average_speed = 0;
-  enc.wheel_diameter = 4064;
-  enc.refresh = 1000;
-  enc.data_size = 14;
+  enc.wheel_diameter = 395;
+  enc.refresh = 100;
+  enc.data_size = 15;
   enc.clock_period = (36 / htim3.Init.Prescaler);
+  enc.wheel_rotation = 0;
+  enc.Km = 0;
 
   //enc.htim = &htim2;
 
@@ -274,7 +276,7 @@ int main(void)
   LSMD9S0_gyro_init(&imu);
   LSMD9S0_check(&imu);
 
-
+  uint32_t start_time = HAL_GetTick();
 
   while (1)
   {
@@ -292,9 +294,37 @@ int main(void)
 	  //sprintf(txt, "%d\t%d\t%d\t%d\t%d\r\n", (int)pot_2.max, (int)pot_2.min, (int)pot_2.val, (int)pot_2.val_100, (int)pot_2.range);
 	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 	  //HAL_Delay(100);
-	  char txt_mul [100];
-	  sprintf(txt_mul,"%d\r\n", multiplier);
-	  HAL_UART_Transmit(&huart2, (uint8_t*)txt_mul, strlen(txt_mul), 10);
+	  char txt[100];
+	  //sprintf(txt, "%d\t%d\t%d\r\n", (int)enc.wheel_rotation, (int)enc.Km, (int)(enc.angle0 * 100));
+	  //sprintf(txt, "%d\r\n", (int)(enc.angle0));
+	  /*
+	  int a[14];
+	  for (int i = 0; i < 14; i++){
+		  a[i] = enc.Data[i];
+	  }*/
+
+
+	  if(HAL_GetTick() - start_time >= 1000){
+		  uint16_t Km = enc.Km;
+		  uint16_t rotations = enc.wheel_rotation;
+		  can.dataTx[0] = 0x08;
+		  can.dataTx[1] = Km / 256;
+		  can.dataTx[2] = Km % 256;
+		  can.dataTx[3] = rotations / 256;
+		  can.dataTx[4] = rotations % 256;
+		  can.dataTx[5] = 0;
+		  can.dataTx[6] = 0;
+		  can.dataTx[7] = 0;
+		  can.id = 0xD0;
+		  can.size = 8;
+		  CAN_Send(&can);
+
+		  start_time = HAL_GetTick();
+	  }
+	  sprintf(txt, "%d\r\n", (int)imu.X_A_axis);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+
+	  //sprintf(txt, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d\t%d\t%d\r\n", a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], enc.error_flag, (int)enc.angle0);
 
   }
   /* USER CODE END 3 */
@@ -653,7 +683,7 @@ static void MX_TIM7_Init(void)
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 36;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 2000;
+  htim7.Init.Period = 200;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -673,9 +703,9 @@ static void MX_TIM10_Init(void)
 {
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 36;
+  htim10.Init.Prescaler = 360;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 500;
+  htim10.Init.Period = 2000;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -911,24 +941,36 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			//encoder_tim_interrupt(&enc);
 			LSMD9S0_accel_read(&imu);
 
-			uint16_t val_a_x = (int)imu.Y_A_axis/10;
-			uint16_t val_a_y = (int)imu.X_A_axis/10;
-			uint16_t val_a_z = (int)imu.Z_A_axis/10;
+			uint16_t val_a_x = (int)imu.Y_A_axis;
+			uint16_t val_a_y = (int)imu.X_A_axis;
+			uint16_t val_a_z = (int)imu.Z_A_axis;
 
 			can.dataTx[0] = 0x05;
-			can.dataTx[1] = (uint8_t)val_a_x / 256;
-			can.dataTx[2] = (uint8_t)val_a_x % 256;
-			can.dataTx[3] = (uint8_t)val_a_y / 256;
-			can.dataTx[4] = (uint8_t)val_a_y % 256;
-			can.dataTx[5] = (uint8_t)val_a_z / 256;
-			can.dataTx[6] = (uint8_t)val_a_z % 256;
+			can.dataTx[1] = val_a_x / 256;
+			can.dataTx[2] = val_a_x % 256;
+			can.dataTx[3] = val_a_y / 256;
+			can.dataTx[4] = val_a_y % 256;
+			can.dataTx[5] = val_a_z / 256;
+			can.dataTx[6] = val_a_z % 256;
 			can.dataTx[7] = 0;
 			can.id = 0xC0;
 			can.size = 8;
 			CAN_Send(&can);
 
 		}else if (flag == 2 * multiplier){
-			//encoder_tim_interrupt(&enc);
+			uint16_t speed_Send = enc.average_speed;
+
+			can.dataTx[0] = 0x06;
+			can.dataTx[1] = speed_Send / 256;
+			can.dataTx[2] = speed_Send % 256;
+			can.dataTx[3] = enc.speed_sign;
+			can.dataTx[4] = 0;
+			can.dataTx[5] = 0;
+			can.dataTx[6] = enc.error_flag;
+			can.dataTx[7] = enc.steer_enc_prescaler;
+			can.id = 0xD0;
+			can.size = 8;
+			CAN_Send(&can);
 		}else if (flag == 3 * multiplier){
 
 		}else if (flag == 4 * multiplier){
@@ -968,6 +1010,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			can.id = 0xC0;
 			can.size = 8;
 			CAN_Send(&can);
+
 		}else if (flag == 7 * multiplier){
 			if(steer_flag == 0 && cal_flag == 0){
 				calc_pot_value(&pot_2);
