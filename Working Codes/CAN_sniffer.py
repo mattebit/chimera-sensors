@@ -1,8 +1,10 @@
 #!/urs/bin/env python
 
 import serial
+from termcolor2 import c
 import serial.tools.list_ports as lst
 import time
+import curses
 
 ser = serial.Serial()
 
@@ -24,26 +26,38 @@ def parse_message(msg):
     msg = msg.split("\t")
     return msg
 
+def message_append(messages, msg, time):
 
-def message_append(messages, msg):
+    msg[0] = time
+
     if len(messages) > 0:
         for i in range(len(messages)):
-            couple = messages[i]
-            if couple[0] == msg[1]:
-                couple = (couple[0], couple[1] + 1)
-                messages[i] = couple
+            if messages[i][2] == msg[1]:
+                dt = int((time - float(messages[i][1]))*1000000)/1000
+                msg = [dt] + msg
+                messages[i] = msg
                 return messages
             else:
                 continue
 
-    messages.append((msg[1], 1))
+    msg = [time] + msg
+    messages.append(msg)
 
     return messages
 
+def print_messages(list_):
+    for i in range(len(list_)):
+        string = ""
+        for num in list_[i]:
+            string += str(num) + " \t"
+        for j in range(i):
+            print("\x1b[A", end = (""))
+        print(c(string, "white"))
+
 if __name__ == "__main__":
-    print("main")
     if find_Stm() != 0:
         open_device(find_Stm())
+        print("Port Opened")
     else:
             print("no STM32 Detected, Exit_Program")
             exit(0)
@@ -51,11 +65,19 @@ if __name__ == "__main__":
     message_list = []
     analisys_duration = 1
 
-    print("Start analizing CAN messages")
+    #print(c("Start SNIFFING COCAINE = LA DROGA").blink.red.underline)
+    start_time = time.time()
+    secondary_timer = 0
     while True:
+        current_sec = round(time.time() - start_time, 5)
+
         msg = str(ser.readline(), 'ascii')
         msg = parse_message(msg)
-        message_list = message_append(message_list, msg)
-        print(message_list)
+        message_list = message_append(message_list, msg, current_sec)
+
+        if current_sec - secondary_timer > 1:
+            print_messages(message_list)
+            secondary_timer = current_sec
+        #print(message_list[0][2])
 
 ser.close()
