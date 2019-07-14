@@ -329,7 +329,7 @@ int main(void)
 		  SCS_Send = 1;
 	  }
 	  sprintf(txt, "val0: %d , val1: %d , val0_100: %d, val1_100: %d, SCS: %d, SCS1: %d, SCS_send: %d \r\n",
-			  	  pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100, SCS, SCS1, SCS_Send);
+			  	  pot_1.val, pot_2.val, pot_1.val_100, 100 - pot_2.val_100, SCS, SCS1, SCS_Send);
 	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
   }
 
@@ -814,8 +814,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		case 3:
 			if (check != 1){
 			  can.dataTx[0] = 0x01;
-			  can.dataTx[1] = pot_1.val_100;
-			  can.dataTx[2] = pot_2.val_100;
+			  can.dataTx[1] = pot_2.val_100;
+			  can.dataTx[2] = pot_1.val_100;
 			  can.dataTx[3] = steer_wheel_prescaler;
 			  can.dataTx[4] = 0;
 			  can.dataTx[5] = 0;
