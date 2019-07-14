@@ -96,6 +96,8 @@ char val0[256];
 char value_Error[256];
 char txt[500];
 
+int multiplier = 1;
+
 int pc6 = 0;
 
 int timer_flag = 0;
@@ -513,9 +515,9 @@ static void MX_TIM2_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 36;
+  htim2.Init.Prescaler = 360;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
+  htim2.Init.Period = 2000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -783,6 +785,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  pot_1.range = abs(pot_1.max - pot_1.min);
 			  pot_2.range = abs(pot_2.max - pot_2.min);
 		  }
+		  if(idsave==195 && can.dataRx[0]==0){
+			  multiplier = can.dataRx[1] * 256 + can.dataRx[2];
+		  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
@@ -842,6 +847,62 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			timer_flag = 0;
 			break;
 		}
+		if(timer_flag == 1* multiplier){
+				can.dataTx[0] = 0x02;
+				can.dataTx[1] = pc6;
+				can.dataTx[2] = 0;
+				can.dataTx[3] = steer_wheel_prescaler;
+				can.dataTx[4] = 0;
+				can.dataTx[5] = 0;
+				can.dataTx[6] = SCS_Send;
+				can.dataTx[7] = 0;
+				can.id = 0xB0;
+				can.size = 8;
+				CAN_Send(&can);
+				timer_flag ++;
+				//SCS = 0;
+				//SCS_Send = 0;
+		}
+		if(timer_flag == 2* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag == 3* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag == 4* multiplier){
+			if (check != 1){
+			  can.dataTx[0] = 0x01;
+			  can.dataTx[1] = pot_2.val_100;
+			  can.dataTx[2] = pot_1.val_100;
+			  can.dataTx[3] = steer_wheel_prescaler;
+			  can.dataTx[4] = 0;
+			  can.dataTx[5] = 0;
+			  can.dataTx[6] = SCS_Send;
+			  can.dataTx[7] = 0;
+			  can.id = 0xB0;
+			  can.size = 8;
+			  CAN_Send(&can);
+			  timer_flag ++;
+			  //SCS = 0;
+			  //SCS_Send = 0;
+			}
+		}
+		if(timer_flag == 5* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag == 6* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag == 7* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag == 8* multiplier){
+				timer_flag ++;
+		}
+		if(timer_flag > 8*multiplier){
+			timer_flag = 0;
+		}
+
 	}
 }
 
