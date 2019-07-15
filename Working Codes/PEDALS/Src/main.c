@@ -517,7 +517,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 360;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 2000;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
@@ -792,7 +792,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
-	if(htim == &htim2){
+	if(htim == &htim2){/*
 		switch(timer_flag){
 		case 0:
 			can.dataTx[0] = 0x02;
@@ -846,7 +846,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		case 7:
 			timer_flag = 0;
 			break;
-		}
+		}*/
 		if(timer_flag == 1* multiplier){
 				can.dataTx[0] = 0x02;
 				can.dataTx[1] = pc6;
@@ -859,15 +859,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				can.id = 0xB0;
 				can.size = 8;
 				CAN_Send(&can);
-				timer_flag ++;
 				//SCS = 0;
 				//SCS_Send = 0;
 		}
 		if(timer_flag == 2* multiplier){
-				timer_flag ++;
 		}
 		if(timer_flag == 3* multiplier){
-				timer_flag ++;
 		}
 		if(timer_flag == 4* multiplier){
 			if (check != 1){
@@ -882,25 +879,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			  can.id = 0xB0;
 			  can.size = 8;
 			  CAN_Send(&can);
-			  timer_flag ++;
 			  //SCS = 0;
 			  //SCS_Send = 0;
 			}
 		}
 		if(timer_flag == 5* multiplier){
-				timer_flag ++;
 		}
 		if(timer_flag == 6* multiplier){
-				timer_flag ++;
 		}
 		if(timer_flag == 7* multiplier){
-				timer_flag ++;
 		}
 		if(timer_flag == 8* multiplier){
-				timer_flag ++;
 		}
+
 		if(timer_flag > 8*multiplier){
 			timer_flag = 0;
+		}
+		else{
+			timer_flag ++;
 		}
 
 	}

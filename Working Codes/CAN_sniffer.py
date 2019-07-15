@@ -46,13 +46,18 @@ def message_append(messages, msg, time):
     return messages
 
 def print_messages(list_):
+    print("\r\n"*100)
     for i in range(len(list_)):
-        string = ""
+        # string = ""
+        # for num in list_[i]:
+        #     string += str(num) + " \t"
+        # for j in range(i):
+        #     print("\x1b[A", end = (""))
+        # print(c(string, "white"))
         for num in list_[i]:
-            string += str(num) + " \t"
-        for j in range(i):
-            print("\x1b[A", end = (""))
-        print(c(string, "white"))
+            print(str(num) + "\t", end="")
+        print("")
+        #print(list_[i])
 
 if __name__ == "__main__":
     if find_Stm() != 0:
