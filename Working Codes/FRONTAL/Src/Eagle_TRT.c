@@ -868,87 +868,95 @@
 	extern UART_HandleTypeDef huart2;
 	extern char txt;
 
-	//function to request data from encoder via SSI communication
-	//this function is called from the interrupt callback of the timer that you are using for the encoder
-	//the tim used for this function must be initialized at most at 2 microsecond per tick
-	//lower the number of microseconds per tick better it is
-	//TimerInstance = struct of the tim used for the encoder
+	// Function to request data from encoder via SSI communication
+	// This function is called from the interrupt callback of the timer that you are using for the encoder
+	// The tim used for this function must be initialized at most at 2 microsecond per tick
+	// Lower the number of microseconds per tick better it is
+	// TimerInstance = struct of the tim used for the encoder
 	enc_stc enc;
 	double read_encoder(enc_stc *enc){
 
 		enc->clock_period = 2;
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
-		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock was high: reset to low
-		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	//clock was high: reset to low
-		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
+
+		// Starting the clock to retrieve 14 bits from the sensor
 		for (int i = 0; i < enc->data_size; i++){
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
-			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+
+			// CLOCK HIGH
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
+			// Set the bit as the pin state (0 or 1)
 			enc->Data[i] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
 
+			// CLOCK LOW
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
+			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 		}
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);	//clock set to high to request the bit
-		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+		// Requesting an other bit for the aventual error sent from the sensor
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
 		enc->error_flag = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
 
+		// Converting bits into number and converting it into angle in degrees (0 ~ 359)
 		enc->converted_data = bin_dec(enc->Data, enc->data_size);
-		enc->converted_data = enc->converted_data / 45.5055;							//conversions from raw data to angle
-		enc->converted_data /= 2;
+		enc->converted_data = enc->converted_data / 45.5055;
 
 		return enc->converted_data;
 	}
 
-	//interrupt function of tim 2
-	//call this function in the timer callback function of the stm
-	//htim = timer TimerInstance of the timer that you are using for the clock of the encoder
-	//interrupt_flag = initilize a int variable in the main file
-	//angles_array = array to store the last angles
-	//speed = pointer to the speed value
+	// Interrupt function of tim 2
+	// Call this function in the timer callback function of the stm
+	// htim = timer TimerInstance of the timer that you are using for the clock of the encoder
+	// Interrupt_flag = initilize a int variable in the main file
+	// Angles_array = array to store the last angles
+	// Speed = pointer to the speed value
 	void encoder_tim_interrupt(enc_stc* enc){
 
 
-		if(enc->interrupt_flag == 0){									//every 3 times request the angle from encoder
+		if(enc->interrupt_flag == 0){
+			// Requesting first angle
 			enc->angle0_prec = enc->angle0;
 			enc->angle0 = read_encoder(enc);
 		}
-		else{
-			if(enc->interrupt_flag == 1){									//every 3 times request the angle from encoder
-				enc->angle1_prec = enc->angle1;
-				enc->angle1 = read_encoder(enc);
-			}
-			else{
-				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
-					get_speed_encoder(enc);
+		else if(enc->interrupt_flag == 1){
+			// Requesting second angle
+			enc->angle1_prec = enc->angle1;
+			enc->angle1 = read_encoder(enc);
+		}
+		else if(enc->interrupt_flag == 2){
+			// Calculate speed from the two angles
+			get_speed_encoder(enc);
 
-					enc->average_speed *= 10;
+			enc->average_speed *= 10;
 
-					if(enc->average_speed < 0){
-						enc->average_speed *= -1;
-						enc->speed_sign = 1;
-					}else{
-						enc->speed_sign = 0;
-					}
-				}
+			// Get the speed sign to be sent in CAN
+			if(enc->average_speed < 0){
+				enc->average_speed *= -1;
+				enc->speed_sign = 1;
+			}else{
+				enc->speed_sign = 0;
 			}
 		}
 
+		// Cycle between steps
 		if(enc->interrupt_flag >= 2){
 			enc->interrupt_flag = 0;
 		}
@@ -957,23 +965,21 @@
 		}
 	}
 
-	//funtion to calculate the speed
-	//angle0 = last angle calculated
-	//angle1 = previous angle calculated
-	//refresh = delta-time from the two calculations, express it in microseconds
-	//wheel_diameter = diameter of the wheel expressed meters
-	int cont_retro=0,avanti=0,indietro=0;
+	// Funtion to calculate the speed
+	// Angle0 = last angle calculated
+	// Angle1 = previous angle calculated
+	// Refresh = delta-time from the two calculations, express it in microseconds
+	// Wheel_diameter = diameter of the wheel expressed meters
 	void get_speed_encoder(enc_stc* enc){
 
-		char text[100];
-		long double meters_per_second = 0;
+		long double speed = 0;
 		double dt = 0;
 		double d_angle;
 
-		dt = enc->refresh;
+		dt = enc->samle_delta_time;
 
-		enc->angle0 *= 100;
-		enc->angle1 *= 100;
+		enc->angle0 *= 1000;
+		enc->angle1 *= 1000;
 
 		if(enc->dx_wheel == 1){
 			d_angle = enc->angle1 - enc->angle0;
@@ -982,18 +988,21 @@
 			d_angle = enc->angle0 - enc->angle1;
 		}
 
-		meters_per_second = (d_angle/360)*3.1415*(enc->wheel_diameter);			//calculating the speed using the circumference arc
-		meters_per_second /= dt;
-		meters_per_second = round((meters_per_second*1000))/1000;
-		meters_per_second *= 3.6;
+		// Calculating rad/s, then m/s, then Km/h
+		speed = (d_angle/360)*3.1415*(enc->wheel_diameter);
+		speed *= 3.6;
+		speed /= dt;
+		speed = round((speed*10000))/100000;
 
-		enc->angle0 /= 100;
-		enc->angle1 /= 100;
+		enc->angle0 /= 1000;
+		enc->angle1 /= 1000;
 
-		if(enc->average_speed < 0.5 || enc->average_speed > 0.5){
+		// Start detecting eventual new wheel roation
+		// If the speed is too low, don't count rotations
+		if(enc->average_speed < -0.5 || enc->average_speed > 0.5){
 			if((enc->angle0_prec <= 361 && enc->angle0_prec > 350) && (enc->angle0 >= -1 && enc->angle0 < 10)){
 				enc->wheel_rotation ++;
-				enc->Km += enc->wheel_diameter/1000;
+				enc->Km += (3.14 * enc->wheel_diameter)/1000;
 			}
 			if((enc->angle0_prec >= -1 && enc->angle0_prec < 10) && (enc->angle0 <= 361 && enc->angle0 > 350)){
 				enc->wheel_rotation ++;
@@ -1001,19 +1010,13 @@
 			}
 		}
 
-/*
-		if(((enc->angle0 < 360 && enc->angle0 > 350) && (enc->angle1 > 0 && enc->angle1 < 10)) || ((enc->angle1 < 360 && enc->angle1 > 350) && (enc->angle0 > 0 && enc->angle0 < 10))){
-			enc->wheel_rotation ++;
-			enc->Km += enc->wheel_diameter/1000;
-		}*/
-
+		// Don't use the speed if the two samples are near to 0/360
 		if((enc->angle0 < 4 && enc->angle1 > 355) || (enc->angle1 < 4 && enc->angle0 > 355)){
 
 		}
 		else{
-			shift_array(enc->speed, 15, meters_per_second);
-			enc->average_speed = dynamic_average(enc->speed, 15);
-			enc->average_speed=meters_per_second;
+			shift_array(enc->speed_array, 50, speed);
+			enc->average_speed = dynamic_average(enc->speed_array, 50);
 		}
 	}
 
@@ -1070,7 +1073,6 @@
 	//max1 = pointer to the maximum value of the APPS1
 	//max2 = pointer to the maximum value of the APPS2
 	void set_max(pot_stc *pot_1){
-
 		pot_1->max = pot_1->val;
 	}
 
@@ -1079,7 +1081,6 @@
 	//min1 = pointer to the minimum value of the APPS1
 	//min2 = pointer to the minimum value of the APPS2
 	void set_min(pot_stc *pot_1){
-
 		pot_1->min = pot_1->val;
 	}
 

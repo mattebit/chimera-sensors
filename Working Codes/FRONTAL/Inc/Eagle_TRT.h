@@ -59,14 +59,14 @@
 #include "stm32f4xx_hal_tim.h"
 	typedef struct{
 
-		int refresh;										//time between the two calculations of the angles
-		int data_size;										//bits sent from the sensor. exclude the error flag
-		int error_flag;										//return value if the encoder has errors
-		int interrupt_flag;									//flag to switch from angles to speed calculations
-		int clock_period;									//period of the clock generated
+		int samle_delta_time;								// Time between the two calculations of the angles
+		int data_size;										// Bits sent from the sensor. exclude the error flag
+		int error_flag;										// Return value if the encoder has errors
+		int interrupt_flag;									// Flag to switch from angles to speed calculations
+		int clock_period;									// Period of the clock generated
 		int Data[20];
 		int steer_enc_prescaler;
-		int dx_wheel;										//1 if the encoder stc is for the right wheel
+		int dx_wheel;										// 1 if the encoder stc is for the right wheel
 
 		long int wheel_rotation;
 		float Km;
@@ -75,15 +75,15 @@
 
 		float wheel_diameter;
 
-		double angle0;										//first angle calculated
-		double angle1;										//second angle calculated
+		double angle0;										// First angle calculated
+		double angle1;										// Second angle calculated
 		double angle0_prec;
 		double angle1_prec;
-		long double speed[20];									//array to store lasts speed
-		long double average_speed;								//filtered speed
-		long double converted_data;								//angle data
+		long double speed_array[100];						// Array to store lasts speed
+		long double average_speed;							// Filtered speed
+		long double converted_data;							// Angle data
 
-		TIM_HandleTypeDef *TimerInstance;					//instance to the timer used to generate the clock
+		TIM_HandleTypeDef *TimerInstance;					// Instance to the timer used to generate the clock
 
 	}enc_stc;
 
