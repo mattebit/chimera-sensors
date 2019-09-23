@@ -83,7 +83,32 @@
 	uint8_t CTRL_REG7_XM_ADD = 0x26;
 	uint8_t CTRL_REG7_XM_VAL = 0x00;
 
+	// GYROSCOPE SCALE SETTING
+	uint8_t CTRL_REG4_G = 0x23;
 
+	uint8_t SCL_G_245 = 0x00;
+	uint8_t SCL_G_500 = 0x10;
+	uint8_t SCL_G_1000 = 0x20;
+	uint8_t SCL_G_2000 = 0x30;
+
+	// ACCELERORMETER SCALE SETTING
+	uint8_t CTRL_REG2_XM = 0x21;
+
+	uint8_t SCL_A_2 = 0x00;
+	uint8_t SCL_A_4 = 0x08;
+	uint8_t SCL_A_6 = 0x10;
+	uint8_t SCL_A_8 = 0x18;
+	uint8_t SCL_A_16 = 0x20;
+
+	// MAGNETORMETER SCALE SETTING
+	uint8_t CTRL_REG6_XM = 0x25;
+
+	uint8_t SCL_M_2 = 0x00;
+	uint8_t SCL_M_4 = 0x20;
+	uint8_t SCL_M_8 = 0x40;
+	uint8_t SCL_M_12 = 0x60;
+
+	// OUTPUT REG
 	uint8_t OUT_X_L_G_ADD = 0xA8;
 	uint8_t OUT_X_H_G_ADD = 0xA9;
 	uint8_t OUT_Y_L_G_ADD = 0xAA;
@@ -100,61 +125,39 @@
 
 	imu_stc imu;
 	can_stc can;
-	//gyro initialization function
-	//call this function before requesting data from the sensor
-	//hspi = pointer to the spi port defined
-	void LSMD9S0_gyro_init(imu_stc* imu){
 
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
-
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_VAL, 1, 10); ///Writing 0b00001111 to enable PowerMode and x,y,z axis
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_VAL, 1, 10); ///Writing 0b00010000 to set full-scale selection to 500dps
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-
-		HAL_UART_Transmit(&huart2, (uint8_t*)"inizializzazione_g fatta\r\n", 26, 10);
+	void send_config(GPIO_TypeDef* pinx, uint16_t pinn, uint8_t * addr, uint8_t * val){
+		HAL_GPIO_WritePin(pinx, pinn, GPIO_PIN_RESET); 					///CS_InUse to 0
+		htim2.Instance->CNT=0; 																		//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
+		HAL_SPI_Transmit(imu->hspi, addr, 1, 10); ///Writing the address
+		HAL_SPI_Transmit(imu->hspi, val, 1, 10); ///Writing 0b00001111 to enable PowerMode and x,y,z axis
+		htim2.Instance->CNT=0; 																	//set counter to 0
+		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
+		HAL_GPIO_WritePin(pinx, pinn, GPIO_PIN_SET); 					///CS_InUse to 1
 	}
 
-	//accelerometer and magnetometer initialization
+	//accelerometer, gyroscope and magnetometer initialization
 	//call this function before requesting data from the sensor
 	//hspi = pointer to the spi port defined
-	void LSMD9S0_accel_init(imu_stc* imu){
+	void LSMD9S0_accel_gyro_init(imu_stc* imu){
 
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_VAL, 1, 10); ///Writing 0b10100111 to enable 1600Hz and x,y,z axis
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG1_G_ADD, (uint8_t*)&CTRL_REG1_G_VAL);
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG1_XM_ADD, (uint8_t*)&CTRL_REG1_XM_VAL);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_VAL, 1, 10); ///Writing 0b00001000 to set +/-4g range for axel axis
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG2_XM, (uint8_t*)&SCL_A_4);
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG4_G, (uint8_t*)&SCL_G_500);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_VAL, 1, 10); ///Writing 0b01110000 to set high resolution for magn and 50Hz
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG5_XM_ADD, (uint8_t*)&CTRL_REG5_XM_VAL);
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG6_XM_ADD, (uint8_t*)&CTRL_REG6_XM_VAL);
+		send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t*)&CTRL_REG7_XM_ADD, (uint8_t*)&CTRL_REG7_XM_VAL);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_VAL, 1, 10); ///Writing 0b00100000 to set +/-4 gauss range for magn axis
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+		HAL_Delay(1);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_ADD, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_VAL, 1, 10); ///Writing 0b00000000 to set continuos conversion for magn axis
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
-
-		HAL_UART_Transmit(&huart2, (uint8_t*)"inizializzazione_a fatta\r\n", 26, 10);
+		HAL_UART_Transmit(&huart2, (uint8_t*)"<IMU> Initialization -> Done\r\n", 26, 10);
 	}
 
 	//this function is used to calibrate the gyroscope
@@ -429,13 +432,13 @@
 			imu->Z_A_axis += 32768;
 		}*/
 
-		shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
-		shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
-		shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
+		//shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
+		//shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
+		//shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
 
-		imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
-		imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
-		imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);
+		//imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
+		//imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
+		//imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);
 /*
 		if(imu->X_A_axis >= 0){
 			imu->x_a_sign = 0;

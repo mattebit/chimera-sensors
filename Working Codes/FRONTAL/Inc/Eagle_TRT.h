@@ -169,8 +169,8 @@ double dynamic_average(long double *array, int size);
 	float LSM9DS0_calib(imu_stc*);
 	void LSMD9S0_gyro_read(imu_stc*);
 	void LSMD9S0_accel_read(imu_stc*);
-	void LSMD9S0_gyro_init();
-	void LSMD9S0_accel_init();
+	void LSMD9S0_accel_gyro_init();
+	void send_config(GPIO_TypeDef*, uint16_t, uint8_t*, uint8_t*);
 #endif
 
 

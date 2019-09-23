@@ -271,8 +271,7 @@ int main(void){
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
     //HAL_Delay(1000);
-    LSMD9S0_accel_init(&imu);
-    LSMD9S0_gyro_init(&imu);
+    LSMD9S0_accel_gyro_init(&imu);
     LSMD9S0_check(&imu);
 
     while (1)
@@ -893,7 +892,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
     if(htim == &htim10){
         //READING SENSORS
-        if(flag == 1 *multiplier){
+        if(flag == 1 * multiplier){
             // ACCEL
             LSMD9S0_accel_read(&imu);
 
@@ -925,7 +924,7 @@ int send_CAN_data(uint32_t millis){
     int sent_flag = 0;
 
     //-------------------SEND Encoder-------------------//
-    if(millis % 2 == 0){
+    if(millis % 25 == 0){
         uint16_t speed_Send = enc.average_speed;
 
         can.dataTx[0] = 0x06;
@@ -963,8 +962,10 @@ int send_CAN_data(uint32_t millis){
         sent_flag = 2;
     }
 
+    millis += 5;
+
     //--------------------SEND Accel--------------------//
-    if(millis % 2 == 0){
+    if(millis % 10 == 0){
         uint16_t val_a_x = imu.Y_A_axis;
         uint16_t val_a_y = imu.X_A_axis;
         uint16_t val_a_z = imu.Z_A_axis;
@@ -984,8 +985,10 @@ int send_CAN_data(uint32_t millis){
         sent_flag = 3;
     }
 
+    millis += 5;
+
     //---------------------SEND Gyro---------------------//
-    if(millis % 2 == 0){
+    if(millis % 25 == 0){
         uint16_t val_g_x = imu.X_G_axis;
         uint16_t val_g_y = imu.Y_G_axis;
 
@@ -1019,8 +1022,10 @@ int send_CAN_data(uint32_t millis){
         sent_flag = 4;
     }
 
+    millis += 5;
+
     //--------------------SEND Steer--------------------//
-    if(millis % 4 == 0){
+    if(millis % 25 == 0){
         if(calibration_flag == 0){
             can.dataTx[0] = 2;
             can.dataTx[1] = pot_2.val_100;

@@ -195,11 +195,12 @@ int main(void)
 
 	HAL_UART_Receive_IT(&huart2,huart_rx, 35);
 
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+	char txt[200];
   while (1)
   {
 	  a++;
@@ -207,6 +208,11 @@ int main(void)
 	  //print(&huart2,"ciao\r\n");
 	  //HAL_Delay(10);
 	  //HAL_UART_Transmit(&huart2, (uint8_t*)"ciao\r\n", 7, 5);
+
+	  //sprintf(txt, "192 5 10 10 10 10 10 10 10\r\n");
+	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 5);
+
+
 	  if(flag_rx == 1){
 		  flag_rx = 0;
 		  HAL_UART_Transmit(&huart2, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
