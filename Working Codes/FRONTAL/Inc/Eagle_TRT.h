@@ -148,6 +148,8 @@ double dynamic_average(long double *array, int size);
 		int y_g_sign;
 		int z_g_sign;
 
+		int calibration_done;
+
 		int error_flag;
 
 		float kp;
@@ -166,7 +168,7 @@ double dynamic_average(long double *array, int size);
 	void LSMD9S0_accel_calib(imu_stc*);
 	int LSMD9S0_check(imu_stc*);
 	float LSMD9S0_read(imu_stc*);
-	float LSM9DS0_calib(imu_stc*);
+	void LSM9DS0_calibration(imu_stc*);
 	void LSMD9S0_gyro_read(imu_stc*);
 	void LSMD9S0_accel_read(imu_stc*);
 	void LSMD9S0_accel_gyro_init();

@@ -5,6 +5,7 @@
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o"
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o"
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.o"
+"Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.o"
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.o"
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.o"
 "Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.o"
@@ -22,4 +23,4 @@
 "Src/stm32f4xx_hal_msp.o"
 "Src/stm32f4xx_it.o"
 "Src/system_stm32f4xx.o"
-"startup/startup_stm32f446xx.o"
+"Startup/startup_stm32f446retx.o"

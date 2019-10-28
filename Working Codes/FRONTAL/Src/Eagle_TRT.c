@@ -130,8 +130,8 @@
 		HAL_GPIO_WritePin(pinx, pinn, GPIO_PIN_RESET); 					///CS_InUse to 0
 		htim2.Instance->CNT=0; 																		//set counter to 0
 		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
-		HAL_SPI_Transmit(imu->hspi, addr, 1, 10); ///Writing the address
-		HAL_SPI_Transmit(imu->hspi, val, 1, 10); ///Writing 0b00001111 to enable PowerMode and x,y,z axis
+		HAL_SPI_Transmit(imu.hspi, addr, 1, 10); ///Writing the address
+		HAL_SPI_Transmit(imu.hspi, val, 1, 10); ///Writing 0b00001111 to enable PowerMode and x,y,z axis
 		htim2.Instance->CNT=0; 																	//set counter to 0
 		while(htim2.Instance->CNT<=20){} 															//delay (must be >5ns)
 		HAL_GPIO_WritePin(pinx, pinn, GPIO_PIN_SET); 					///CS_InUse to 1
@@ -296,6 +296,24 @@
 		return check;
 	}
 
+	void LSM9DS0_calibration(imu_stc*imu){
+		long int x = 0, y = 0, z = 0;
+		int iterations = 0;
+		for (int i = 0; i < iterations; i++){
+			LSMD9S0_accel_read(imu);
+			x += imu->X_A_axis;
+			y += imu->Y_A_axis;
+			z += imu->Z_A_axis;
+			HAL_Delay(1);
+		}
+
+		imu->X_A_axis_offset = x / iterations;
+		imu->Y_A_axis_offset = y / iterations;
+		imu->Z_A_axis_offset = z / iterations;
+
+		imu->calibration_done = 1;
+	}
+
 	//Reading G_axis values
 	//hspi = pointer to the spi port defined
 	//X_G_axis = pointer gyroscope x variable
@@ -417,28 +435,31 @@
 		imu->REG_L = OUT_Z_L_A_ADD;
 		imu->Z_A_axis = LSMD9S0_read(imu);
 		//imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+
+		if(imu->calibration_done){
+
+			imu->X_A_axis -= imu->X_A_axis_offset;
+			imu->Y_A_axis -= imu->Y_A_axis_offset;
+			imu->Z_A_axis -= imu->Z_A_axis_offset;
+
+			if(imu->X_A_axis > 32768){
+				imu->X_A_axis -= 65536;
+			}
+			if(imu->Y_A_axis > 32768){
+				imu->Y_A_axis -= 65536;
+			}
+			if(imu->Z_A_axis > 32768){
+				imu->Z_A_axis -= 65536;
+			}
 /*
-		imu->X_A_axis -= 32768;
-		imu->Y_A_axis -= 32768;
-		imu->Z_A_axis -= 32768;
+			shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
+			shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
+			shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
 
-		if(imu->X_A_axis < 0){
-			imu->X_A_axis += 32768;
+			imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
+			imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
+			imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);*/
 		}
-		if(imu->Y_A_axis < 0){
-			imu->Y_A_axis += 32768;
-		}
-		if(imu->Z_A_axis < 0){
-			imu->Z_A_axis += 32768;
-		}*/
-
-		//shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
-		//shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
-		//shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
-
-		//imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
-		//imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
-		//imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);
 /*
 		if(imu->X_A_axis >= 0){
 			imu->x_a_sign = 0;
@@ -1014,7 +1035,7 @@
 		}
 
 		// Don't use the speed if the two samples are near to 0/360
-		if((enc->angle0 < 4 && enc->angle1 > 355) || (enc->angle1 < 4 && enc->angle0 > 355)){
+		if((enc->angle0 < 40 && enc->angle1 > 320) || (enc->angle1 < 40 && enc->angle0 > 320)){
 
 		}
 		else{

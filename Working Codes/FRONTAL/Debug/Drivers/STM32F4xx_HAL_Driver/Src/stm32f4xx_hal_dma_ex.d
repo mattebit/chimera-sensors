@@ -1,98 +1,98 @@
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.o: \
  ../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Inc/stm32f4xx_hal_conf.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Inc/main.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cm4.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmInstr.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/cmsis_gcc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmFunc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmSimd.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
- /media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
+ ../Inc/stm32f4xx_hal_conf.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
+ ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h \
+ ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h \
+ ../Drivers/CMSIS/Include/core_cm4.h \
+ ../Drivers/CMSIS/Include/cmsis_version.h \
+ ../Drivers/CMSIS/Include/cmsis_compiler.h \
+ ../Drivers/CMSIS/Include/cmsis_gcc.h \
+ ../Drivers/CMSIS/Include/mpu_armv7.h \
+ ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Inc/stm32f4xx_hal_conf.h:
+../Inc/stm32f4xx_hal_conf.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Inc/main.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
+../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
+../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h:
+../Drivers/CMSIS/Include/core_cm4.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cm4.h:
+../Drivers/CMSIS/Include/cmsis_version.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmInstr.h:
+../Drivers/CMSIS/Include/cmsis_compiler.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/cmsis_gcc.h:
+../Drivers/CMSIS/Include/cmsis_gcc.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmFunc.h:
+../Drivers/CMSIS/Include/mpu_armv7.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Include/core_cmSimd.h:
+../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 
-/media/usr/label/Programmazione/Github/Eagle/fenice-sensors/Working\ Codes/FRONTAL/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
