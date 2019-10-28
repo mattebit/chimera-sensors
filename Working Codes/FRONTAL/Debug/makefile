@@ -37,8 +37,8 @@ FRONTAL.list \
 all: FRONTAL.elf secondary-outputs
 
 # Tool invocations
-FRONTAL.elf: $(OBJS) $(USER_OBJS) /media/usr/label/Programmazione/Github/Eagle/chimera-sensors/Working\ Codes/FRONTAL/STM32F446RETX_FLASH.ld
-	arm-none-eabi-gcc -o "FRONTAL.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/media/usr/label/Programmazione/Github/Eagle/chimera-sensors/Working Codes/FRONTAL/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FRONTAL.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+FRONTAL.elf: $(OBJS) $(USER_OBJS) /home/luca/Documents/git/chimera-sensors/Working\ Codes/FRONTAL/STM32F446RETX_FLASH.ld
+	arm-none-eabi-gcc -o "FRONTAL.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/luca/Documents/git/chimera-sensors/Working Codes/FRONTAL/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FRONTAL.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
