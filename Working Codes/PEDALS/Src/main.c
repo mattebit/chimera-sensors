@@ -269,7 +269,7 @@ int main(void)
 	  HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
 
 	  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET){
-		  pc6 = 1;
+		  pc6 = 100;
 	  }
 	  else{
 		  pc6 = 0;

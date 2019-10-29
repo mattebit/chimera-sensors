@@ -240,8 +240,9 @@ int main(void)
     enc.average_speed = 0;
     enc.wheel_diameter = 395;
     enc.samle_delta_time = htim7.Init.Period;
-    enc.data_size = 14;
-    enc.clock_period = (36 / htim3.Init.Prescaler);
+    enc.data_size = 15;
+    //enc.clock_period = (36 / htim3.Init.Prescaler);
+    enc.clock_period = 2;
     enc.wheel_rotation = 0;
     enc.Km = 0;
 
@@ -293,8 +294,8 @@ int main(void)
 				send_CAN_data(HAL_GetTick());
 				previous_millis = HAL_GetTick();
 
-				sprintf(txt, "suca: %d\t%d\t%d\r\n", (int)imu.X_A_axis, (int)imu.Y_A_axis, (int)imu.Z_A_axis);
-				HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+				//sprintf(txt, "suca: %d\t%d\t%d\r\n", (int)imu.X_A_axis, (int)imu.Y_A_axis, (int)imu.Z_A_axis);
+				//HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
         	}
         }
         else{
@@ -1083,14 +1084,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
             LSMD9S0_accel_read(&imu);
 
         }else if (flag == 2 * multiplier){
-            // GYRO
-            LSMD9S0_gyro_read(&imu);
+        	// STEER
+			calc_pot_value(&pot_2);
 
         }else if (flag == 3 * multiplier){
-            // STEER
-            calc_pot_value(&pot_2);
-            calc_pot_value(&pot_1);
-            calc_pot_value(&pot_3);
+            // GYRO
+			LSMD9S0_gyro_read(&imu);
 
         }
 
@@ -1112,7 +1111,7 @@ int send_CAN_data(uint32_t millis){
     int sent_flag = 0;
 
     //-------------------SEND Encoder-------------------//
-    if(millis % 25 == 0){
+    if(millis % 100 == 0){
         uint16_t speed_Send = enc.average_speed;
 
         can.dataTx[0] = 0x06;
@@ -1130,10 +1129,12 @@ int send_CAN_data(uint32_t millis){
         sent_flag = 1;
     }
 
-    //-------------SEND KM & WHEEL ROTAIONS-------------//
-    if(millis % 1000 == 0){
+    millis += 5;
 
-        uint16_t Km = enc.Km;
+    //-------------SEND KM & WHEEL ROTAIONS-------------//
+    if(millis % 500 == 0){
+
+        uint16_t Km = (enc.Km);
         uint16_t rotations = enc.wheel_rotation;
 
         can.dataTx[0] = 0x08;
@@ -1141,8 +1142,8 @@ int send_CAN_data(uint32_t millis){
         can.dataTx[2] = Km;
         can.dataTx[3] = (uint8_t)rotations >> 8;
         can.dataTx[4] = (uint8_t)rotations;
-        can.dataTx[5] = 0;
-        can.dataTx[6] = 0;
+        can.dataTx[5] = (enc.angle0/10);
+        can.dataTx[6] = enc.clock_period;
         can.dataTx[7] = 0;
         can.id = 0xD0;
         can.size = 8;
@@ -1154,7 +1155,7 @@ int send_CAN_data(uint32_t millis){
     millis += 5;
 
     //--------------------SEND Accel--------------------//
-    if(millis % 10 == 0){
+    if(millis % 100 == 0){
 
     	//removing negative values
         uint16_t val_a_x = imu.Y_A_axis + 32768;
@@ -1179,7 +1180,7 @@ int send_CAN_data(uint32_t millis){
     millis += 5;
 
     //---------------------SEND Gyro---------------------//
-    if(millis % 25 == 0){
+    if(millis % 100 == 0){
         uint16_t val_g_x = imu.X_G_axis + 32768;
         uint16_t val_g_y = imu.Y_G_axis + 32768;
 
@@ -1202,8 +1203,8 @@ int send_CAN_data(uint32_t millis){
     millis += 1;
 
     //---------------------SEND Gyro---------------------//
-	if(millis % 25 == 0){
-		uint16_t val_g_z = imu.Z_G_axis + 32768;
+	if(millis % 100 == 0){
+		uint16_t val_g_z = (imu.Z_G_axis + 32768);
 
 		can.dataTx[0] = 0x04;
 		can.dataTx[1] = val_g_z / 256;
@@ -1221,12 +1222,12 @@ int send_CAN_data(uint32_t millis){
     millis += 5;
 
     //--------------------SEND Steer--------------------//
-    if(millis % 25 == 0){
+    if(millis % 100 == 0){
         if(calibration_flag == 0){
             can.dataTx[0] = 2;
             can.dataTx[1] = pot_2.val_100;
-            can.dataTx[2] = pot_1.val_100;
-            can.dataTx[3] = pot_3.val_100;
+            can.dataTx[2] = 0;
+            can.dataTx[3] = 0;
             can.dataTx[4] = 0;
             can.dataTx[5] = 0;
             can.dataTx[6] = 0;

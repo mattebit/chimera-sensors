@@ -326,8 +326,8 @@
 
 		imu->kp = 0.0175;
 
-		imu->GPIOx_InUse=GPIOA;
-		imu->GPIO_Pin_InUse=GPIO_PIN_8;
+		imu->GPIOx_InUse=GPIOC;
+		imu->GPIO_Pin_InUse=GPIO_PIN_9;
 
 		imu->REG_H = OUT_X_H_G_ADD;
 		imu->REG_L = OUT_X_L_G_ADD;
@@ -373,28 +373,6 @@
 		imu->X_G_axis = dynamic_average(imu->X_G_axis_array, 10);
 		imu->Y_G_axis = dynamic_average(imu->Y_G_axis_array, 10);
 		imu->Z_G_axis = dynamic_average(imu->Z_G_axis_array, 10);
-
-		if(imu->X_G_axis >= 0){
-			imu->x_g_sign = 0;
-		}
-		else{
-			imu->x_g_sign = 1;
-			imu->X_G_axis *= -1;
-		}
-		if(imu->Y_G_axis >= 0){
-			imu->y_g_sign = 0;
-		}
-		else{
-			imu->y_g_sign = 1;
-			imu->Y_G_axis *= -1;
-		}
-		if(imu->Z_G_axis >= 0){
-			imu->z_g_sign = 0;
-		}
-		else{
-			imu->z_g_sign = 1;
-			imu->Z_G_axis *= -1;
-		}
 
 		/*char imu_str_1[100];
 
@@ -457,28 +435,6 @@
 			imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
 			imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);*/
 		}
-/*
-		if(imu->X_A_axis >= 0){
-			imu->x_a_sign = 0;
-		}
-		else{
-			imu->x_a_sign = 1;
-			imu->X_A_axis *= -1;
-		}
-		if(imu->Y_A_axis >= 0){
-			imu->y_a_sign = 0;
-		}
-		else{
-			imu->y_a_sign = 1;
-			imu->Y_A_axis *= -1;
-		}
-		if(imu->Z_A_axis >= 0){
-			imu->z_a_sign = 0;
-		}
-		else{
-			imu->z_a_sign = 1;
-			imu->Z_A_axis *= -1;
-		}*/
 
 	}
 
@@ -903,6 +859,7 @@
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
 
+		// CLOCK HIGH
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
@@ -932,12 +889,12 @@
 		// Requesting an other bit for the aventual error sent from the sensor
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){}
+		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period*2){}
 
 		enc->error_flag = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
 
 		// Converting bits into number and converting it into angle in degrees (0 ~ 359)
-		enc->converted_data = bin_dec(enc->Data, enc->data_size);
+		enc->converted_data = bin_dec(enc->Data, enc->data_size-1);
 		enc->converted_data = enc->converted_data / 45.5055;
 
 		return enc->converted_data;
@@ -1018,14 +975,16 @@
 		enc->angle0 /= 1000;
 		enc->angle1 /= 1000;
 
+		int off = 20;
+
 		// Start detecting eventual new wheel roation
 		// If the speed is too low, don't count rotations
 		if(enc->average_speed < -0.5 || enc->average_speed > 0.5){
-			if((enc->angle0_prec <= 361 && enc->angle0_prec > 350) && (enc->angle0 >= -1 && enc->angle0 < 10)){
+			if((enc->angle0_prec <= 361 && enc->angle0_prec > 360-off) && (enc->angle0 >= -1 && enc->angle0 < off)){
 				enc->wheel_rotation ++;
 				enc->Km += (3.14 * enc->wheel_diameter)/1000;
 			}
-			if((enc->angle0_prec >= -1 && enc->angle0_prec < 10) && (enc->angle0 <= 361 && enc->angle0 > 350)){
+			if((enc->angle0_prec >= -1 && enc->angle0_prec < off) && (enc->angle0 <= 361 && enc->angle0 > 360-off)){
 				enc->wheel_rotation ++;
 				enc->Km += (3.14 * enc->wheel_diameter)/1000;
 			}
