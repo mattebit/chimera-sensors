@@ -1,7 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
 ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_8
 ADC1.ContinuousConvMode=ENABLE
-ADC1.DMAContinuousRequests=DISABLE
+ADC1.DMAContinuousRequests=ENABLE
 ADC1.IPParameters=Rank-0\#ChannelRegularConversion,Channel-0\#ChannelRegularConversion,SamplingTime-0\#ChannelRegularConversion,NbrOfConversionFlag,master,ScanConvMode,ContinuousConvMode,DMAContinuousRequests,NbrOfConversion
 ADC1.NbrOfConversion=1
 ADC1.NbrOfConversionFlag=1
@@ -81,8 +81,8 @@ Mcu.PinsNb=27
 Mcu.ThirdPartyNb=0
 Mcu.UserConstants=
 Mcu.UserName=STM32F446RETx
-MxCube.Version=5.3.0
-MxDb.Version=DB.5.0.30
+MxCube.Version=5.4.0
+MxDb.Version=DB.5.0.40
 NVIC.ADC_IRQn=true\:0\:0\:false\:true\:true\:5\:true\:true
 NVIC.BusFault_IRQn=true\:0\:0\:false\:false\:true\:false\:false
 NVIC.CAN1_RX0_IRQn=true\:0\:0\:false\:true\:true\:2\:true\:true
@@ -91,6 +91,7 @@ NVIC.CAN1_SCE_IRQn=true\:0\:0\:false\:true\:true\:4\:true\:true
 NVIC.CAN1_TX_IRQn=true\:0\:0\:false\:true\:true\:1\:true\:true
 NVIC.DMA2_Stream0_IRQn=true\:0\:0\:false\:false\:true\:false\:true
 NVIC.DebugMonitor_IRQn=true\:0\:0\:false\:false\:true\:false\:false
+NVIC.ForceEnableDMAVector=true
 NVIC.HardFault_IRQn=true\:0\:0\:false\:false\:true\:false\:false
 NVIC.MemoryManagement_IRQn=true\:0\:0\:false\:false\:true\:false\:false
 NVIC.NonMaskableInt_IRQn=true\:0\:0\:false\:false\:true\:false\:false

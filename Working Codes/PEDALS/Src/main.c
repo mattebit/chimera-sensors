@@ -99,6 +99,7 @@ int timer_flag = 0;
 int command_flag = 0;
 
 int steer_wheel_prescaler;
+int previous_millis;
 
 int stampa = 0;
 
@@ -244,7 +245,7 @@ int main(void)
   steer_wheel_prescaler = htim2.Init.Period;
   steer_wheel_prescaler /= 8;
   steer_wheel_prescaler /= 20;
-  steer_wheel_prescaler += 4;
+  steer_wheel_prescaler += 2;
 
   HAL_UART_Transmit(&huart2, (uint8_t*)"vivo\r\n", strlen("vivo\r\n"), 10);
 
@@ -272,6 +273,18 @@ int main(void)
 	  }
 	  else{
 		  pc6 = 0;
+	  }
+
+	  // If CAN is free from important messages, send data
+	  if(command_flag == 0){
+		if (previous_millis != HAL_GetTick()){
+			send_CAN_data(HAL_GetTick());
+			previous_millis = HAL_GetTick();
+		}
+	  }
+	  else{
+		HAL_Delay(1);
+		command_flag = 0;
 	  }
 
 	  //print_Max_Min();
@@ -975,6 +988,48 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 
 	}
+}
+
+int send_CAN_data(uint32_t millis){
+
+    int sent_flag = 0;
+
+    if(millis % 25 == 0){
+
+    	can.dataTx[0] = 0x02;
+		can.dataTx[1] = pc6;
+		can.dataTx[2] = 0;
+		can.dataTx[3] = steer_wheel_prescaler;
+		can.dataTx[4] = 0;
+		can.dataTx[5] = 0;
+		can.dataTx[6] = SCS_Send;
+		can.dataTx[7] = 0;
+		can.id = 0xB0;
+		can.size = 8;
+		CAN_Send(&can);
+
+    }
+    millis += 1;
+
+    if(millis % 25 == 0){
+
+		if (check != 1){
+		  can.dataTx[0] = 0x01;
+		  can.dataTx[1] = pot_2.val_100;
+		  can.dataTx[2] = pot_1.val_100;
+		  can.dataTx[3] = steer_wheel_prescaler;
+		  can.dataTx[4] = 0;
+		  can.dataTx[5] = 0;
+		  can.dataTx[6] = SCS_Send;
+		  can.dataTx[7] = 0;
+		  can.id = 0xB0;
+		  can.size = 8;
+		  CAN_Send(&can);
+		  //SCS = 0;
+		  //SCS_Send = 0;
+		}
+
+    }
 }
 
 /* USER CODE END 4 */

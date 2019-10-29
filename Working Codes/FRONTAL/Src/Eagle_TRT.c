@@ -354,20 +354,17 @@
 		/*int16_t val_g_x = imu->Y_G_axis * 100;
 		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
 		int16_t val_g_z = imu->Z_G_axis * 100;*/
-/*
-		imu->X_G_axis -= 32768;
-		imu->Y_G_axis -= 32768;
-		imu->Z_G_axis -= 32768;
 
-		if(imu->X_G_axis < 0){
-			imu->X_G_axis += 32768;
+		if(imu->X_G_axis > 32768){
+			imu->X_G_axis -= 65536;
 		}
-		if(imu->Y_G_axis < 0){
-			imu->Y_G_axis += 32768;
+		if(imu->Y_G_axis > 32768){
+			imu->Y_G_axis -= 65536;
 		}
-		if(imu->Z_G_axis < 0){
-			imu->Z_G_axis += 32768;
-		}*/
+		if(imu->Z_G_axis > 32768){
+			imu->Z_G_axis -= 65536;
+		}
+
 
 		shift_array(imu->X_G_axis_array, 10, imu->X_G_axis);
 		shift_array(imu->Y_G_axis_array, 10, imu->Y_G_axis);

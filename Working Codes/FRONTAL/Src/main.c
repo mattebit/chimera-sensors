@@ -422,7 +422,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -1045,7 +1045,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
             can.dataTx[2] = 0;
             can.dataTx[3] = 0;
             can.dataTx[4] = 0;
-            can.dataTx[5] = 0;
+            can.dataTx[5] = 0;;
             can.dataTx[6] = 0;
             can.dataTx[7] = 0;
             can.id = 0xBC;
@@ -1089,6 +1089,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
         }else if (flag == 3 * multiplier){
             // STEER
             calc_pot_value(&pot_2);
+            calc_pot_value(&pot_1);
+            calc_pot_value(&pot_3);
 
         }
 
@@ -1178,8 +1180,8 @@ int send_CAN_data(uint32_t millis){
 
     //---------------------SEND Gyro---------------------//
     if(millis % 25 == 0){
-        uint16_t val_g_x = imu.X_G_axis;
-        uint16_t val_g_y = imu.Y_G_axis;
+        uint16_t val_g_x = imu.X_G_axis + 32768;
+        uint16_t val_g_y = imu.Y_G_axis + 32768;
 
         can.dataTx[0] = 0x03;
         can.dataTx[1] = val_g_x / 256;
@@ -1194,22 +1196,27 @@ int send_CAN_data(uint32_t millis){
         CAN_Send(&can);
 
 
-        uint16_t val_g_z = imu.Z_G_axis;
-
-        can.dataTx[0] = 0x04;
-        can.dataTx[1] = val_g_z / 256;
-        can.dataTx[2] = val_g_z % 256;
-        can.dataTx[3] = imu.z_g_sign;
-        can.dataTx[4] = 0;
-        can.dataTx[5] = 0;
-        can.dataTx[6] = 0;
-        can.dataTx[7] = imu.error_flag;
-        can.id = 0xC0;
-        can.size = 8;
-        CAN_Send(&can);
-
         sent_flag = 4;
     }
+
+    millis += 1;
+
+    //---------------------SEND Gyro---------------------//
+	if(millis % 25 == 0){
+		uint16_t val_g_z = imu.Z_G_axis + 32768;
+
+		can.dataTx[0] = 0x04;
+		can.dataTx[1] = val_g_z / 256;
+		can.dataTx[2] = val_g_z % 256;
+		can.dataTx[3] = imu.z_g_sign;
+		can.dataTx[4] = 0;
+		can.dataTx[5] = 0;
+		can.dataTx[6] = 0;
+		can.dataTx[7] = imu.error_flag;
+		can.id = 0xC0;
+		can.size = 8;
+		CAN_Send(&can);
+	}
 
     millis += 5;
 
@@ -1218,8 +1225,8 @@ int send_CAN_data(uint32_t millis){
         if(calibration_flag == 0){
             can.dataTx[0] = 2;
             can.dataTx[1] = pot_2.val_100;
-            can.dataTx[2] = 0;
-            can.dataTx[3] = 0;
+            can.dataTx[2] = pot_1.val_100;
+            can.dataTx[3] = pot_3.val_100;
             can.dataTx[4] = 0;
             can.dataTx[5] = 0;
             can.dataTx[6] = 0;

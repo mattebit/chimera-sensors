@@ -56,7 +56,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+int send_CAN_data(uint32_t millis);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
