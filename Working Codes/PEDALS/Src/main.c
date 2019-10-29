@@ -327,11 +327,11 @@ int main(void)
 
 	  //print_Max_Min();
 
-	  /*if(implausibility_check(&pot_1, &pot_2) == 1){
-		  pot_1.val_100 = 0;
-		  pot_2.val_100 = 0;
+	  if(implausibility_check(&pot_1, &pot_2) == 1){
+		  //pot_1.val_100 = 0;
+		  //pot_2.val_100 = 0;
 		  SCS_Send = 1;
-	  }*/
+	  }
 
 	  /*if (SCS != 0 || SCS1 != 0){
 		  pot_1.val_100 = 0;
@@ -835,7 +835,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
 			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
 			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 0)){
-				  set_min(&pot_1);
+				  set_max(&pot_1);
 				  set_min(&pot_2);
 				  //CheckControl[0] = 1;
 				  can.dataTx[0] = 0;
@@ -852,7 +852,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 				  check = 1;
 			  }
 			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 1)){
-				  set_max(&pot_1);
+				  set_min(&pot_1);
 				  set_max(&pot_2);
 				  //CheckControl[1] = 1;
 				  can.dataTx[0] = 0;

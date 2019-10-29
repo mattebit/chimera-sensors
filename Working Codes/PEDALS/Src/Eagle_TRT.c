@@ -838,13 +838,13 @@
 
 		int SCS1 = 0;
 
-		if(abs(pot_1->val_100 - pot_2->val_100) >= 10){
+		if(100 - abs(pot_1->val_100 - pot_2->val_100) >= 10){
 			if(__HAL_TIM_GET_COUNTER(pot_1->TimerInstance) > 100){
 				SCS1 = 1;
-				pot_1-> val = 0;
-				pot_1-> val_100 = 0;
-				pot_2-> val = 0;
-				pot_2 -> val_100 = 0;
+				//pot_1-> val = 0;
+				//pot_1-> val_100 = 0;
+				//pot_2-> val = 0;
+				//pot_2 -> val_100 = 0;
 				//HAL_UART_Transmit(&huart2, (uint8_t*)"tex_diocane\r\n", 13, 10);
 			}
 		}
