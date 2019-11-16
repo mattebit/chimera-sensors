@@ -19629,8 +19629,6 @@ int main(void)
  8007cba:	4b20      	ldr	r3, [pc, #128]	; (8007d3c <main+0x2c4>)
  8007cbc:	601a      	str	r2, [r3, #0]
  8007cbe:	e7e2      	b.n	8007c86 <main+0x20e>
-				//sprintf(txt, "suca: %d\t%d\t%d\r\n", (int)imu.X_A_axis, (int)imu.Y_A_axis, (int)imu.Z_A_axis);
-				//HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
         	}
         }
         else{
