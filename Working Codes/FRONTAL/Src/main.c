@@ -71,7 +71,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 extern can_stc can;
-extern imu_stc imu;
+extern imu_stc accel;
+extern imu_stc gyro;
 extern enc_stc enc;
 extern pot_stc pot_1;
 extern pot_stc pot_2;
@@ -209,11 +210,13 @@ int main(void)
     // can initialization //
 
     // imu initialization //
-    imu.GPIOx_InUse = GPIOC;
-    imu.GPIO_Pin_InUse = GPIO_PIN_9;
-    imu.GPIOx_NotInUse = GPIOA;
-    imu.GPIO_Pin_NotInUse = GPIO_PIN_8;
-    imu.hspi = &hspi1;
+    accel.GPIOx_InUse = GPIOC;
+    accel.GPIO_Pin_InUse = GPIO_PIN_9;
+    accel.hspi = &hspi1;
+
+    gyro.GPIOx_InUse = GPIOA;
+    gyro.GPIO_Pin_InUse = GPIO_PIN_8;
+    gyro.hspi = &hspi1;
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
@@ -243,8 +246,10 @@ int main(void)
     enc.wheel_rotation = 0;
     enc.Km = 0;
 
+    enc.max_delta_angle = 40;
     enc.frequency = 0;
     enc.frequency_timer = &htim7;
+    enc.frequency_timer_Hz = 72000000;
 
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
@@ -270,12 +275,18 @@ int main(void)
     __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
-    //HAL_Delay(1000);
-    LSMD9S0_accel_gyro_init(&imu);
-    LSMD9S0_check(&imu);
+    // INIT Encoder
+    enc_calculate_optimal_frequency(&enc);
 
-    imu.calibration_done = 1;
-    //LSM9DS0_calibration(&imu);
+    accel.scale = 4;
+    gyro.scale = 500;
+
+    //HAL_Delay(1000);
+    LSMD9S0_accel_gyro_init(&accel, &gyro);
+    //LSMD9S0_check(&imu);
+
+    LSM9DS0_calibration(&accel);
+    LSM9DS0_calibration(&gyro);
 
     encoder_counter = 0;
 
@@ -1082,7 +1093,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         if (flag == 1 * multiplier)
         {
             // ACCEL
-            LSMD9S0_accel_read(&imu);
+            LSMD9S0_accel_read(&accel);
+            imu_elaborate_data(&accel);
         }
         else if (flag == 2 * multiplier)
         {
@@ -1092,7 +1104,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         else if (flag == 3 * multiplier)
         {
             // GYRO
-            LSMD9S0_gyro_read(&imu);
+            LSMD9S0_gyro_read(&gyro);
+            imu_elaborate_data(&gyro);
         }
 
         if (flag >= (3 * multiplier))
@@ -1167,11 +1180,11 @@ int send_CAN_data(uint32_t millis)
     {
 
         //removing negative values
-        uint16_t val_a_x = imu.Y_A_axis + 32768;
-        uint16_t val_a_y = imu.X_A_axis + 32768;
-        uint16_t val_a_z = imu.Z_A_axis + 32768;
+        uint16_t val_a_x = accel.x + accel.scale * 1000;
+        uint16_t val_a_y = accel.y + accel.scale * 1000;
+        uint16_t val_a_z = accel.z + accel.scale * 1000;
 
-        can.dataTx[0] = 0x05;
+        can.dataTx[0] = 0x03;
         can.dataTx[1] = val_a_x / 256;
         can.dataTx[2] = val_a_x % 256;
         can.dataTx[3] = val_a_y / 256;
@@ -1191,42 +1204,23 @@ int send_CAN_data(uint32_t millis)
     //---------------------SEND Gyro---------------------//
     if (millis % 100 == 0)
     {
-        uint16_t val_g_x = imu.X_G_axis + 32768;
-        uint16_t val_g_y = imu.Y_G_axis + 32768;
+        uint16_t val_g_x = gyro.x + gyro.scale * 1000;
+        uint16_t val_g_y = gyro.y + gyro.scale * 1000;
+        uint16_t val_g_z = gyro.z + gyro.scale * 1000;
 
-        can.dataTx[0] = 0x03;
+        can.dataTx[0] = 0x04;
         can.dataTx[1] = val_g_x / 256;
         can.dataTx[2] = val_g_x % 256;
-        can.dataTx[3] = imu.x_g_sign;
-        can.dataTx[4] = val_g_y / 256;
-        can.dataTx[5] = val_g_y % 256;
-        can.dataTx[6] = imu.x_g_sign;
+        can.dataTx[3] = val_g_y / 256;
+        can.dataTx[4] = val_g_y % 256;
+        can.dataTx[5] = val_g_z / 256;
+        can.dataTx[6] = val_g_z % 256;
         can.dataTx[7] = 0;
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);
 
         sent_flag = 4;
-    }
-
-    millis += 1;
-
-    //---------------------SEND Gyro---------------------//
-    if (millis % 100 == 0)
-    {
-        uint16_t val_g_z = (imu.Z_G_axis + 32768);
-
-        can.dataTx[0] = 0x04;
-        can.dataTx[1] = val_g_z / 256;
-        can.dataTx[2] = val_g_z % 256;
-        can.dataTx[3] = imu.z_g_sign;
-        can.dataTx[4] = 0;
-        can.dataTx[5] = 0;
-        can.dataTx[6] = 0;
-        can.dataTx[7] = imu.error_flag;
-        can.id = 0xC0;
-        can.size = 8;
-        CAN_Send(&can);
     }
 
     millis += 5;

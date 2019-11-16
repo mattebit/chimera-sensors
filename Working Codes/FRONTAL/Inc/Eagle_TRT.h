@@ -135,39 +135,21 @@ double dynamic_average(long double *array, int size);
 #include "stm32f4xx_hal_spi.h"
 typedef struct
 {
-	float X_G_axis;
-	float Y_G_axis;
-	float Z_G_axis;
-	float X_G_axis_offset;
-	float Y_G_axis_offset;
-	float Z_G_axis_offset;
+	double x;
+	double y;
+	double z;
+	double x_offset;
+	double y_offset;
+	double z_offset;
 
-	float X_A_axis;
-	float Y_A_axis;
-	float Z_A_axis;
-	float X_A_axis_offset;
-	float Y_A_axis_offset;
-	float Z_A_axis_offset;
-
-	long double X_A_axis_array[20];
-	long double Y_A_axis_array[20];
-	long double Z_A_axis_array[20];
-
-	long double X_G_axis_array[20];
-	long double Y_G_axis_array[20];
-	long double Z_G_axis_array[20];
-
-	int x_a_sign;
-	int y_a_sign;
-	int z_a_sign;
-
-	int x_g_sign;
-	int y_g_sign;
-	int z_g_sign;
+	double x_array[20];
+	double y_array[20];
+	double z_array[20];
 
 	int calibration_done;
 
 	int error_flag;
+	int scale;
 
 	float kp;
 
@@ -188,8 +170,9 @@ float LSMD9S0_read(imu_stc *);
 void LSM9DS0_calibration(imu_stc *);
 void LSMD9S0_gyro_read(imu_stc *);
 void LSMD9S0_accel_read(imu_stc *);
-void LSMD9S0_accel_gyro_init();
+void LSMD9S0_accel_gyro_init(imu_stc *, imu_stc *);
 void send_config(GPIO_TypeDef *, uint16_t, uint8_t *, uint8_t *);
+void imu_elaborate_data(imu_stc *);
 #endif
 
 //----------------CAN----------------//

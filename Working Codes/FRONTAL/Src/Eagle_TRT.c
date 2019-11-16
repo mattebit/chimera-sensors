@@ -122,6 +122,8 @@ uint8_t OUT_Z_L_A_ADD = 0xAC;
 uint8_t OUT_Z_H_A_ADD = 0xAD;
 
 imu_stc imu;
+imu_stc accel;
+imu_stc gyro;
 can_stc can;
 
 void send_config(GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr, uint8_t *val)
@@ -143,21 +145,66 @@ void send_config(GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr, uint8_t *val)
 //accelerometer, gyroscope and magnetometer initialization
 //call this function before requesting data from the sensor
 //hspi = pointer to the spi port defined
-void LSMD9S0_accel_gyro_init(imu_stc *imu)
+void LSMD9S0_accel_gyro_init(imu_stc *accel, imu_stc *gyro)
 {
 
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_G_ADD, (uint8_t *)&CTRL_REG1_G_VAL);
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_XM_ADD, (uint8_t *)&CTRL_REG1_XM_VAL);
+	// Wake Up Gyro, enabling x, y, z axis
+	send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_G_ADD, (uint8_t *)&CTRL_REG1_G_VAL);
 
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_500);
+	// Wake Up Accel, enabling x, y, z axis
+	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_XM_ADD, (uint8_t *)&CTRL_REG1_XM_VAL);
 
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG5_XM_ADD, (uint8_t *)&CTRL_REG5_XM_VAL);
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG6_XM_ADD, (uint8_t *)&CTRL_REG6_XM_VAL);
-	send_config(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG7_XM_ADD, (uint8_t *)&CTRL_REG7_XM_VAL);
+	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG5_XM_ADD, (uint8_t *)&CTRL_REG5_XM_VAL);
+	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG6_XM_ADD, (uint8_t *)&CTRL_REG6_XM_VAL);
+	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG7_XM_ADD, (uint8_t *)&CTRL_REG7_XM_VAL);
+
+	// Set Gyro scale range
+	switch (gyro->scale)
+	{
+	case 245:
+		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
+		break;
+	case 500:
+		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_500);
+		break;
+	case 1000:
+		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_1000);
+		break;
+	case 2000:
+		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_2000);
+		break;
+	default:
+		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
+		gyro->scale = 500;
+		break;
+	}
+
+	// Set Accel scale range
+	switch (accel->scale)
+	{
+	case 2:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_2);
+		break;
+	case 4:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
+		break;
+	case 6:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_6);
+		break;
+	case 8:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_8);
+		break;
+	case 16:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_16);
+		break;
+	default:
+		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
+		accel->scale = 4;
+		break;
+	}
 
 	HAL_Delay(1);
 
@@ -170,11 +217,6 @@ float LSMD9S0_read(imu_stc *imu)
 	uint8_t OUT_L_VAL;
 	uint8_t OUT_H_VAL;
 
-	//__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
-	//while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period){
-	//}
-
-	///READING ROTATION
 	HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
 	htim2.Instance->CNT = 0;												  //set counter to 0
 	while (htim2.Instance->CNT <= 20)
@@ -210,13 +252,6 @@ float LSMD9S0_read(imu_stc *imu)
 	uint32_t value = (OUT_H_VAL << 8) | OUT_L_VAL; ///Calculating axis value shifting and using a logic OR
 	float axis = value;
 
-	//axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
-
-	/*char imu_str_1[100];
-		int imu_val_ret = OUT_H_VAL << 8 | OUT_L_VAL;
-		sprintf(imu_str_1,"gyro: %d\n\r",imu_val_ret);
-		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
-
 	return axis;
 }
 
@@ -232,7 +267,6 @@ int LSMD9S0_check(imu_stc *imu)
 	{
 	}															 //delay (must be >5ns)
 	HAL_SPI_Transmit(imu->hspi, (uint8_t *)&WHO_AM_I_XM, 1, 10); ///Writing on register ----> (uint8_t*) it's the cast of the pointer to WHO_AM_I_G (giving by &variable)
-	//HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_XM_VAL, 1, 10); ///Reading from register sending a 0x00
 	HAL_SPI_Receive(imu->hspi, (uint8_t *)&WHO_AM_I_XM_VAL, 1, 10);
 	htim2.Instance->CNT = 0; //set counter to 0
 	while (htim2.Instance->CNT <= 20)
@@ -257,74 +291,66 @@ int LSMD9S0_check(imu_stc *imu)
 
 	char imu_str[100];
 
-	//sprintf(imu_str,"Test with %d and %d\r\n%d, %d\r\n",WHO_AM_I_G,WHO_AM_I_XM,WHO_AM_I_G_VAL,WHO_AM_I_XM_VAL);
-	//HAL_UART_Transmit(&huart2, (uint8_t*)imu_str, strlen(imu_str), 10);
-
 	///AXEL/GYRO STATUS
 	if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73))
 	{
 		check = 1;
-		//HAL_UART_Transmit(&huart2, (uint8_t*)"imu int correct\r\n", 17, 10);
 	}
 	else
 	{
 		check = 0;
-		//HAL_UART_Transmit(&huart2, (uint8_t*)"imu int failed\r\n", 16, 10);
 	}
 
 	return check;
 }
 
+// Request inital axis values, average them, set as initial offsets
 void LSM9DS0_calibration(imu_stc *imu)
 {
-	long int x = 0, y = 0, z = 0;
-	int iterations = 0;
+	double x = 0, y = 0, z = 0;
+	int iterations = 200;
 	for (int i = 0; i < iterations; i++)
 	{
 		LSMD9S0_accel_read(imu);
-		x += imu->X_A_axis;
-		y += imu->Y_A_axis;
-		z += imu->Z_A_axis;
+		imu_elaborate_data(imu);
+		x += imu->x;
+		y += imu->y;
+		z += imu->z;
 		HAL_Delay(1);
 	}
 
-	imu->X_A_axis_offset = x / iterations;
-	imu->Y_A_axis_offset = y / iterations;
-	imu->Z_A_axis_offset = z / iterations;
+	imu->x_offset = x / iterations;
+	imu->y_offset = y / iterations;
+	imu->z_offset = z / iterations;
 
 	imu->calibration_done = 1;
 }
 
 //Reading G_axis values
 //hspi = pointer to the spi port defined
-//X_G_axis = pointer gyroscope x variable
-//Y_G_axis = pointer gyroscope y variable
-//Z_G_axis = pointer gyroscope z variable
-//X_G_axis_offset = offset x value
-//Y_G_axis_offset = offset y value
-//Z_G_axis_offset = offset z value
+//x = pointer gyroscope x variable
+//y = pointer gyroscope y variable
+//z = pointer gyroscope z variable
+//x_offset = offset x value
+//y_offset = offset y value
+//z_offset = offset z value
 void LSMD9S0_gyro_read(imu_stc *imu)
 {
 
-	imu->kp = 0.0175;
-
-	imu->GPIOx_InUse = GPIOC;
-	imu->GPIO_Pin_InUse = GPIO_PIN_9;
+	imu->GPIOx_InUse = GPIOA;
+	imu->GPIO_Pin_InUse = GPIO_PIN_8;
 
 	imu->REG_H = OUT_X_H_G_ADD;
 	imu->REG_L = OUT_X_L_G_ADD;
-	imu->X_G_axis = LSMD9S0_read(imu);
-	//imu->X_G_axis = imu->X_G_axis - imu->X_G_axis_offset;
+	imu->x = LSMD9S0_read(imu);
 
 	imu->REG_H = OUT_Y_H_G_ADD;
 	imu->REG_L = OUT_Y_L_G_ADD;
-	imu->Y_G_axis = LSMD9S0_read(imu);
-	//imu->Y_G_axis = imu->Y_G_axis - imu->Y_G_axis_offset;
+	imu->y = LSMD9S0_read(imu);
 
 	imu->REG_H = OUT_Z_H_G_ADD;
 	imu->REG_L = OUT_Z_L_G_ADD;
-	imu->Z_G_axis = LSMD9S0_read(imu);
-	//imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
+	imu->z = LSMD9S0_read(imu);
 
 	///AXEL/GYRO STATUS
 	if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73))
@@ -335,98 +361,69 @@ void LSMD9S0_gyro_read(imu_stc *imu)
 	{
 		imu->error_flag = 1;
 	}
+}
 
-	/*int16_t val_g_x = imu->Y_G_axis * 100;
-		int16_t val_g_y = (0 - imu->X_G_axis) * 100;
-		int16_t val_g_z = imu->Z_G_axis * 100;*/
-
-	if (imu->X_G_axis > 32768)
+// Elaborating data
+// Use the setted scale to calculate data in the correct ranges
+// Aveage an array to remove noise
+// Remove inital offset
+void imu_elaborate_data(imu_stc *imu)
+{
+	if (imu->x > 32768)
 	{
-		imu->X_G_axis -= 65536;
+		imu->x -= 65536;
 	}
-	if (imu->Y_G_axis > 32768)
+	if (imu->y > 32768)
 	{
-		imu->Y_G_axis -= 65536;
+		imu->y -= 65536;
 	}
-	if (imu->Z_G_axis > 32768)
+	if (imu->z > 32768)
 	{
-		imu->Z_G_axis -= 65536;
+		imu->z -= 65536;
 	}
 
-	shift_array(imu->X_G_axis_array, 10, imu->X_G_axis);
-	shift_array(imu->Y_G_axis_array, 10, imu->Y_G_axis);
-	shift_array(imu->Z_G_axis_array, 10, imu->Z_G_axis);
+	imu->x = imu->x * (imu->scale / 32768);
+	imu->y = imu->y * (imu->scale / 32768);
+	imu->z = imu->z * (imu->scale / 32768);
 
-	imu->X_G_axis = dynamic_average(imu->X_G_axis_array, 10);
-	imu->Y_G_axis = dynamic_average(imu->Y_G_axis_array, 10);
-	imu->Z_G_axis = dynamic_average(imu->Z_G_axis_array, 10);
+	shift_array(imu->x_array, 10, imu->x);
+	shift_array(imu->y_array, 10, imu->y);
+	shift_array(imu->z_array, 10, imu->z);
 
-	/*char imu_str_1[100];
+	imu->x = dynamic_average(imu->x_array, 10);
+	imu->y = dynamic_average(imu->y_array, 10);
+	imu->z = dynamic_average(imu->z_array, 10);
 
-		sprintf(imu_str_1,"gyro: %d %d %d\n\r", (int)imu->X_G_axis, (int)imu->Y_G_axis, (int)imu->Z_G_axis);
-		HAL_UART_Transmit(&huart2, (uint8_t*)imu_str_1, strlen(imu_str_1), 10);*/
+	imu->x -= imu->x_offset;
+	imu->y -= imu->y_offset;
+	imu->z -= imu->z_offset;
 }
 
 ///Reading A_axis values
 //hspi = pointer to the spi port defined
-//X_A_axis = pointer accelerometer x variable
-//Y_A_axis = pointer accelerometer y variable
-//Z_A_axis = pointer accelerometer z variable
-//X_A_axis_offset = offset x value
-//Y_A_axis_offset = offset y value
-//Z_A_axis_offset = offset z value
+//x = pointer gyroscope x variable
+//y = pointer gyroscope y variable
+//z = pointer gyroscope z variable
+//x_offset = offset x value
+//y_offset = offset y value
+//z_offset = offset z value
 void LSMD9S0_accel_read(imu_stc *imu)
 {
-
-	imu->kp = 0.00119782; ///0.000122 * 9,81
 
 	imu->GPIOx_InUse = GPIOC;
 	imu->GPIO_Pin_InUse = GPIO_PIN_9;
 
 	imu->REG_H = OUT_X_H_A_ADD;
 	imu->REG_L = OUT_X_L_A_ADD;
-	imu->X_A_axis = LSMD9S0_read(imu);
-
-	//imu->X_A_axis = imu->X_A_axis - imu->X_A_axis_offset;
+	imu->x = LSMD9S0_read(imu);
 
 	imu->REG_H = OUT_Y_H_A_ADD;
 	imu->REG_L = OUT_Y_L_A_ADD;
-	imu->Y_A_axis = LSMD9S0_read(imu);
-	//imu->Y_A_axis = imu->Y_A_axis - imu->Y_A_axis_offset;
+	imu->y = LSMD9S0_read(imu);
 
 	imu->REG_H = OUT_Z_H_A_ADD;
 	imu->REG_L = OUT_Z_L_A_ADD;
-	imu->Z_A_axis = LSMD9S0_read(imu);
-	//imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
-
-	if (imu->calibration_done)
-	{
-
-		imu->X_A_axis -= imu->X_A_axis_offset;
-		imu->Y_A_axis -= imu->Y_A_axis_offset;
-		imu->Z_A_axis -= imu->Z_A_axis_offset;
-
-		if (imu->X_A_axis > 32768)
-		{
-			imu->X_A_axis -= 65536;
-		}
-		if (imu->Y_A_axis > 32768)
-		{
-			imu->Y_A_axis -= 65536;
-		}
-		if (imu->Z_A_axis > 32768)
-		{
-			imu->Z_A_axis -= 65536;
-		}
-		/*
-			shift_array(imu->X_A_axis_array, 10, imu->X_A_axis);
-			shift_array(imu->Y_A_axis_array, 10, imu->Y_A_axis);
-			shift_array(imu->Z_A_axis_array, 10, imu->Z_A_axis);
-
-			imu->X_A_axis = dynamic_average(imu->X_A_axis_array, 10);
-			imu->Y_A_axis = dynamic_average(imu->Y_A_axis_array, 10);
-			imu->Z_A_axis = dynamic_average(imu->Z_A_axis_array, 10);*/
-	}
+	imu->z = LSMD9S0_read(imu);
 }
 
 #endif
@@ -995,8 +992,6 @@ void encoder_tim_interrupt(enc_stc *enc)
 		// Calculate speed from the two angles
 		get_speed_encoder(enc);
 
-		enc->average_speed *= 10;
-
 		// Get the speed sign to be sent in CAN
 		if (enc->average_speed < 0)
 		{
@@ -1031,8 +1026,6 @@ void get_speed_encoder(enc_stc *enc)
 	long double speed = 0;
 	double dt = 0;
 
-	dt = enc->samle_delta_time;
-
 	if (enc->dx_wheel == 1)
 	{
 		enc->delta_angle = enc->angle1 - enc->angle0;
@@ -1042,7 +1035,7 @@ void get_speed_encoder(enc_stc *enc)
 		enc->delta_angle = enc->angle0 - enc->angle1;
 	}
 
-	//calculate correct delta angle if near to 0-360
+	// Calculate correct delta angle if near to 0-360
 	if ((enc->angle0 < enc->max_delta_angle && enc->angle1 > 360 - enc->max_delta_angle) ||
 		(enc->angle1 < enc->max_delta_angle && enc->angle0 > 360 - enc->max_delta_angle))
 	{
@@ -1057,9 +1050,9 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Calculating rad/s, then m/s, then Km/h
-	speed = (enc->delta_angle / 180) * 3.1415 * (enc->wheel_diameter);
+	speed = (enc->delta_angle / 360) * 3.1415 * (enc->wheel_diameter);
+	speed *= enc->frequency;
 	speed *= 3.6;
-	speed /= dt;
 	speed = round((speed * 1000)) / 1000;
 
 	int off = enc->max_delta_angle;
@@ -1080,12 +1073,17 @@ void get_speed_encoder(enc_stc *enc)
 		}
 	}
 
+	// Remove noise mediating previous values with actual
 	shift_array(enc->speed_array, 50, speed);
 	enc->average_speed = dynamic_average(enc->speed_array, 50);
 
+	// Calculating the angle sample frequency
 	enc_calculate_optimal_frequency(enc);
 }
 
+// Calculate anche sample frequency
+// The delta angle changes depending on the current speed
+// Constrain the delta angle between a defined range (max_delta_angle)
 void enc_calculate_optimal_frequency(enc_stc *enc)
 {
 	double abs_delta_angle = (enc->delta_angle >= 0) ? enc->delta_angle : enc->delta_angle * -1;
@@ -1104,6 +1102,7 @@ void enc_calculate_optimal_frequency(enc_stc *enc)
 	}
 }
 
+// Reinitializing timer to generate interrupts to the given frequency
 int ReinitTIM7(float frequency, enc_stc *enc)
 {
 
