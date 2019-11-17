@@ -63,12 +63,10 @@ void print_it(UART_HandleTypeDef *huart);
 #include "stm32f4xx_hal_tim.h"
 typedef struct
 {
-
-	int samle_delta_time; // Time between the two calculations of the angles
-	int data_size;		  // Bits sent from the sensor. exclude the error flag
-	int error_flag;		  // Return value if the encoder has errors
-	int interrupt_flag;   // Flag to switch from angles to speed calculations
-	int clock_period;	 // Period of the clock generated
+	int data_size;		// Bits sent from the sensor. exclude the error flag
+	int error_flag;		// Return value if the encoder has errors
+	int interrupt_flag; // Flag to switch from angles to speed calculations
+	int clock_period;   // Period of the clock generated
 	int Data[20];
 	int steer_enc_prescaler;
 	int dx_wheel; // 1 if the encoder stc is for the right wheel
@@ -91,16 +89,21 @@ typedef struct
 	double angle0_prec;
 	double angle1_prec;
 	double delta_angle;
-	long double speed_array[100]; // Array to store lasts speed
-	long double average_speed;	// Filtered speed
-	long double converted_data;   // Angle data
+	double speed_array[100]; // Array to store lasts speed
+	double average_speed;	// Filtered speed
+	int converted_data;		 // Angle data
 
 	TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
 
+	GPIO_TypeDef *ClockPinName;
+	GPIO_TypeDef *DataPinName;
+	uint16_t ClockPinNumber;
+	uint16_t DataPinNumber;
+
 } enc_stc;
 
-double read_encoder(enc_stc *);
+int read_SSI(enc_stc *, int *);
 void encoder_tim_interrupt(enc_stc *);
 void get_speed_encoder(enc_stc *);
 void enc_calculate_optimal_frequency(enc_stc *);

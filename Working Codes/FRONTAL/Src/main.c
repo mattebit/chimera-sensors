@@ -235,12 +235,16 @@ int main(void)
     pot_2.min = 2350;
     pot_2.range = abs(pot_2.max - pot_2.min);
 
+    enc.ClockPinName = GPIOC;
+    enc.ClockPinNumber = GPIO_PIN_6;
+    enc.DataPinName = GPIOC;
+    enc.DataPinNumber = GPIO_PIN_8;
+
     enc.dx_wheel = 1;
     enc.interrupt_flag = 0;
     enc.TimerInstance = &a_TimerInstance3;
     enc.average_speed = 0;
     enc.wheel_diameter = 0.395;
-    enc.samle_delta_time = htim7.Init.Period;
     enc.data_size = 15;
     enc.clock_period = 2;
     enc.wheel_rotation = 0;
@@ -250,6 +254,7 @@ int main(void)
     enc.frequency = 0;
     enc.frequency_timer = &htim7;
     enc.frequency_timer_Hz = 72000000;
+    HAL_GPIO_WritePin(enc.ClockPinName, enc.ClockPinNumber, GPIO_PIN_SET);
 
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
@@ -795,7 +800,7 @@ static void MX_TIM10_Init(void)
 
     /* USER CODE END TIM10_Init 1 */
     htim10.Instance = TIM10;
-    htim10.Init.Prescaler = 36;
+    htim10.Init.Prescaler = 72;
     htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim10.Init.Period = 500;
     htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -1191,7 +1196,7 @@ int send_CAN_data(uint32_t millis)
         can.dataTx[4] = val_a_y % 256;
         can.dataTx[5] = val_a_z / 256;
         can.dataTx[6] = val_a_z % 256;
-        can.dataTx[7] = 0;
+        can.dataTx[7] = accel.scale;
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);
@@ -1215,7 +1220,7 @@ int send_CAN_data(uint32_t millis)
         can.dataTx[4] = val_g_y % 256;
         can.dataTx[5] = val_g_z / 256;
         can.dataTx[6] = val_g_z % 256;
-        can.dataTx[7] = 0;
+        can.dataTx[7] = (gyro.scale / 10);
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);

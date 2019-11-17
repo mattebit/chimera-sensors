@@ -904,25 +904,12 @@ extern char txt;
 // Lower the number of microseconds per tick better it is
 // TimerInstance = struct of the tim used for the encoder
 enc_stc enc;
-double read_encoder(enc_stc *enc)
+int read_SSI(enc_stc *enc, int *data)
 {
 
-	enc->clock_period = 2;
+	int bin_data[enc->data_size];
 
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
-	{
-	}
-
-	// CLOCK HIGH
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
-	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
-	{
-	}
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_RESET);
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
 	{
@@ -933,17 +920,23 @@ double read_encoder(enc_stc *enc)
 	{
 
 		// CLOCK HIGH
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_SET);
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-		while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+		while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period / 2)
 		{
 		}
 
+		//Reading the Pin at the half of the clock period
 		// Set the bit as the pin state (0 or 1)
-		enc->Data[i] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
+		bin_data[i] = HAL_GPIO_ReadPin(enc->DataPinName, enc->DataPinNumber);
+
+		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
+		while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period / 2)
+		{
+		}
 
 		// CLOCK LOW
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_RESET);
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
 		{
@@ -951,19 +944,23 @@ double read_encoder(enc_stc *enc)
 	}
 
 	// Requesting an other bit for the aventual error sent from the sensor
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_SET);
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period * 2)
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
 	{
 	}
 
-	enc->error_flag = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8);
+	int error_flag = HAL_GPIO_ReadPin(enc->DataPinName, enc->DataPinNumber);
+
+	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+	{
+	}
 
 	// Converting bits into number and converting it into angle in degrees (0 ~ 359)
-	enc->converted_data = bin_dec(enc->Data, enc->data_size - 1);
-	enc->converted_data = enc->converted_data / 45.5055;
+	data = bin_dec(bin_data, enc->data_size - 1);
 
-	return enc->converted_data;
+	return error_flag;
 }
 
 // Interrupt function of tim 2
@@ -979,13 +976,15 @@ void encoder_tim_interrupt(enc_stc *enc)
 	{
 		// Requesting first angle
 		enc->angle0_prec = enc->angle0;
-		enc->angle0 = read_encoder(enc);
+		enc->error_flag = read_SSI(enc, &enc->converted_data);
+		enc->angle0 = enc->converted_data / 45.5055;
 	}
 	else if (enc->interrupt_flag == 1)
 	{
 		// Requesting second angle
 		enc->angle1_prec = enc->angle1;
-		enc->angle1 = read_encoder(enc);
+		enc->error_flag = read_SSI(enc, &enc->converted_data);
+		enc->angle1 = enc->converted_data / 45.5055;
 	}
 	else if (enc->interrupt_flag == 2)
 	{
@@ -1005,14 +1004,7 @@ void encoder_tim_interrupt(enc_stc *enc)
 	}
 
 	// Cycle between steps
-	if (enc->interrupt_flag >= 2)
-	{
-		enc->interrupt_flag = 0;
-	}
-	else
-	{
-		enc->interrupt_flag++;
-	}
+	enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
 }
 
 // Funtion to calculate the speed
