@@ -946,14 +946,14 @@ int read_SSI(enc_stc *enc, int *data)
 	// Requesting an other bit for the aventual error sent from the sensor
 	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_SET);
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period * 2)
 	{
 	}
 
 	int error_flag = HAL_GPIO_ReadPin(enc->DataPinName, enc->DataPinNumber);
 
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period * 2)
 	{
 	}
 
