@@ -67,7 +67,7 @@ typedef struct
 	int error_flag;		// Return value if the encoder has errors
 	int interrupt_flag; // Flag to switch from angles to speed calculations
 	int clock_period;   // Period of the clock generated
-	int Data[20];
+	int Data[14];
 	int steer_enc_prescaler;
 	int dx_wheel; // 1 if the encoder stc is for the right wheel
 
@@ -93,6 +93,8 @@ typedef struct
 	double average_speed;	// Filtered speed
 	int converted_data;		 // Angle data
 
+	float flake_freq;
+
 	TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
 
@@ -103,7 +105,7 @@ typedef struct
 
 } enc_stc;
 
-int read_SSI(enc_stc *, int *);
+int read_SSI(enc_stc *);
 void encoder_tim_interrupt(enc_stc *);
 void get_speed_encoder(enc_stc *);
 void enc_calculate_optimal_frequency(enc_stc *);
@@ -174,7 +176,7 @@ void LSM9DS0_calibration(imu_stc *);
 void LSMD9S0_gyro_read(imu_stc *);
 void LSMD9S0_accel_read(imu_stc *);
 void LSMD9S0_accel_gyro_init(imu_stc *, imu_stc *);
-void send_config(GPIO_TypeDef *, uint16_t, uint8_t *, uint8_t *);
+void send_config(imu_stc *, GPIO_TypeDef *, uint16_t, uint8_t *, uint8_t *);
 void imu_elaborate_data(imu_stc *);
 #endif
 

@@ -121,20 +121,19 @@ uint8_t OUT_Y_H_A_ADD = 0xAB;
 uint8_t OUT_Z_L_A_ADD = 0xAC;
 uint8_t OUT_Z_H_A_ADD = 0xAD;
 
-imu_stc imu;
 imu_stc accel;
 imu_stc gyro;
 can_stc can;
 
-void send_config(GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr, uint8_t *val)
+void send_config(imu_stc *imu, GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr, uint8_t *val)
 {
 	HAL_GPIO_WritePin(pinx, pinn, GPIO_PIN_RESET); ///CS_InUse to 0
 	htim2.Instance->CNT = 0;					   //set counter to 0
 	while (htim2.Instance->CNT <= 20)
 	{
 	}										 //delay (must be >5ns)
-	HAL_SPI_Transmit(imu.hspi, addr, 1, 10); ///Writing the address
-	HAL_SPI_Transmit(imu.hspi, val, 1, 10);  ///Writing 0b00001111 to enable PowerMode and x,y,z axis
+	HAL_SPI_Transmit(imu->hspi, addr, 1, 10); ///Writing the address
+	HAL_SPI_Transmit(imu->hspi, val, 1, 10);  ///Writing 0b00001111 to enable PowerMode and x,y,z axis
 	htim2.Instance->CNT = 0;				 //set counter to 0
 	while (htim2.Instance->CNT <= 20)
 	{
@@ -148,67 +147,71 @@ void send_config(GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr, uint8_t *val)
 void LSMD9S0_accel_gyro_init(imu_stc *accel, imu_stc *gyro)
 {
 
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
-
 	// Wake Up Gyro, enabling x, y, z axis
-	send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_G_ADD, (uint8_t *)&CTRL_REG1_G_VAL);
+	send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_G_ADD, (uint8_t *)&CTRL_REG1_G_VAL);
+
+	HAL_Delay(1);
 
 	// Wake Up Accel, enabling x, y, z axis
-	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_XM_ADD, (uint8_t *)&CTRL_REG1_XM_VAL);
+	send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG1_XM_ADD, (uint8_t *)&CTRL_REG1_XM_VAL);
+	HAL_Delay(1);
 
-	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG5_XM_ADD, (uint8_t *)&CTRL_REG5_XM_VAL);
-	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG6_XM_ADD, (uint8_t *)&CTRL_REG6_XM_VAL);
-	send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG7_XM_ADD, (uint8_t *)&CTRL_REG7_XM_VAL);
+	send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG5_XM_ADD, (uint8_t *)&CTRL_REG5_XM_VAL);
+	HAL_Delay(1);
+	send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG6_XM_ADD, (uint8_t *)&CTRL_REG6_XM_VAL);
+	HAL_Delay(1);
+	send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG7_XM_ADD, (uint8_t *)&CTRL_REG7_XM_VAL);
+	HAL_Delay(1);
 
 	// Set Gyro scale range
 	switch (gyro->scale)
 	{
 	case 245:
-		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
+		send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
 		break;
 	case 500:
-		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_500);
+		send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_500);
 		break;
 	case 1000:
-		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_1000);
+		send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_1000);
 		break;
 	case 2000:
-		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_2000);
+		send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_2000);
 		break;
 	default:
-		send_config(gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
+		send_config(gyro, gyro->GPIOx_InUse, gyro->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG4_G, (uint8_t *)&SCL_G_245);
 		gyro->scale = 500;
 		break;
 	}
+	HAL_Delay(1);
 
 	// Set Accel scale range
 	switch (accel->scale)
 	{
 	case 2:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_2);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_2);
 		break;
 	case 4:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
 		break;
 	case 6:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_6);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_6);
 		break;
 	case 8:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_8);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_8);
 		break;
 	case 16:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_16);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_16);
 		break;
 	default:
-		send_config(accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
+		send_config(accel, accel->GPIOx_InUse, accel->GPIO_Pin_InUse, (uint8_t *)&CTRL_REG2_XM, (uint8_t *)&SCL_A_4);
 		accel->scale = 4;
 		break;
 	}
 
 	HAL_Delay(1);
 
-	HAL_UART_Transmit(&huart2, (uint8_t *)"<IMU> Initialization -> Done\r\n", 26, 10);
+	HAL_UART_Transmit(&huart2, (uint8_t *)"<IMU> Initialization -> Done\r\n", strlen("<IMU> Initialization -> Done\r\n"), 10);
 }
 
 float LSMD9S0_read(imu_stc *imu)
@@ -233,7 +236,7 @@ float LSMD9S0_read(imu_stc *imu)
 	HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
 
 	htim2.Instance->CNT = 0; //set counter to 0
-	while (htim2.Instance->CNT <= 20)
+	while (htim2.Instance->CNT <= 80)
 	{
 	}																		  //delay (must be >5ns)
 	HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
@@ -289,7 +292,10 @@ int LSMD9S0_check(imu_stc *imu)
 	}													//delay (must be >5ns)
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 
-	char imu_str[100];
+	char txt[100];
+
+	sprintf(txt, "Gyro, Accel check: %d\t%d\r\n", WHO_AM_I_G_VAL, WHO_AM_I_XM_VAL);
+	HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
 	///AXEL/GYRO STATUS
 	if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73))
@@ -312,7 +318,7 @@ void LSM9DS0_calibration(imu_stc *imu)
 	for (int i = 0; i < iterations; i++)
 	{
 		LSMD9S0_accel_read(imu);
-		imu_elaborate_data(imu);
+		//imu_elaborate_data(imu);
 		x += imu->x;
 		y += imu->y;
 		z += imu->z;
@@ -334,32 +340,50 @@ void LSM9DS0_calibration(imu_stc *imu)
 //x_offset = offset x value
 //y_offset = offset y value
 //z_offset = offset z value
-void LSMD9S0_gyro_read(imu_stc *imu)
+void LSMD9S0_gyro_read(imu_stc *gyro)
 {
 
-	imu->GPIOx_InUse = GPIOA;
-	imu->GPIO_Pin_InUse = GPIO_PIN_8;
+	gyro->REG_H = OUT_X_H_G_ADD;
+	gyro->REG_L = OUT_X_L_G_ADD;
+	gyro->x = LSMD9S0_read(gyro);
 
-	imu->REG_H = OUT_X_H_G_ADD;
-	imu->REG_L = OUT_X_L_G_ADD;
-	imu->x = LSMD9S0_read(imu);
+	gyro->REG_H = OUT_Y_H_G_ADD;
+	gyro->REG_L = OUT_Y_L_G_ADD;
+	gyro->y = LSMD9S0_read(gyro);
 
-	imu->REG_H = OUT_Y_H_G_ADD;
-	imu->REG_L = OUT_Y_L_G_ADD;
-	imu->y = LSMD9S0_read(imu);
+	gyro->REG_H = OUT_Z_H_G_ADD;
+	gyro->REG_L = OUT_Z_L_G_ADD;
+	gyro->z = LSMD9S0_read(gyro);
 
-	imu->REG_H = OUT_Z_H_G_ADD;
-	imu->REG_L = OUT_Z_L_G_ADD;
-	imu->z = LSMD9S0_read(imu);
+	if (gyro->x > 32768)
+	{
+		gyro->x -= 65536;
+	}
+	if (gyro->y > 32768)
+	{
+		gyro->y -= 65536;
+	}
+	if (gyro->z > 32768)
+	{
+		gyro->z -= 65536;
+	}
+
+	gyro->x = gyro->x * ((float)gyro->scale / 32768);
+	gyro->y = gyro->y * ((float)gyro->scale / 32768);
+	gyro->z = gyro->z * ((float)gyro->scale / 32768);
+
+	gyro->x -= gyro->x_offset;
+	gyro->y -= gyro->y_offset;
+	gyro->z -= gyro->z_offset;
 
 	///AXEL/GYRO STATUS
 	if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73))
 	{
-		imu->error_flag = 0;
+		gyro->error_flag = 0;
 	}
 	else
 	{
-		imu->error_flag = 1;
+		gyro->error_flag = 1;
 	}
 }
 
@@ -382,9 +406,9 @@ void imu_elaborate_data(imu_stc *imu)
 		imu->z -= 65536;
 	}
 
-	imu->x = imu->x * (imu->scale / 32768);
-	imu->y = imu->y * (imu->scale / 32768);
-	imu->z = imu->z * (imu->scale / 32768);
+	imu->x = imu->x * ((float)imu->scale / 32768);
+	imu->y = imu->y * ((float)imu->scale / 32768);
+	imu->z = imu->z * ((float)imu->scale / 32768);
 
 	shift_array(imu->x_array, 10, imu->x);
 	shift_array(imu->y_array, 10, imu->y);
@@ -407,23 +431,41 @@ void imu_elaborate_data(imu_stc *imu)
 //x_offset = offset x value
 //y_offset = offset y value
 //z_offset = offset z value
-void LSMD9S0_accel_read(imu_stc *imu)
+void LSMD9S0_accel_read(imu_stc *accel)
 {
 
-	imu->GPIOx_InUse = GPIOC;
-	imu->GPIO_Pin_InUse = GPIO_PIN_9;
+	accel->REG_H = OUT_X_H_A_ADD;
+	accel->REG_L = OUT_X_L_A_ADD;
+	accel->x = LSMD9S0_read(accel);
 
-	imu->REG_H = OUT_X_H_A_ADD;
-	imu->REG_L = OUT_X_L_A_ADD;
-	imu->x = LSMD9S0_read(imu);
+	accel->REG_H = OUT_Y_H_A_ADD;
+	accel->REG_L = OUT_Y_L_A_ADD;
+	accel->y = LSMD9S0_read(accel);
 
-	imu->REG_H = OUT_Y_H_A_ADD;
-	imu->REG_L = OUT_Y_L_A_ADD;
-	imu->y = LSMD9S0_read(imu);
+	accel->REG_H = OUT_Z_H_A_ADD;
+	accel->REG_L = OUT_Z_L_A_ADD;
+	accel->z = LSMD9S0_read(accel);
 
-	imu->REG_H = OUT_Z_H_A_ADD;
-	imu->REG_L = OUT_Z_L_A_ADD;
-	imu->z = LSMD9S0_read(imu);
+	if (accel->x > 32768)
+	{
+		accel->x -= 65536;
+	}
+	if (accel->y > 32768)
+	{
+		accel->y -= 65536;
+	}
+	if (accel->z > 32768)
+	{
+		accel->z -= 65536;
+	}
+
+	accel->x = accel->x * ((float)accel->scale / 32768);
+	accel->y = accel->y * ((float)accel->scale / 32768);
+	accel->z = accel->z * ((float)accel->scale / 32768);
+
+	accel->x -= accel->x_offset;
+	accel->y -= accel->y_offset;
+	accel->z -= accel->z_offset;
 }
 
 #endif
@@ -904,11 +946,21 @@ extern char txt;
 // Lower the number of microseconds per tick better it is
 // TimerInstance = struct of the tim used for the encoder
 enc_stc enc;
-int read_SSI(enc_stc *enc, int *data)
+int read_SSI(enc_stc *enc)
 {
 
 	int bin_data[enc->data_size];
 
+	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+	{
+	}
+	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_SET);
+	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
+	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
+	{
+	}
 	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_RESET);
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
@@ -929,6 +981,7 @@ int read_SSI(enc_stc *enc, int *data)
 		//Reading the Pin at the half of the clock period
 		// Set the bit as the pin state (0 or 1)
 		bin_data[i] = HAL_GPIO_ReadPin(enc->DataPinName, enc->DataPinNumber);
+		enc->Data[i] = bin_data[i];
 
 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 		while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period / 2)
@@ -958,7 +1011,7 @@ int read_SSI(enc_stc *enc, int *data)
 	}
 
 	// Converting bits into number and converting it into angle in degrees (0 ~ 359)
-	data = bin_dec(bin_data, enc->data_size - 1);
+	enc->converted_data = bin_dec(enc->Data, enc->data_size);
 
 	return error_flag;
 }
@@ -976,14 +1029,14 @@ void encoder_tim_interrupt(enc_stc *enc)
 	{
 		// Requesting first angle
 		enc->angle0_prec = enc->angle0;
-		enc->error_flag = read_SSI(enc, &enc->converted_data);
+		read_SSI(enc);
 		enc->angle0 = enc->converted_data / 45.5055;
 	}
 	else if (enc->interrupt_flag == 1)
 	{
 		// Requesting second angle
 		enc->angle1_prec = enc->angle1;
-		enc->error_flag = read_SSI(enc, &enc->converted_data);
+		read_SSI(enc);
 		enc->angle1 = enc->converted_data / 45.5055;
 	}
 	else if (enc->interrupt_flag == 2)
@@ -1004,7 +1057,13 @@ void encoder_tim_interrupt(enc_stc *enc)
 	}
 
 	// Cycle between steps
-	enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
+	if (enc->interrupt_flag >=2){
+		enc->interrupt_flag = 0;
+	}
+	else{
+		enc->interrupt_flag ++;
+	}
+	//enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
 }
 
 // Funtion to calculate the speed
@@ -1028,8 +1087,8 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Calculate correct delta angle if near to 0-360
-	if ((enc->angle0 < enc->max_delta_angle && enc->angle1 > 360 - enc->max_delta_angle) ||
-		(enc->angle1 < enc->max_delta_angle && enc->angle0 > 360 - enc->max_delta_angle))
+	if ((enc->angle0 < enc->max_delta_angle * 2 && enc->angle1 > 360 - enc->max_delta_angle * 2) ||
+		(enc->angle1 < enc->max_delta_angle * 2 && enc->angle0 > 360 - enc->max_delta_angle * 2))
 	{
 		if (enc->delta_angle < 0)
 		{
@@ -1047,7 +1106,7 @@ void get_speed_encoder(enc_stc *enc)
 	speed *= 3.6;
 	speed = round((speed * 1000)) / 1000;
 
-	int off = enc->max_delta_angle;
+	int off = 100;
 
 	// Start detecting eventual new wheel roation
 	// If the speed is too low, don't count rotations
@@ -1056,18 +1115,18 @@ void get_speed_encoder(enc_stc *enc)
 		if ((enc->angle0_prec <= 361 && enc->angle0_prec > 360 - off) && (enc->angle0 >= -1 && enc->angle0 < off))
 		{
 			enc->wheel_rotation++;
-			enc->Km += (3.14 * enc->wheel_diameter) / 1000;
+			enc->Km += (3.14 * enc->wheel_diameter);
 		}
 		if ((enc->angle0_prec >= -1 && enc->angle0_prec < off) && (enc->angle0 <= 361 && enc->angle0 > 360 - off))
 		{
 			enc->wheel_rotation++;
-			enc->Km += (3.14 * enc->wheel_diameter) / 1000;
+			enc->Km += (3.14 * enc->wheel_diameter);
 		}
 	}
 
 	// Remove noise mediating previous values with actual
-	shift_array(enc->speed_array, 50, speed);
-	enc->average_speed = dynamic_average(enc->speed_array, 50);
+	shift_array(enc->speed_array, 10, speed);
+	enc->average_speed = dynamic_average(enc->speed_array, 10);
 
 	// Calculating the angle sample frequency
 	enc_calculate_optimal_frequency(enc);
@@ -1079,10 +1138,15 @@ void get_speed_encoder(enc_stc *enc)
 void enc_calculate_optimal_frequency(enc_stc *enc)
 {
 	double abs_delta_angle = (enc->delta_angle >= 0) ? enc->delta_angle : enc->delta_angle * -1;
-	if (abs_delta_angle > enc->max_delta_angle * 1.25 || abs_delta_angle < enc->max_delta_angle * 0.5)
+
+	if (abs_delta_angle > enc->max_delta_angle * 1.2 || abs_delta_angle < enc->max_delta_angle * 0.5)
 	{
-		double angular_speed = enc->average_speed / (enc->wheel_diameter / 2);
-		double frequency = angular_speed / enc->max_delta_angle;
+		double angular_speed = enc->average_speed / ((enc->wheel_diameter / 2)*3.6);
+		double frequency = angular_speed / (enc->max_delta_angle * 3.14 / 180);
+
+		enc->flake_freq = frequency;
+
+		frequency = frequency < 0 ? frequency * (-1) : frequency;
 		frequency = frequency < 50 ? 50 : frequency;
 
 		// Returns 0 if reinitialization is done correctly
@@ -1107,7 +1171,7 @@ int ReinitTIM7(float frequency, enc_stc *enc)
 
 	/* USER CODE BEGIN TIM7_Init 1 */
 
-	enc->frequency_timer_prescaler = sqrt(enc->frequency_timer_Hz * frequency);
+	enc->frequency_timer_prescaler = sqrt(enc->frequency_timer_Hz / frequency);
 	enc->frequency_timer_period = enc->frequency_timer_prescaler;
 
 	/* USER CODE END TIM7_Init 1 */
@@ -1226,7 +1290,6 @@ int bin_dec(int *bin, int size)
 			dec += Power(2, size - i - 1);
 		}
 	}
-
 	return dec;
 }
 

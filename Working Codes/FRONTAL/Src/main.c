@@ -245,12 +245,12 @@ int main(void)
     enc.TimerInstance = &a_TimerInstance3;
     enc.average_speed = 0;
     enc.wheel_diameter = 0.395;
-    enc.data_size = 15;
+    enc.data_size = 14;
     enc.clock_period = 2;
     enc.wheel_rotation = 0;
     enc.Km = 0;
 
-    enc.max_delta_angle = 40;
+    enc.max_delta_angle = 5;
     enc.frequency = 0;
     enc.frequency_timer = &htim7;
     enc.frequency_timer_Hz = 72000000;
@@ -288,7 +288,7 @@ int main(void)
 
     //HAL_Delay(1000);
     LSMD9S0_accel_gyro_init(&accel, &gyro);
-    //LSMD9S0_check(&imu);
+    LSMD9S0_check(&accel);
 
     LSM9DS0_calibration(&accel);
     LSM9DS0_calibration(&gyro);
@@ -302,7 +302,18 @@ int main(void)
 
         /* USER CODE BEGIN 3 */
 
+        //sprintf(txt, "%d\t%d\t%d\r\n", (int)(accel.x*100), (int)(accel.y*100), (int)(accel.z * 100));
+        /*sprintf(txt, "%d\t%d\r\n", (int)(accel.x*100), (int)(gyro.x*100));
+        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
+
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
+/*
+        for(int i = 0; i < enc.data_size; i++){
+            sprintf(txt, "%d ", enc.Data[i]);
+            HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+        }
+        sprintf(txt, "\r\n");
+        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
 
         // If CAN is free from important messages, send data
         if (command_flag == 0)
@@ -802,7 +813,7 @@ static void MX_TIM10_Init(void)
     htim10.Instance = TIM10;
     htim10.Init.Prescaler = 72;
     htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim10.Init.Period = 500;
+    htim10.Init.Period = 1000;
     htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -1099,7 +1110,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         {
             // ACCEL
             LSMD9S0_accel_read(&accel);
-            imu_elaborate_data(&accel);
+
         }
         else if (flag == 2 * multiplier)
         {
@@ -1110,7 +1121,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         {
             // GYRO
             LSMD9S0_gyro_read(&gyro);
-            imu_elaborate_data(&gyro);
+            //imu_elaborate_data(&gyro);
         }
 
         if (flag >= (3 * multiplier))
@@ -1126,6 +1137,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim == &htim7)
     {
         encoder_tim_interrupt(&enc);
+        if (enc.interrupt_flag == 0){
+            sprintf(txt, "%d\t%d\r\n", (int)(pot_2.val_100), (int)(enc.delta_angle));
+            HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+        }
     }
 }
 
@@ -1152,6 +1167,9 @@ int send_CAN_data(uint32_t millis)
         CAN_Send(&can);
 
         sent_flag = 1;
+/*
+        sprintf(txt, "%d\t%d\r\n", (int)(accel.z*100), (int)(gyro.x*100));
+        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
     }
 
     millis += 5;
