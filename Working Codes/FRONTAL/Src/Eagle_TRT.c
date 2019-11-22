@@ -210,8 +210,8 @@ void LSMD9S0_accel_gyro_init(imu_stc *accel, imu_stc *gyro)
 	}
 
 	HAL_Delay(1);
-
-	HAL_UART_Transmit(&huart2, (uint8_t *)"<IMU> Initialization -> Done\r\n", strlen("<IMU> Initialization -> Done\r\n"), 10);
+/*
+	HAL_UART_Transmit(&huart2, (uint8_t *)"<IMU> Initialization -> Done\r\n", strlen("<IMU> Initialization -> Done\r\n"), 10);*/
 }
 
 float LSMD9S0_read(imu_stc *imu)
@@ -293,9 +293,9 @@ int LSMD9S0_check(imu_stc *imu)
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 
 	char txt[100];
-
+/*
 	sprintf(txt, "Gyro, Accel check: %d\t%d\r\n", WHO_AM_I_G_VAL, WHO_AM_I_XM_VAL);
-	HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+	HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
 
 	///AXEL/GYRO STATUS
 	if ((WHO_AM_I_G_VAL == 212) & (WHO_AM_I_XM_VAL == 73))
@@ -826,6 +826,9 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 						can.id = 0xD0;
 						can.size = 8;
 						CAN_Send(&can);
+
+						sprintf(txt, "GPS Presence\r\n");
+						HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 					}
 					else
 					{

@@ -87,6 +87,7 @@ int multiplier = 1;
 int timer_factor = 2;
 int command_flag = 0;
 int calibration_flag = 0;
+int inverter_rpm = 0;
 
 TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -295,6 +296,24 @@ int main(void)
 
     encoder_counter = 0;
 
+    HAL_Delay(1);
+
+    can.dataTx[0] = 0x3D;
+    can.dataTx[1] = 0xA8;
+    can.dataTx[2] = 0x64;
+    can.id = 0x201;
+    can.size = 3;
+    CAN_Send(&can);
+
+    can.dataTx[0] = 0x3D;
+    can.dataTx[1] = 0xA8;
+    can.dataTx[2] = 0x64;
+    can.id = 0x202;
+    can.size = 3;
+    CAN_Send(&can);
+
+    HAL_Delay(1);
+
     while (1)
     {
 
@@ -302,12 +321,9 @@ int main(void)
 
         /* USER CODE BEGIN 3 */
 
-        //sprintf(txt, "%d\t%d\t%d\r\n", (int)(accel.x*100), (int)(accel.y*100), (int)(accel.z * 100));
-        /*sprintf(txt, "%d\t%d\r\n", (int)(accel.x*100), (int)(gyro.x*100));
-        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
-
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
-/*
+        
+        /*
         for(int i = 0; i < enc.data_size; i++){
             sprintf(txt, "%d ", enc.Data[i]);
             HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
@@ -315,11 +331,14 @@ int main(void)
         sprintf(txt, "\r\n");
         HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
 
+
         // If CAN is free from important messages, send data
         if (command_flag == 0)
         {
             if (previous_millis != HAL_GetTick())
             {
+                // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
+                // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
                 send_CAN_data(HAL_GetTick());
                 previous_millis = HAL_GetTick();
             }
@@ -1031,6 +1050,17 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
             idsave = 0;
         }
     }
+/*
+    if (idsave == 0x181){
+        if (can.dataRx[0] = 0xA8){
+            inverter_rpm = can.dataRx[2] * 256 + can.dataRx[1];
+            //x : 32000 = 100 : 7000
+            inverter_rpm = inverter_rpm * 7000/32767;
+            if (inverter_rpm > 7000){
+                inverter_rpm -= 14000;
+            }
+        }
+    }*/
 
     if (idsave == 0xBB)
     {
@@ -1137,10 +1167,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim == &htim7)
     {
         encoder_tim_interrupt(&enc);
-        if (enc.interrupt_flag == 0){
-            sprintf(txt, "%d\t%d\r\n", (int)(pot_2.val_100), (int)(enc.delta_angle));
-            HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-        }
     }
 }
 
@@ -1152,14 +1178,15 @@ int send_CAN_data(uint32_t millis)
     //-------------------SEND Encoder-------------------//
     if (millis % 100 == 0)
     {
-        uint16_t speed_Send = enc.average_speed;
+        uint16_t speed_kmh = enc.average_speed;
+        uint16_t speed_ms = enc.average_speed / 3.6 * 100;
 
         can.dataTx[0] = 0x06;
-        can.dataTx[1] = speed_Send / 256;
-        can.dataTx[2] = speed_Send % 256;
+        can.dataTx[1] = speed_kmh / 256;
+        can.dataTx[2] = speed_kmh % 256;
         can.dataTx[3] = enc.speed_sign;
-        can.dataTx[4] = 0;
-        can.dataTx[5] = 0;
+        can.dataTx[4] = speed_ms / 256;
+        can.dataTx[5] = speed_ms % 256;
         can.dataTx[6] = enc.error_flag;
         can.dataTx[7] = enc.steer_enc_prescaler;
         can.id = 0xD0;
@@ -1167,15 +1194,15 @@ int send_CAN_data(uint32_t millis)
         CAN_Send(&can);
 
         sent_flag = 1;
-/*
-        sprintf(txt, "%d\t%d\r\n", (int)(accel.z*100), (int)(gyro.x*100));
-        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
+
+        // sprintf(txt, "%d\t%d\r\n", (int)(speed_Send), (int)(enc.Km));
+        // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
     }
 
     millis += 5;
 
     //-------------SEND KM & WHEEL ROTAIONS-------------//
-    if (millis % 500 == 0)
+    if (millis % 100 == 0)
     {
 
         uint16_t Km = (enc.Km);
@@ -1186,8 +1213,8 @@ int send_CAN_data(uint32_t millis)
         can.dataTx[2] = Km;
         can.dataTx[3] = (uint8_t)rotations >> 8;
         can.dataTx[4] = (uint8_t)rotations;
-        can.dataTx[5] = (enc.angle0 / 10);
-        can.dataTx[6] = enc.clock_period;
+        can.dataTx[5] = 0;
+        can.dataTx[6] = 0;
         can.dataTx[7] = 0;
         can.id = 0xD0;
         can.size = 8;
@@ -1203,18 +1230,18 @@ int send_CAN_data(uint32_t millis)
     {
 
         //removing negative values
-        uint16_t val_a_x = accel.x + accel.scale * 1000;
-        uint16_t val_a_y = accel.y + accel.scale * 1000;
-        uint16_t val_a_z = accel.z + accel.scale * 1000;
+        uint16_t val_a_x = (accel.x + accel.scale) * 100;
+        uint16_t val_a_y = (accel.y + accel.scale) * 100;
+        uint16_t val_a_z = (accel.z + accel.scale) * 100;
 
-        can.dataTx[0] = 0x03;
+        can.dataTx[0] = 0x00;
         can.dataTx[1] = val_a_x / 256;
         can.dataTx[2] = val_a_x % 256;
         can.dataTx[3] = val_a_y / 256;
         can.dataTx[4] = val_a_y % 256;
         can.dataTx[5] = val_a_z / 256;
         can.dataTx[6] = val_a_z % 256;
-        can.dataTx[7] = accel.scale;
+        can.dataTx[7] = (uint8_t)accel.scale;
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);
@@ -1227,21 +1254,24 @@ int send_CAN_data(uint32_t millis)
     //---------------------SEND Gyro---------------------//
     if (millis % 100 == 0)
     {
-        uint16_t val_g_x = gyro.x + gyro.scale * 1000;
-        uint16_t val_g_y = gyro.y + gyro.scale * 1000;
-        uint16_t val_g_z = gyro.z + gyro.scale * 1000;
+        uint16_t val_g_x = (gyro.x + gyro.scale) * 10;
+        uint16_t val_g_y = (gyro.y + gyro.scale) * 10;
+        uint16_t val_g_z = (gyro.z + gyro.scale) * 10;
 
-        can.dataTx[0] = 0x04;
+        can.dataTx[0] = 0x01;
         can.dataTx[1] = val_g_x / 256;
         can.dataTx[2] = val_g_x % 256;
         can.dataTx[3] = val_g_y / 256;
         can.dataTx[4] = val_g_y % 256;
         can.dataTx[5] = val_g_z / 256;
         can.dataTx[6] = val_g_z % 256;
-        can.dataTx[7] = (gyro.scale / 10);
+        can.dataTx[7] = (uint8_t)(gyro.scale / 10);
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);
+
+        // sprintf(txt, "%d\t%d\r\n", (int)(val_g_x), (int)(val_g_y));
+        // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
         sent_flag = 4;
     }
