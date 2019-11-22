@@ -221,11 +221,6 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-    if (gps_init(&huart1, &gps_main) == 0)
-    {
-        //--error--//
-    }
-
     steer_enc_prescaler = htim3.Init.Period;
     steer_enc_prescaler /= 3;
     steer_enc_prescaler /= 20;
@@ -314,6 +309,11 @@ int main(void)
 
     HAL_Delay(1);
 
+    if (gps_init(&huart1, &gps_main) == 0)
+    {
+        //--error--//
+    }
+
     while (1)
     {
 
@@ -337,8 +337,12 @@ int main(void)
         {
             if (previous_millis != HAL_GetTick())
             {
+                // ALL DATA
                 // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
-                // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+                // GPS
+                sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
+
+                HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
                 send_CAN_data(HAL_GetTick());
                 previous_millis = HAL_GetTick();
             }

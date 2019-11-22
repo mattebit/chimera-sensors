@@ -737,6 +737,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 		//check if it's the huart_gps interrupt
 		HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request interrupt for the next data
 		data_string_gps = buffer_gps[0];						  //convert a pointer into a char
+		char txt[10];
 		if ((start_string_gps == 1) && (data_string_gps != '$'))
 		{											   //check that the new string has not started yet
 			string_gps[cont_string] = data_string_gps; //save the data into the array
@@ -748,6 +749,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 				start_string_gps = 0;			//end of string
 				if (string_gps[2] == 'G' && string_gps[3] == 'G' && string_gps[4] == 'A')
 				{ // operation when the string is GPGGA //
+					//sprintf(txt, "GPS Presence %s\r\n", string_gps);
 					if (checksum(string_gps, cont_string) == 1)
 					{ //check the checksum (if==true -> enter)
 						int cont_comma = 0, cont_latitude = 0, cont_longitude = 0, cont_altitude = 0, cont_time = 0;
@@ -764,6 +766,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 								}
 								else if (cont_comma == 2)
 								{ //save latitude
+
 									gps->latitude[cont_latitude] = string_gps[i];
 									cont_latitude++;
 								}
@@ -795,6 +798,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 								}
 							}
 						}
+
 						//-- operation to split data and send them --//
 						if (gps->fix_status == '0')
 						{
@@ -826,9 +830,6 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 						can.id = 0xD0;
 						can.size = 8;
 						CAN_Send(&can);
-
-						sprintf(txt, "GPS Presence\r\n");
-						HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 					}
 					else
 					{
@@ -867,6 +868,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 						{
 							gps->speed_i = (int)(atof(gps->speed) * 100);
 						}
+
 						can.dataTx[0] = 0x07;
 						can.dataTx[1] = gps->latitude_i_h / 256;
 						can.dataTx[2] = gps->latitude_i_h % 256;
@@ -885,6 +887,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 						ret = 0; //checksum failed
 					}
 				}
+				strcpy(string_gps, "");
 			}
 		}
 		else
