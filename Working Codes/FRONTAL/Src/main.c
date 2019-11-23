@@ -1203,7 +1203,7 @@ int send_CAN_data(uint32_t millis)
         // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
     }
 
-    millis += 5;
+    millis += 2;
 
     //-------------SEND KM & WHEEL ROTAIONS-------------//
     if (millis % 100 == 0)
@@ -1227,7 +1227,7 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 2;
     }
 
-    millis += 5;
+    millis += 2;
 
     //--------------------SEND Accel--------------------//
     if (millis % 100 == 0)
@@ -1253,7 +1253,7 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 3;
     }
 
-    millis += 5;
+    millis += 2;
 
     //---------------------SEND Gyro---------------------//
     if (millis % 100 == 0)
@@ -1280,7 +1280,7 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 4;
     }
 
-    millis += 5;
+    millis += 2;
 
     //--------------------SEND Steer--------------------//
     if (millis % 100 == 0)
@@ -1302,6 +1302,47 @@ int send_CAN_data(uint32_t millis)
             sent_flag = 5;
         }
     }
+
+    millis += 2;
+
+    //--------------------SEND GPS--------------------//
+    if (millis % 100 == 0)
+    {
+        can.dataTx[0] = 0x07;
+        can.dataTx[1] = gps_main.latitude_i_h / 256;
+        can.dataTx[2] = gps_main.latitude_i_h % 256;
+        can.dataTx[3] = gps_main.latitude_i_l / 256;
+        can.dataTx[4] = gps_main.latitude_i_l % 256;
+        can.dataTx[5] = (int)gps_main.latitude_o;
+        can.dataTx[6] = gps_main.speed_i / 256;
+        can.dataTx[7] = gps_main.speed_i % 256;
+        can.id = 0xD0;
+        can.size = 8;
+        CAN_Send(&can);
+
+        sent_flag = 6;
+    }
+
+    millis += 2;
+
+    //--------------------SEND GPS--------------------//
+    if (millis % 100 == 0)
+    {
+        can.dataTx[0] = 0x08;
+        can.dataTx[1] = gps_main.longitude_i_h / 256;
+        can.dataTx[2] = gps_main.longitude_i_h % 256;
+        can.dataTx[3] = gps_main.longitude_i_l / 256;
+        can.dataTx[4] = gps_main.longitude_i_l % 256;
+        can.dataTx[5] = (int)gps_main.longitude_o;
+        can.dataTx[6] = gps_main.altitude_i / 256;
+        can.dataTx[7] = gps_main.altitude_i % 256;
+        can.id = 0xD0;
+        can.size = 8;
+        CAN_Send(&can);
+        
+        sent_flag = 7;
+    }
+
 
     return sent_flag;
 }

@@ -818,18 +818,7 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 							gps->longitude_i_h = (int)(gps->longitude_i / 100000);
 							gps->longitude_i_l = (int)(gps->longitude_i - gps->longitude_i_h * 100000);
 						}
-
-						can.dataTx[0] = 0x08;
-						can.dataTx[1] = gps->longitude_i_h / 256;
-						can.dataTx[2] = gps->longitude_i_h % 256;
-						can.dataTx[3] = gps->longitude_i_l / 256;
-						can.dataTx[4] = gps->longitude_i_l % 256;
-						can.dataTx[5] = (int)gps->longitude_o;
-						can.dataTx[6] = gps->altitude_i / 256;
-						can.dataTx[7] = gps->altitude_i % 256;
-						can.id = 0xD0;
-						can.size = 8;
-						CAN_Send(&can);
+						ret = 1;
 					}
 					else
 					{
@@ -869,17 +858,6 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 							gps->speed_i = (int)(atof(gps->speed) * 100);
 						}
 
-						can.dataTx[0] = 0x07;
-						can.dataTx[1] = gps->latitude_i_h / 256;
-						can.dataTx[2] = gps->latitude_i_h % 256;
-						can.dataTx[3] = gps->latitude_i_l / 256;
-						can.dataTx[4] = gps->latitude_i_l % 256;
-						can.dataTx[5] = (int)gps->latitude_o;
-						can.dataTx[6] = gps->speed_i / 256;
-						can.dataTx[7] = gps->speed_i % 256;
-						can.id = 0xD0;
-						can.size = 8;
-						CAN_Send(&can);
 						ret = 1;
 					}
 					else
