@@ -749,7 +749,9 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 				start_string_gps = 0;			//end of string
 				if (string_gps[2] == 'G' && string_gps[3] == 'G' && string_gps[4] == 'A')
 				{ // operation when the string is GPGGA //
-					//sprintf(txt, "GPS Presence %s\r\n", string_gps);
+					memcpy(gps->string, "", 100);
+					memcpy(gps->string, string_gps, strlen(string_gps));
+
 					if (checksum(string_gps, cont_string) == 1)
 					{ //check the checksum (if==true -> enter)
 						int cont_comma = 0, cont_latitude = 0, cont_longitude = 0, cont_altitude = 0, cont_time = 0;
@@ -1085,7 +1087,7 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Calculating rad/s, then m/s, then Km/h
-	speed = (enc->delta_angle / 360) * 3.1415 * (enc->wheel_diameter);
+	speed = (enc->delta_angle/360) * 3.1415 * (enc->wheel_diameter/2);
 	speed *= enc->frequency;
 	speed *= 3.6;
 	speed = round((speed * 1000)) / 1000;
@@ -1134,11 +1136,15 @@ void enc_calculate_optimal_frequency(enc_stc *enc)
 		frequency = frequency < 50 ? 50 : frequency;
 
 		// Returns 0 if reinitialization is done correctly
+		HAL_TIM_Base_Stop(enc->frequency_timer);
+		HAL_TIM_Base_Stop_IT(enc->frequency_timer);
 		if (ReinitTIM7(frequency, enc) == 0)
 		{
 			// Set encoder actual frequency
 			enc->frequency = enc->frequency_timer_Hz / (enc->frequency_timer->Init.Prescaler * enc->frequency_timer->Init.Period);
 		}
+		HAL_TIM_Base_Start(enc->frequency_timer);
+		HAL_TIM_Base_Start_IT(enc->frequency_timer);
 	}
 }
 

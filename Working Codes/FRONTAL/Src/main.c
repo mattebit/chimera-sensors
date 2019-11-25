@@ -139,6 +139,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 int steer_enc_prescaler;
 int encoder_counter;
 int previous_millis;
+int second_millis;
+
+int count_message;
 
 /* USER CODE END 0 */
 
@@ -309,6 +312,8 @@ int main(void)
 
     HAL_Delay(1);
 
+    second_millis = HAL_GetTick();
+
     if (gps_init(&huart1, &gps_main) == 0)
     {
         //--error--//
@@ -340,11 +345,22 @@ int main(void)
                 // ALL DATA
                 // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
                 // GPS
-                sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
-
+                //sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
+                sprintf(txt,"%d\r\n", gps_main.latitude_i);
                 HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-                send_CAN_data(HAL_GetTick());
+
+                int sent = send_CAN_data(HAL_GetTick());
                 previous_millis = HAL_GetTick();
+                /*
+                second_millis = HAL_GetTick();
+                if (sent != 0){
+                    count_message ++;
+                }
+                if(second_millis % 1000 == 0){
+                    sprintf(txt, "messages Per second %d\r\n", count_message);
+                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+                    count_message = 0;
+                }*/
             }
         }
         else
@@ -1308,7 +1324,7 @@ int send_CAN_data(uint32_t millis)
     //--------------------SEND GPS--------------------//
     if (millis % 100 == 0)
     {
-        can.dataTx[0] = 0x07;
+        can.dataTx[0] = 0x010;
         can.dataTx[1] = gps_main.latitude_i_h / 256;
         can.dataTx[2] = gps_main.latitude_i_h % 256;
         can.dataTx[3] = gps_main.latitude_i_l / 256;
@@ -1328,7 +1344,7 @@ int send_CAN_data(uint32_t millis)
     //--------------------SEND GPS--------------------//
     if (millis % 100 == 0)
     {
-        can.dataTx[0] = 0x08;
+        can.dataTx[0] = 0x011;
         can.dataTx[1] = gps_main.longitude_i_h / 256;
         can.dataTx[2] = gps_main.longitude_i_h % 256;
         can.dataTx[3] = gps_main.longitude_i_l / 256;

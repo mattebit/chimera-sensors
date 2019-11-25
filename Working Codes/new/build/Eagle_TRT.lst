@@ -1,0 +1,3925 @@
+ARM GAS  /tmp/ccihUd1h.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.eabi_attribute 27, 1
+   3              		.eabi_attribute 28, 1
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"Eagle_TRT.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.next,"ax",%progbits
+  18              		.align	1
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu fpv4-sp-d16
+  24              	next:
+  25              	.LFB133:
+  26              		.file 1 "Src/Eagle_TRT.c"
+   1:Src/Eagle_TRT.c **** #include "Eagle_TRT.h"
+   2:Src/Eagle_TRT.c **** #include "stm32f4xx_hal_conf.h"
+   3:Src/Eagle_TRT.c **** 
+   4:Src/Eagle_TRT.c **** /*
+   5:Src/Eagle_TRT.c ****  *Driver for all the stm in the Eagle_TRT veichle
+   6:Src/Eagle_TRT.c ****  *incude this driver in the main file
+   7:Src/Eagle_TRT.c ****  *you can't use all the functions unless you set up the CubeMx project correctly
+   8:Src/Eagle_TRT.c **** */
+   9:Src/Eagle_TRT.c **** 
+  10:Src/Eagle_TRT.c **** 
+  11:Src/Eagle_TRT.c **** //----------------ENCODER----------------//
+  12:Src/Eagle_TRT.c **** /*
+  13:Src/Eagle_TRT.c ****  *To use encoder functions you have to initialize two timers, one for the clock and one to generate
+  14:Src/Eagle_TRT.c ****  *To get the rotational speed of the encoder, you can setup the interrupt timer and call 'encoder_t
+  15:Src/Eagle_TRT.c ****  *you have to declare a variable and pass it as argument to the encoder_tim_interrupt() function.
+  16:Src/Eagle_TRT.c ****  *The porpouse of that variable is to switch from the three phases needed to calculate the rotation
+  17:Src/Eagle_TRT.c ****  *The first and the second phases are to request two angles from the encoder, then third is to calc
+  18:Src/Eagle_TRT.c ****  *For the configuration of the first timer go to the description of the read_encoder() function.
+  19:Src/Eagle_TRT.c ****  *For the configuration of the second timer you have to configure it to generate an interrupt.
+  20:Src/Eagle_TRT.c ****  *That interrupt must be long enough to calculate a speed but not too long because you have to get 
+  21:Src/Eagle_TRT.c ****  *
+  22:Src/Eagle_TRT.c ****  *working settings:
+  23:Src/Eagle_TRT.c ****  *interrupt timer -> prescaler 36, counter period 1000
+  24:Src/Eagle_TRT.c ****  *timer2 -> prescaler = 18, counter period = 65500
+  25:Src/Eagle_TRT.c ****  *pin PC8 = data in
+  26:Src/Eagle_TRT.c ****  *pin PC9 = clock pin
+  27:Src/Eagle_TRT.c ****  *angles_array[15]
+  28:Src/Eagle_TRT.c **** */
+  29:Src/Eagle_TRT.c **** 
+  30:Src/Eagle_TRT.c **** //----------------GPS----------------//
+  31:Src/Eagle_TRT.c **** /*
+  32:Src/Eagle_TRT.c ****  *To use GPS functions you have to setup the UART port to communicate with it.
+ARM GAS  /tmp/ccihUd1h.s 			page 2
+
+
+  33:Src/Eagle_TRT.c ****  *Possibly set the port as interrupt because the received data are cleaner.
+  34:Src/Eagle_TRT.c ****  *Call GPS_INIT() to setup the GPS
+  35:Src/Eagle_TRT.c ****  *Every loop read the input data.
+  36:Src/Eagle_TRT.c ****  *Then the function Get_Sentence() looks for a sequence of letters like "GPRMC"
+  37:Src/Eagle_TRT.c ****  *Look at NMEA protocol, there you can find all the strings that a GPS can send,
+  38:Src/Eagle_TRT.c ****  *every one of them defines the types of data that the GPS sends.
+  39:Src/Eagle_TRT.c ****  *If Get_Sentence() found one string, returns the number of the position of that string in the char
+  40:Src/Eagle_TRT.c ****  *Go to Get_Sentence() description to find an example of Matrix
+  41:Src/Eagle_TRT.c ****  *Once you have the number of the string you can call Get_Requested_Data() to get the data that you
+  42:Src/Eagle_TRT.c ****  *If you need to know if the GPS is connected to at least 3 satellites call Is_Valid() function
+  43:Src/Eagle_TRT.c ****  *
+  44:Src/Eagle_TRT.c ****  *checksum calculator http://www.hhhh.org/wiml/proj/nmeaxor.html
+  45:Src/Eagle_TRT.c **** */
+  46:Src/Eagle_TRT.c **** 
+  47:Src/Eagle_TRT.c **** //----------------IMU----------------//
+  48:Src/Eagle_TRT.c **** /*
+  49:Src/Eagle_TRT.c ****  *Setup SPI port to communicate with the sensor
+  50:Src/Eagle_TRT.c ****  *Call gyro_init() and magn_accel_init() to setup the sensor
+  51:Src/Eagle_TRT.c ****  *If you want to calibrate the sensor call gyro_calib() and accel_calib().
+  52:Src/Eagle_TRT.c ****  *You can read the x, y, z data from the Gyroscope by calling gyro_read()
+  53:Src/Eagle_TRT.c ****  *You can read the x, y, z data from the Gyroscope by calling accel_read()
+  54:Src/Eagle_TRT.c **** */
+  55:Src/Eagle_TRT.c **** 
+  56:Src/Eagle_TRT.c **** 
+  57:Src/Eagle_TRT.c **** #ifdef HAL_SPI_MODULE_ENABLED
+  58:Src/Eagle_TRT.c **** #include "stm32f4xx_hal_spi.h"
+  59:Src/Eagle_TRT.c **** 
+  60:Src/Eagle_TRT.c **** 	///IMU VARIABLES///
+  61:Src/Eagle_TRT.c **** 	uint8_t ZERO=0x00;
+  62:Src/Eagle_TRT.c **** 	uint8_t WHO_AM_I_G = 0x8F;
+  63:Src/Eagle_TRT.c **** 	uint8_t WHO_AM_I_G_VAL;
+  64:Src/Eagle_TRT.c **** 	uint8_t WHO_AM_I_XM = 0x8F;
+  65:Src/Eagle_TRT.c **** 	uint8_t WHO_AM_I_XM_VAL;
+  66:Src/Eagle_TRT.c **** 
+  67:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG1_G_ADD = 0x20;
+  68:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG1_G_VAL = 0x0F;
+  69:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG4_G_ADD = 0x23;
+  70:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG4_G_VAL = 0x10;
+  71:Src/Eagle_TRT.c **** 
+  72:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG1_XM_ADD = 0x20;
+  73:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG1_XM_VAL = 0xA7;
+  74:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG2_XM_ADD = 0x21;
+  75:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG2_XM_VAL = 0x08;
+  76:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG5_XM_ADD = 0x24;
+  77:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG5_XM_VAL = 0x70;
+  78:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG6_XM_ADD = 0x25;
+  79:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG6_XM_VAL = 0x20;
+  80:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG7_XM_ADD = 0x26;
+  81:Src/Eagle_TRT.c **** 	uint8_t CTRL_REG7_XM_VAL = 0x00;
+  82:Src/Eagle_TRT.c **** 
+  83:Src/Eagle_TRT.c **** 	uint8_t OUT_X_L_G_ADD = 0xE8;
+  84:Src/Eagle_TRT.c **** 	uint8_t OUT_X_H_G_ADD = 0xE9;
+  85:Src/Eagle_TRT.c **** 	uint8_t OUT_Y_L_G_ADD = 0xEA;
+  86:Src/Eagle_TRT.c **** 	uint8_t OUT_Y_H_G_ADD = 0xEB;
+  87:Src/Eagle_TRT.c **** 	uint8_t OUT_Z_L_G_ADD = 0xEC;
+  88:Src/Eagle_TRT.c **** 	uint8_t OUT_Z_H_G_ADD = 0xED;
+  89:Src/Eagle_TRT.c **** 
+ARM GAS  /tmp/ccihUd1h.s 			page 3
+
+
+  90:Src/Eagle_TRT.c **** 	uint8_t OUT_X_L_A_ADD = 0xE8;
+  91:Src/Eagle_TRT.c **** 	uint8_t OUT_X_H_A_ADD = 0xE9;
+  92:Src/Eagle_TRT.c **** 	uint8_t OUT_Y_L_A_ADD = 0xEA;
+  93:Src/Eagle_TRT.c **** 	uint8_t OUT_Y_H_A_ADD = 0xEB;
+  94:Src/Eagle_TRT.c **** 	uint8_t OUT_Z_L_A_ADD = 0xEC;
+  95:Src/Eagle_TRT.c **** 	uint8_t OUT_Z_H_A_ADD = 0xED;
+  96:Src/Eagle_TRT.c **** 
+  97:Src/Eagle_TRT.c **** 	imu_stc imu;
+  98:Src/Eagle_TRT.c **** 	//gyro initialization function
+  99:Src/Eagle_TRT.c **** 	//call this function before requesting data from the sensor
+ 100:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 101:Src/Eagle_TRT.c **** 	void LSMD9S0_gyro_init(imu_stc* imu){
+ 102:Src/Eagle_TRT.c **** 
+ 103:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 104:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 105:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_ADD, 1, 10); ///Writing the address
+ 106:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_G_VAL, 1, 10); ///Writing 0b00001111 to enable P
+ 107:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 108:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 109:Src/Eagle_TRT.c **** 
+ 110:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 111:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 112:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_ADD, 1, 10); ///Writing the address
+ 113:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG4_G_VAL, 1, 10); ///Writing 0b00010000 to set full
+ 114:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 115:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 116:Src/Eagle_TRT.c **** 	}
+ 117:Src/Eagle_TRT.c **** 
+ 118:Src/Eagle_TRT.c **** 	//accelerometer and magnetometer initialization
+ 119:Src/Eagle_TRT.c **** 	//call this function before requesting data from the sensor
+ 120:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 121:Src/Eagle_TRT.c **** 	void LSMD9S0_gyro_accel_init(imu_stc* imu){
+ 122:Src/Eagle_TRT.c **** 
+ 123:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 124:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 125:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_ADD, 1, 10); ///Writing the address
+ 126:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG1_XM_VAL, 1, 10); ///Writing 0b10100111 to enable 
+ 127:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 128:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 129:Src/Eagle_TRT.c **** 
+ 130:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 131:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 132:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_ADD, 1, 10); ///Writing the address
+ 133:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG2_XM_VAL, 1, 10); ///Writing 0b00001000 to set +/-
+ 134:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 135:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 136:Src/Eagle_TRT.c **** 
+ 137:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 138:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 139:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_ADD, 1, 10); ///Writing the address
+ 140:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG5_XM_VAL, 1, 10); ///Writing 0b01110000 to set hig
+ 141:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 142:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 143:Src/Eagle_TRT.c **** 
+ 144:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 145:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 146:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_ADD, 1, 10); ///Writing the address
+ARM GAS  /tmp/ccihUd1h.s 			page 4
+
+
+ 147:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG6_XM_VAL, 1, 10); ///Writing 0b00100000 to set +/-
+ 148:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 149:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 150:Src/Eagle_TRT.c **** 
+ 151:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
+ 152:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); ///CS_XM to 0
+ 153:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_ADD, 1, 10); ///Writing the address
+ 154:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&CTRL_REG7_XM_VAL, 1, 10); ///Writing 0b00000000 to set con
+ 155:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); ///CS_G to 0
+ 156:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+ 157:Src/Eagle_TRT.c **** 	}
+ 158:Src/Eagle_TRT.c **** 
+ 159:Src/Eagle_TRT.c **** 	//this function is used to calibrate the gyroscope
+ 160:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 161:Src/Eagle_TRT.c **** 	//X_G_axis_offset = gyroscope x axis offset value that changes after executing this function
+ 162:Src/Eagle_TRT.c **** 	//Y_G_axis_offset = gyroscope y axis offset value that changes after executing this function
+ 163:Src/Eagle_TRT.c **** 	//Z_G_axis_offset = gyroscope z axis offset value that changes after executing this function
+ 164:Src/Eagle_TRT.c **** 	void LSMD9S0_gyro_calib(imu_stc* imu){
+ 165:Src/Eagle_TRT.c **** 
+ 166:Src/Eagle_TRT.c **** 		imu->kp = 0.0175;
+ 167:Src/Eagle_TRT.c **** 
+ 168:Src/Eagle_TRT.c **** 		imu->X_G_axis_offset = LSM9DS0_calib(imu);
+ 169:Src/Eagle_TRT.c **** 		imu->Y_G_axis_offset = LSM9DS0_calib(imu);
+ 170:Src/Eagle_TRT.c **** 		imu->Z_G_axis_offset = LSM9DS0_calib(imu);
+ 171:Src/Eagle_TRT.c **** 	}
+ 172:Src/Eagle_TRT.c **** 
+ 173:Src/Eagle_TRT.c **** 	//this function is used to calibrate the accelerometer
+ 174:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 175:Src/Eagle_TRT.c **** 	//X_A_axis_offset = accelerometer x axis offset value that changes after executing this function
+ 176:Src/Eagle_TRT.c **** 	//Y_A_axis_offset = accelerometer y axis offset value that changes after executing this function
+ 177:Src/Eagle_TRT.c **** 	//Z_A_axis_offset = accelerometer z axis offset value that changes after executing this function
+ 178:Src/Eagle_TRT.c **** 	void LSMD9S0_accel_calib(imu_stc* imu){
+ 179:Src/Eagle_TRT.c **** 
+ 180:Src/Eagle_TRT.c **** 		imu->kp = 0.00119782; ///0.000122 * 9,81
+ 181:Src/Eagle_TRT.c **** 
+ 182:Src/Eagle_TRT.c **** 		imu->X_A_axis_offset = LSM9DS0_calib(imu);
+ 183:Src/Eagle_TRT.c **** 		imu->Y_A_axis_offset = LSM9DS0_calib(imu);
+ 184:Src/Eagle_TRT.c **** 		imu->Z_A_axis_offset = LSM9DS0_calib(imu);
+ 185:Src/Eagle_TRT.c **** 	}
+ 186:Src/Eagle_TRT.c **** 
+ 187:Src/Eagle_TRT.c **** 	float LSMD9S0_read(imu_stc* imu){
+ 188:Src/Eagle_TRT.c **** 
+ 189:Src/Eagle_TRT.c **** 		uint8_t OUT_L_VAL;
+ 190:Src/Eagle_TRT.c **** 		uint8_t OUT_H_VAL;
+ 191:Src/Eagle_TRT.c **** 
+ 192:Src/Eagle_TRT.c **** 		///READING ROTATION
+ 193:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
+ 194:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_SET); ///CS_NotInUse to 1
+ 195:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, &(imu->REG_L), 1, 10); ///Writing LOW address
+ 196:Src/Eagle_TRT.c **** 		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_L_VAL, 1, 10); ///Saving LOW data
+ 197:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
+ 198:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_RESET); ///CS_NotInUse to
+ 199:Src/Eagle_TRT.c **** 
+ 200:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_RESET); ///CS_InUse to 0
+ 201:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_SET); ///CS_NotInUse to 1
+ 202:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, &(imu->REG_H), 1, 10); ///Writing HIGH address
+ 203:Src/Eagle_TRT.c **** 		HAL_SPI_Receive(imu->hspi, (uint8_t*)&OUT_H_VAL, 1, 10); ///Saving HIGH data
+ARM GAS  /tmp/ccihUd1h.s 			page 5
+
+
+ 204:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_InUse, imu->GPIO_Pin_InUse, GPIO_PIN_SET); ///CS_InUse to 1
+ 205:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(imu->GPIOx_NotInUse, imu->GPIO_Pin_NotInUse, GPIO_PIN_RESET); ///CS_NotInUse to
+ 206:Src/Eagle_TRT.c **** 
+ 207:Src/Eagle_TRT.c **** 		///CALCULATING ROTATION
+ 208:Src/Eagle_TRT.c **** 		float axis = OUT_H_VAL << 8 | OUT_L_VAL;	///Calculating axis value shifting and using a logic OR
+ 209:Src/Eagle_TRT.c **** 		if (axis > 32767){ ///Generating positive and negative value of rotation
+ 210:Src/Eagle_TRT.c **** 			axis = axis - 65536;
+ 211:Src/Eagle_TRT.c **** 		}
+ 212:Src/Eagle_TRT.c **** 		axis = axis * imu->kp; ///Scaling axis value with appropriate conversion factor from datasheet
+ 213:Src/Eagle_TRT.c **** 
+ 214:Src/Eagle_TRT.c **** 		return axis;
+ 215:Src/Eagle_TRT.c **** 	}
+ 216:Src/Eagle_TRT.c **** 
+ 217:Src/Eagle_TRT.c **** 	float LSM9DS0_calib(imu_stc* imu){
+ 218:Src/Eagle_TRT.c **** 
+ 219:Src/Eagle_TRT.c **** 		float axis_cal;
+ 220:Src/Eagle_TRT.c **** 		float sum_cal = 0.0000;
+ 221:Src/Eagle_TRT.c **** 
+ 222:Src/Eagle_TRT.c **** 		for(int i = 0; i < 10000; i++){
+ 223:Src/Eagle_TRT.c **** 			float tmp = LSMD9S0_read(imu);
+ 224:Src/Eagle_TRT.c **** 			sum_cal = sum_cal + tmp;
+ 225:Src/Eagle_TRT.c **** 		}
+ 226:Src/Eagle_TRT.c **** 		axis_cal = sum_cal / 10000;
+ 227:Src/Eagle_TRT.c **** 
+ 228:Src/Eagle_TRT.c **** 		return axis_cal;
+ 229:Src/Eagle_TRT.c **** 	}
+ 230:Src/Eagle_TRT.c **** 
+ 231:Src/Eagle_TRT.c **** 	int LSMD9S0_check(imu_stc* imu){
+ 232:Src/Eagle_TRT.c **** 
+ 233:Src/Eagle_TRT.c **** 		int check = 0;
+ 234:Src/Eagle_TRT.c **** 
+ 235:Src/Eagle_TRT.c **** 		///GYRO IS WORKING
+ 236:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); ///CS_G to 0
+ 237:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET); ///CS_XM to 1
+ 238:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_G, 1, 10); ///Writing on register ----> (uint8_t*
+ 239:Src/Eagle_TRT.c **** 		HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_G_VAL, 1, 10); ///Reading
+ 240:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); ///CS_G to 1
+ 241:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET); ///CS_XM to 0
+ 242:Src/Eagle_TRT.c **** 
+ 243:Src/Eagle_TRT.c **** 		///AXEL/MAGN ARE WORKING
+ 244:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); ///CS_G to 1
+ 245:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET); ///CS_XM to 0
+ 246:Src/Eagle_TRT.c **** 		HAL_SPI_Transmit(imu->hspi, (uint8_t*)&WHO_AM_I_XM, 1, 10); ///Writing on register ----> (uint8_t
+ 247:Src/Eagle_TRT.c **** 		HAL_SPI_TransmitReceive(imu->hspi, (uint8_t*)&ZERO, (uint8_t*)&WHO_AM_I_XM_VAL, 1, 10); ///Readin
+ 248:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); ///CS_G to 0
+ 249:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET); ///CS_XM to 1
+ 250:Src/Eagle_TRT.c **** 
+ 251:Src/Eagle_TRT.c **** 		///AXEL/GYRO STATUS
+ 252:Src/Eagle_TRT.c **** 		if (WHO_AM_I_G_VAL != 212){
+ 253:Src/Eagle_TRT.c **** 			check = 1;
+ 254:Src/Eagle_TRT.c **** 		}
+ 255:Src/Eagle_TRT.c **** 		if (WHO_AM_I_XM_VAL != 212){
+ 256:Src/Eagle_TRT.c **** 			check = 2;
+ 257:Src/Eagle_TRT.c **** 		}
+ 258:Src/Eagle_TRT.c **** 		if ((WHO_AM_I_G_VAL != 212) & (WHO_AM_I_XM_VAL != 212)){
+ 259:Src/Eagle_TRT.c **** 			check = 3;
+ 260:Src/Eagle_TRT.c **** 		}
+ARM GAS  /tmp/ccihUd1h.s 			page 6
+
+
+ 261:Src/Eagle_TRT.c **** 
+ 262:Src/Eagle_TRT.c **** 		return check;
+ 263:Src/Eagle_TRT.c **** 	}
+ 264:Src/Eagle_TRT.c **** 
+ 265:Src/Eagle_TRT.c **** 	//Reading G_axis values
+ 266:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 267:Src/Eagle_TRT.c **** 	//X_G_axis = pointer gyroscope x variable
+ 268:Src/Eagle_TRT.c **** 	//Y_G_axis = pointer gyroscope y variable
+ 269:Src/Eagle_TRT.c **** 	//Z_G_axis = pointer gyroscope z variable
+ 270:Src/Eagle_TRT.c **** 	//X_G_axis_offset = offset x value
+ 271:Src/Eagle_TRT.c **** 	//Y_G_axis_offset = offset y value
+ 272:Src/Eagle_TRT.c **** 	//Z_G_axis_offset = offset z value
+ 273:Src/Eagle_TRT.c **** 	void LSMD9S0_gyro_read(imu_stc* imu){
+ 274:Src/Eagle_TRT.c **** 
+ 275:Src/Eagle_TRT.c **** 		imu->kp = 0.0175;
+ 276:Src/Eagle_TRT.c **** 
+ 277:Src/Eagle_TRT.c **** 		imu->X_G_axis = LSMD9S0_read(imu);
+ 278:Src/Eagle_TRT.c **** 		imu->X_G_axis = imu->X_G_axis - imu->X_G_axis_offset;
+ 279:Src/Eagle_TRT.c **** 		imu->Y_G_axis = LSMD9S0_read(imu);
+ 280:Src/Eagle_TRT.c **** 		imu->Y_G_axis = imu->Y_G_axis - imu->Y_G_axis_offset;
+ 281:Src/Eagle_TRT.c **** 		imu->Z_G_axis = LSMD9S0_read(imu);
+ 282:Src/Eagle_TRT.c **** 		imu->Z_G_axis = imu->Z_G_axis - imu->Z_G_axis_offset;
+ 283:Src/Eagle_TRT.c **** 	}
+ 284:Src/Eagle_TRT.c **** 
+ 285:Src/Eagle_TRT.c **** 	///Reading A_axis values
+ 286:Src/Eagle_TRT.c **** 	//hspi = pointer to the spi port defined
+ 287:Src/Eagle_TRT.c **** 	//X_A_axis = pointer accelerometer x variable
+ 288:Src/Eagle_TRT.c **** 	//Y_A_axis = pointer accelerometer y variable
+ 289:Src/Eagle_TRT.c **** 	//Z_A_axis = pointer accelerometer z variable
+ 290:Src/Eagle_TRT.c **** 	//X_A_axis_offset = offset x value
+ 291:Src/Eagle_TRT.c **** 	//Y_A_axis_offset = offset y value
+ 292:Src/Eagle_TRT.c **** 	//Z_A_axis_offset = offset z value
+ 293:Src/Eagle_TRT.c **** 	void LSMD9S0_accel_read(imu_stc* imu){
+ 294:Src/Eagle_TRT.c **** 
+ 295:Src/Eagle_TRT.c **** 		imu->kp= 0.00119782; ///0.000122 * 9,81
+ 296:Src/Eagle_TRT.c **** 
+ 297:Src/Eagle_TRT.c **** 		imu->X_A_axis = LSMD9S0_read(imu);
+ 298:Src/Eagle_TRT.c **** 		imu->X_A_axis = imu->X_A_axis - imu->X_A_axis_offset;
+ 299:Src/Eagle_TRT.c **** 		imu->Y_A_axis = LSMD9S0_read(imu);
+ 300:Src/Eagle_TRT.c **** 		imu->Y_A_axis = imu->Y_A_axis - imu->Y_A_axis_offset;
+ 301:Src/Eagle_TRT.c **** 		imu->Z_A_axis = LSMD9S0_read(imu);
+ 302:Src/Eagle_TRT.c **** 		imu->Z_A_axis = imu->Z_A_axis - imu->Z_A_axis_offset + 9.81;
+ 303:Src/Eagle_TRT.c **** 	}
+ 304:Src/Eagle_TRT.c **** 
+ 305:Src/Eagle_TRT.c **** #endif
+ 306:Src/Eagle_TRT.c **** 
+ 307:Src/Eagle_TRT.c **** 
+ 308:Src/Eagle_TRT.c **** #ifdef HAL_CAN_MODULE_ENABLED
+ 309:Src/Eagle_TRT.c **** #include "stm32f4xx_hal_can.h"
+ 310:Src/Eagle_TRT.c **** 	//function that sends an array via CAN
+ 311:Src/Eagle_TRT.c **** 	//hcan = pointer to can port
+ 312:Src/Eagle_TRT.c **** 	//id = id of the message to be sent
+ 313:Src/Eagle_TRT.c **** 	//dataTx = pointer to array that contains the data to be sent
+ 314:Src/Eagle_TRT.c **** 	//size = size of the array
+ 315:Src/Eagle_TRT.c **** 	can_stc can;
+ 316:Src/Eagle_TRT.c **** 	int CAN_Send(can_stc* can){
+ 317:Src/Eagle_TRT.c **** 
+ARM GAS  /tmp/ccihUd1h.s 			page 7
+
+
+ 318:Src/Eagle_TRT.c **** 		uint32_t mailbox;
+ 319:Src/Eagle_TRT.c **** 		uint8_t flag = 0;
+ 320:Src/Eagle_TRT.c **** 
+ 321:Src/Eagle_TRT.c **** 		CAN_TxHeaderTypeDef TxHeader;
+ 322:Src/Eagle_TRT.c **** 		TxHeader.StdId = can->id;
+ 323:Src/Eagle_TRT.c **** 		TxHeader.IDE = CAN_ID_STD;
+ 324:Src/Eagle_TRT.c **** 		TxHeader.RTR = CAN_RTR_DATA;
+ 325:Src/Eagle_TRT.c **** 		TxHeader.DLC = can->size;
+ 326:Src/Eagle_TRT.c **** 		TxHeader.TransmitGlobalTime = DISABLE;
+ 327:Src/Eagle_TRT.c **** 
+ 328:Src/Eagle_TRT.c **** 		if (HAL_CAN_GetTxMailboxesFreeLevel(can->hcan) != 0 && HAL_CAN_IsTxMessagePending(can->hcan, CAN_
+ 329:Src/Eagle_TRT.c **** 			HAL_CAN_AddTxMessage(can->hcan, &TxHeader, can->dataTx, &mailbox);
+ 330:Src/Eagle_TRT.c **** 			flag = 1;
+ 331:Src/Eagle_TRT.c **** 		}
+ 332:Src/Eagle_TRT.c **** 
+ 333:Src/Eagle_TRT.c **** 		return flag;
+ 334:Src/Eagle_TRT.c **** 	}
+ 335:Src/Eagle_TRT.c **** 
+ 336:Src/Eagle_TRT.c **** 	//receive a buffer from the CAN communication
+ 337:Src/Eagle_TRT.c **** 	//you can call this function in the callback of the CAN interrupt
+ 338:Src/Eagle_TRT.c **** 	//hcan = pointer to can port
+ 339:Src/Eagle_TRT.c **** 	//DataRx = pointer to the buffer you are receiveng
+ 340:Src/Eagle_TRT.c **** 	//size = size of the buffer you are using
+ 341:Src/Eagle_TRT.c **** 	int CAN_Receive(can_stc* can){
+ 342:Src/Eagle_TRT.c **** 
+ 343:Src/Eagle_TRT.c **** 		CAN_RxHeaderTypeDef RxHeader;
+ 344:Src/Eagle_TRT.c **** 
+ 345:Src/Eagle_TRT.c **** 		if (HAL_CAN_GetRxFifoFillLevel(can->hcan, CAN_RX_FIFO0) != 0){
+ 346:Src/Eagle_TRT.c **** 			HAL_CAN_GetRxMessage(can->hcan, CAN_RX_FIFO0, &RxHeader, can->dataRx);
+ 347:Src/Eagle_TRT.c **** 		}
+ 348:Src/Eagle_TRT.c **** 
+ 349:Src/Eagle_TRT.c **** 		int id = RxHeader.StdId;
+ 350:Src/Eagle_TRT.c **** 
+ 351:Src/Eagle_TRT.c **** 		return id;
+ 352:Src/Eagle_TRT.c **** 	}
+ 353:Src/Eagle_TRT.c **** #endif
+ 354:Src/Eagle_TRT.c **** 
+ 355:Src/Eagle_TRT.c **** #ifdef HAL_UART_MODULE_ENABLED
+ 356:Src/Eagle_TRT.c **** 	#include "stm32f4xx_hal_uart.h"
+ 357:Src/Eagle_TRT.c **** 	#include "malloc.h"
+ 358:Src/Eagle_TRT.c **** 	///---- queue ---- ///
+ 359:Src/Eagle_TRT.c **** 	static int next(int ret, int dim){
+  27              		.loc 1 359 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32              	.LVL0:
+ 360:Src/Eagle_TRT.c **** 
+ 361:Src/Eagle_TRT.c **** 	  return (ret+1)%dim;
+  33              		.loc 1 361 0
+  34 0000 0130     		adds	r0, r0, #1
+  35              	.LVL1:
+  36 0002 90FBF1F3 		sdiv	r3, r0, r1
+ 362:Src/Eagle_TRT.c **** 	}
+  37              		.loc 1 362 0
+  38 0006 01FB1300 		mls	r0, r1, r3, r0
+ARM GAS  /tmp/ccihUd1h.s 			page 8
+
+
+  39              	.LVL2:
+  40 000a 7047     		bx	lr
+  41              		.cfi_endproc
+  42              	.LFE133:
+  44              		.section	.text.emptyp,"ax",%progbits
+  45              		.align	1
+  46              		.syntax unified
+  47              		.thumb
+  48              		.thumb_func
+  49              		.fpu fpv4-sp-d16
+  51              	emptyp:
+  52              	.LFB135:
+ 363:Src/Eagle_TRT.c **** 
+ 364:Src/Eagle_TRT.c **** 	// Implementazione dinamica
+ 365:Src/Eagle_TRT.c **** 	void init(queue * q){
+ 366:Src/Eagle_TRT.c **** 
+ 367:Src/Eagle_TRT.c **** 	  q->tail=q->head=0;
+ 368:Src/Eagle_TRT.c **** 	  q->dim=40;
+ 369:Src/Eagle_TRT.c **** 	}
+ 370:Src/Eagle_TRT.c **** 
+ 371:Src/Eagle_TRT.c **** 	static int emptyp(const queue * q){
+  53              		.loc 1 371 0
+  54              		.cfi_startproc
+  55              		@ args = 0, pretend = 0, frame = 0
+  56              		@ frame_needed = 0, uses_anonymous_args = 0
+  57              		@ link register save eliminated.
+  58              	.LVL3:
+ 372:Src/Eagle_TRT.c **** 
+ 373:Src/Eagle_TRT.c **** 	  return (q->tail==q->head);
+  59              		.loc 1 373 0
+  60 0000 4268     		ldr	r2, [r0, #4]
+  61 0002 0068     		ldr	r0, [r0]
+  62              	.LVL4:
+ 374:Src/Eagle_TRT.c **** 	}
+  63              		.loc 1 374 0
+  64 0004 8242     		cmp	r2, r0
+  65 0006 14BF     		ite	ne
+  66 0008 0020     		movne	r0, #0
+  67 000a 0120     		moveq	r0, #1
+  68 000c 7047     		bx	lr
+  69              		.cfi_endproc
+  70              	.LFE135:
+  72              		.section	.text.fullp,"ax",%progbits
+  73              		.align	1
+  74              		.syntax unified
+  75              		.thumb
+  76              		.thumb_func
+  77              		.fpu fpv4-sp-d16
+  79              	fullp:
+  80              	.LFB136:
+ 375:Src/Eagle_TRT.c **** 
+ 376:Src/Eagle_TRT.c **** 	static int fullp(const queue * q){
+  81              		.loc 1 376 0
+  82              		.cfi_startproc
+  83              		@ args = 0, pretend = 0, frame = 0
+  84              		@ frame_needed = 0, uses_anonymous_args = 0
+  85              	.LVL5:
+ARM GAS  /tmp/ccihUd1h.s 			page 9
+
+
+  86 0000 10B5     		push	{r4, lr}
+  87              	.LCFI0:
+  88              		.cfi_def_cfa_offset 8
+  89              		.cfi_offset 4, -8
+  90              		.cfi_offset 14, -4
+  91 0002 0446     		mov	r4, r0
+ 377:Src/Eagle_TRT.c **** 
+ 378:Src/Eagle_TRT.c **** 	  return (next(q->tail,q->dim)==q->head);
+  92              		.loc 1 378 0
+  93 0004 8168     		ldr	r1, [r0, #8]
+  94 0006 4068     		ldr	r0, [r0, #4]
+  95              	.LVL6:
+  96 0008 FFF7FEFF 		bl	next
+  97              	.LVL7:
+  98 000c 2368     		ldr	r3, [r4]
+ 379:Src/Eagle_TRT.c **** 	}
+  99              		.loc 1 379 0
+ 100 000e 9842     		cmp	r0, r3
+ 101 0010 14BF     		ite	ne
+ 102 0012 0020     		movne	r0, #0
+ 103 0014 0120     		moveq	r0, #1
+ 104 0016 10BD     		pop	{r4, pc}
+ 105              		.cfi_endproc
+ 106              	.LFE136:
+ 108              		.section	.text.checksum,"ax",%progbits
+ 109              		.align	1
+ 110              		.syntax unified
+ 111              		.thumb
+ 112              		.thumb_func
+ 113              		.fpu fpv4-sp-d16
+ 115              	checksum:
+ 116              	.LFB143:
+ 380:Src/Eagle_TRT.c **** 
+ 381:Src/Eagle_TRT.c **** 	int push (char * str,queue * q){
+ 382:Src/Eagle_TRT.c **** 		int res;
+ 383:Src/Eagle_TRT.c **** 		if (fullp(q)){
+ 384:Src/Eagle_TRT.c **** 			res = FAIL;
+ 385:Src/Eagle_TRT.c **** 		}
+ 386:Src/Eagle_TRT.c **** 		else{
+ 387:Src/Eagle_TRT.c **** 			int length=strlen(str);
+ 388:Src/Eagle_TRT.c **** 			q->elem[q->tail] = (char*) malloc(sizeof(char)*length);
+ 389:Src/Eagle_TRT.c **** 			strcpy(q->elem[q->tail],str);
+ 390:Src/Eagle_TRT.c **** 			//q->tail = next(q->tail,q->dim);
+ 391:Src/Eagle_TRT.c **** 			if(q->tail==39){
+ 392:Src/Eagle_TRT.c **** 				q->tail=0;
+ 393:Src/Eagle_TRT.c **** 			}
+ 394:Src/Eagle_TRT.c **** 			else{
+ 395:Src/Eagle_TRT.c **** 				q->tail++;
+ 396:Src/Eagle_TRT.c **** 			}
+ 397:Src/Eagle_TRT.c **** 			res=OK;
+ 398:Src/Eagle_TRT.c **** 		}
+ 399:Src/Eagle_TRT.c **** 
+ 400:Src/Eagle_TRT.c **** 		return res;
+ 401:Src/Eagle_TRT.c **** 	}
+ 402:Src/Eagle_TRT.c **** 
+ 403:Src/Eagle_TRT.c **** 	int pop(char * str,queue * q){
+ 404:Src/Eagle_TRT.c **** 		int res;
+ARM GAS  /tmp/ccihUd1h.s 			page 10
+
+
+ 405:Src/Eagle_TRT.c **** 		if (emptyp(q)){
+ 406:Src/Eagle_TRT.c **** 			res = FAIL;
+ 407:Src/Eagle_TRT.c **** 		}
+ 408:Src/Eagle_TRT.c **** 		else {
+ 409:Src/Eagle_TRT.c **** 			strcpy(str,q->elem[q->head]);
+ 410:Src/Eagle_TRT.c **** 			free(q->elem[q->head]);
+ 411:Src/Eagle_TRT.c **** 			//q->head = next(q->head,q->dim);
+ 412:Src/Eagle_TRT.c **** 			if(q->head==39){
+ 413:Src/Eagle_TRT.c **** 				q->head=0;
+ 414:Src/Eagle_TRT.c **** 			}else{
+ 415:Src/Eagle_TRT.c **** 				q->head++;
+ 416:Src/Eagle_TRT.c **** 			}
+ 417:Src/Eagle_TRT.c **** 			res=OK;
+ 418:Src/Eagle_TRT.c **** 		}
+ 419:Src/Eagle_TRT.c **** 
+ 420:Src/Eagle_TRT.c **** 		return res;
+ 421:Src/Eagle_TRT.c **** 	}
+ 422:Src/Eagle_TRT.c **** 	/// ---- end queue ----///
+ 423:Src/Eagle_TRT.c **** 	queue print_q={.head=0,.tail=0,.dim=0};
+ 424:Src/Eagle_TRT.c **** 
+ 425:Src/Eagle_TRT.c **** 	int print(UART_HandleTypeDef *huart,char * text_print_function){
+ 426:Src/Eagle_TRT.c **** 
+ 427:Src/Eagle_TRT.c **** 		int ret=0;
+ 428:Src/Eagle_TRT.c **** 
+ 429:Src/Eagle_TRT.c **** 		if(HAL_UART_Transmit_IT(huart, (uint8_t*)text_print_function, strlen(text_print_function))==HAL_O
+ 430:Src/Eagle_TRT.c **** 			ret=1;
+ 431:Src/Eagle_TRT.c **** 		}else{
+ 432:Src/Eagle_TRT.c **** 			if(push(text_print_function,&print_q)==FAIL){
+ 433:Src/Eagle_TRT.c **** 				ret=0;
+ 434:Src/Eagle_TRT.c **** 			}else{
+ 435:Src/Eagle_TRT.c **** 				ret=1;
+ 436:Src/Eagle_TRT.c **** 			}
+ 437:Src/Eagle_TRT.c **** 		}
+ 438:Src/Eagle_TRT.c **** 
+ 439:Src/Eagle_TRT.c **** 		return ret;
+ 440:Src/Eagle_TRT.c **** 	}
+ 441:Src/Eagle_TRT.c **** 
+ 442:Src/Eagle_TRT.c **** 	void print_it(UART_HandleTypeDef *huart){ //put in the uart interrupt
+ 443:Src/Eagle_TRT.c **** 
+ 444:Src/Eagle_TRT.c **** 		char text_print_function[50];
+ 445:Src/Eagle_TRT.c **** 
+ 446:Src/Eagle_TRT.c **** 		if(pop(text_print_function,&print_q)==OK){
+ 447:Src/Eagle_TRT.c **** 			HAL_UART_Transmit_IT(huart, (uint8_t*)text_print_function, strlen(text_print_function));
+ 448:Src/Eagle_TRT.c **** 		}
+ 449:Src/Eagle_TRT.c **** 	}
+ 450:Src/Eagle_TRT.c **** 
+ 451:Src/Eagle_TRT.c **** 	UART_HandleTypeDef* huart_GPS;
+ 452:Src/Eagle_TRT.c **** 	int start_string_gps=0;
+ 453:Src/Eagle_TRT.c **** 	char string_gps[100];
+ 454:Src/Eagle_TRT.c **** 	int cont_string,cont_comma;
+ 455:Src/Eagle_TRT.c **** 	char data_string_gps;
+ 456:Src/Eagle_TRT.c **** 	char buffer_gps[2];
+ 457:Src/Eagle_TRT.c **** 	static int checksum(char * string_checksum, int size_string_checksum);
+ 458:Src/Eagle_TRT.c **** 
+ 459:Src/Eagle_TRT.c **** 	/* GPS library
+ 460:Src/Eagle_TRT.c **** 	gps_init() ->initialize the GPS. Put it in the main initialization. Example:
+ 461:Src/Eagle_TRT.c **** 	gps_struct gps_main; //define the name of gps_structure istance
+ARM GAS  /tmp/ccihUd1h.s 			page 11
+
+
+ 462:Src/Eagle_TRT.c **** 	if(gps_init(&huart3,&gps_main)==0){
+ 463:Src/Eagle_TRT.c **** 		/--error--/
+ 464:Src/Eagle_TRT.c **** 	}
+ 465:Src/Eagle_TRT.c **** 	gps_read_it() -> put it in interrupt. Example:
+ 466:Src/Eagle_TRT.c **** 	void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+ 467:Src/Eagle_TRT.c **** 		gps_read_it(huart,&gps_main);
+ 468:Src/Eagle_TRT.c **** 	}*/
+ 469:Src/Eagle_TRT.c **** 
+ 470:Src/Eagle_TRT.c **** 	int gps_init(UART_HandleTypeDef* huart,gps_struct * gps){ //initialization of GPS
+ 471:Src/Eagle_TRT.c **** 
+ 472:Src/Eagle_TRT.c **** 		//if return--> 0=error,1=ok
+ 473:Src/Eagle_TRT.c **** 		huart_GPS=huart;
+ 474:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 9600;
+ 475:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 476:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 477:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 478:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 57600;
+ 479:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 480:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 481:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 482:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 115200;
+ 483:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 484:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 485:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 486:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10H
+ 487:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 488:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_NMEA_OUTPUT_GGAVTG, strlen(PMTK_SET_NMEA_OUTPUT_G
+ 489:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 490:Src/Eagle_TRT.c **** 		strcpy(gps->speed,"000.00");
+ 491:Src/Eagle_TRT.c **** 		strcpy(gps->latitude,"0000.0000");
+ 492:Src/Eagle_TRT.c **** 		strcpy(gps->latitude_o,"N");
+ 493:Src/Eagle_TRT.c **** 		strcpy(gps->longitude,"00000.0000");
+ 494:Src/Eagle_TRT.c **** 		strcpy(gps->longitude_o,"W");
+ 495:Src/Eagle_TRT.c **** 		strcpy(gps->altitude,"0000.0");
+ 496:Src/Eagle_TRT.c **** 		strcpy(gps->time,"000000");
+ 497:Src/Eagle_TRT.c **** 		HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request of rx buffer interrupt
+ 498:Src/Eagle_TRT.c **** 
+ 499:Src/Eagle_TRT.c **** 		return 1;
+ 500:Src/Eagle_TRT.c **** 	}
+ 501:Src/Eagle_TRT.c **** 
+ 502:Src/Eagle_TRT.c **** 	int gps_read_it(UART_HandleTypeDef *huart, gps_struct* gps){
+ 503:Src/Eagle_TRT.c **** 
+ 504:Src/Eagle_TRT.c **** 			int ret=0; //return--> 0=error,1=ok
+ 505:Src/Eagle_TRT.c **** 
+ 506:Src/Eagle_TRT.c **** 			/*
+ 507:Src/Eagle_TRT.c **** 			* Example of strings
+ 508:Src/Eagle_TRT.c **** 			* $GPGGA,064951.000,2307.1256,N,12016.4438,E,1,8,0.95,39.9,M,17.8,M,,*65
+ 509:Src/Eagle_TRT.c **** 			* $GPGSA,A,3,29,21,26,15,18,09,06,10,,,,,2.32,0.95,2.11*00
+ 510:Src/Eagle_TRT.c **** 			* $GPGSV,3,1,09,29,36,029,42,21,46,314,43,26,44,020,43,15,21,321,39*7D
+ 511:Src/Eagle_TRT.c **** 			  $GPGSV,3,2,09,18,26,314,40,09,57,170,44,06,20,229,37,10,26,084,37*77
+ 512:Src/Eagle_TRT.c **** 			  $GPGSV,3,3,09,07,,,26*73
+ 513:Src/Eagle_TRT.c **** 			* $GPRMC,064951.000,A,2307.1256,N,12016.4438,E,0.03,165.48,260406,3.05,W,A*2C
+ 514:Src/Eagle_TRT.c **** 			* $GPVTG,165.48,T,,M,0.03,N,0.06,K,A*37
+ 515:Src/Eagle_TRT.c **** 			* $PGTOP,11,3 *6F
+ 516:Src/Eagle_TRT.c **** 			*
+ 517:Src/Eagle_TRT.c **** 			*
+ 518:Src/Eagle_TRT.c **** 			*
+ARM GAS  /tmp/ccihUd1h.s 			page 12
+
+
+ 519:Src/Eagle_TRT.c **** 			* 	$GPBOD - Bearing, origin to destination
+ 520:Src/Eagle_TRT.c **** 				$GPBWC - Bearing and distance to waypoint, great circle
+ 521:Src/Eagle_TRT.c **** 				$GPGGA - Global Positioning System Fix Data
+ 522:Src/Eagle_TRT.c **** 				$GPGLL - Geographic position, latitude / longitude
+ 523:Src/Eagle_TRT.c **** 				$GPGSA - GPS DOP and active satellites
+ 524:Src/Eagle_TRT.c **** 				$GPGSV - GPS Satellites in view
+ 525:Src/Eagle_TRT.c **** 				$GPHDT - Heading, True
+ 526:Src/Eagle_TRT.c **** 				$GPR00 - List of waypoints in currently active route
+ 527:Src/Eagle_TRT.c **** 				$GPRMA - Recommended minimum specific Loran-C data
+ 528:Src/Eagle_TRT.c **** 				$GPRMB - Recommended minimum navigation info
+ 529:Src/Eagle_TRT.c **** 				$GPRMC - Recommended minimum specific GPS/Transit data
+ 530:Src/Eagle_TRT.c **** 				$GPRTE - Routes
+ 531:Src/Eagle_TRT.c **** 				$GPTRF - Transit Fix Data
+ 532:Src/Eagle_TRT.c **** 				$GPSTN - Multiple Data ID
+ 533:Src/Eagle_TRT.c **** 				$GPVBW - Dual Ground / Water Speed
+ 534:Src/Eagle_TRT.c **** 				$GPVTG - Track made good and ground speed
+ 535:Src/Eagle_TRT.c **** 				$GPWPL - Waypoint location
+ 536:Src/Eagle_TRT.c **** 				$GPXTE - Cross-track error, Measured
+ 537:Src/Eagle_TRT.c **** 				$GPZDA - Date & Time
+ 538:Src/Eagle_TRT.c **** 				http://aprs.gids.nl/nmea/
+ 539:Src/Eagle_TRT.c **** 			*/
+ 540:Src/Eagle_TRT.c **** 			if(huart==huart_GPS){
+ 541:Src/Eagle_TRT.c **** 				//check if it's the huart_gps interrupt
+ 542:Src/Eagle_TRT.c **** 				HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request interrupt for the next data
+ 543:Src/Eagle_TRT.c **** 				data_string_gps=buffer_gps[0]; //convert a pointer into a char
+ 544:Src/Eagle_TRT.c **** 				if((start_string_gps==1)&&(data_string_gps!='$')){ //check that the new string has not started 
+ 545:Src/Eagle_TRT.c **** 					string_gps[cont_string]=data_string_gps; //save the data into the array
+ 546:Src/Eagle_TRT.c **** 					cont_string++;
+ 547:Src/Eagle_TRT.c **** 					if(string_gps[cont_string-1]=='\r'||string_gps[cont_string-1]=='\n'){  //indicates that the st
+ 548:Src/Eagle_TRT.c **** 						cont_string--;
+ 549:Src/Eagle_TRT.c **** 						string_gps[cont_string]='\0'; // '\0'=end of the string
+ 550:Src/Eagle_TRT.c **** 						start_string_gps=0; //end of string
+ 551:Src/Eagle_TRT.c **** 						if(string_gps[2]=='G'&&string_gps[3]=='G'&&string_gps[4]=='A'){ // operation when the string 
+ 552:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 553:Src/Eagle_TRT.c **** 								int cont_comma=0,cont_latitude=0,cont_longitude=0,cont_altitude=0,cont_time=0;
+ 554:Src/Eagle_TRT.c **** 								for(int i=5;i<100;i++){
+ 555:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 556:Src/Eagle_TRT.c **** 									else{
+ 557:Src/Eagle_TRT.c **** 										if(cont_comma==1){ //save the time
+ 558:Src/Eagle_TRT.c **** 											gps->time[cont_time]=string_gps[i];
+ 559:Src/Eagle_TRT.c **** 											cont_time++;
+ 560:Src/Eagle_TRT.c **** 										}
+ 561:Src/Eagle_TRT.c **** 										else if(cont_comma==2){ //save latitude
+ 562:Src/Eagle_TRT.c **** 											gps->latitude[cont_latitude]=string_gps[i];
+ 563:Src/Eagle_TRT.c **** 											cont_latitude++;
+ 564:Src/Eagle_TRT.c **** 										}
+ 565:Src/Eagle_TRT.c **** 										else if(cont_comma==3){ //save orientation of latitude
+ 566:Src/Eagle_TRT.c **** 											gps->latitude_o[0]=string_gps[i];
+ 567:Src/Eagle_TRT.c **** 										}
+ 568:Src/Eagle_TRT.c **** 										else if(cont_comma==4){ //save longitude
+ 569:Src/Eagle_TRT.c **** 											gps->longitude[cont_longitude]=string_gps[i];
+ 570:Src/Eagle_TRT.c **** 											cont_longitude++;
+ 571:Src/Eagle_TRT.c **** 										}
+ 572:Src/Eagle_TRT.c **** 										else if(cont_comma==5){ //save orientation of longitude
+ 573:Src/Eagle_TRT.c **** 											gps->longitude_o[0]=string_gps[i];
+ 574:Src/Eagle_TRT.c **** 										}
+ 575:Src/Eagle_TRT.c **** 										else if (cont_comma==6){
+ARM GAS  /tmp/ccihUd1h.s 			page 13
+
+
+ 576:Src/Eagle_TRT.c **** 											gps->fix_status=string_gps[i];
+ 577:Src/Eagle_TRT.c **** 										}
+ 578:Src/Eagle_TRT.c **** 										else if(cont_comma==9){ //save altitude
+ 579:Src/Eagle_TRT.c **** 											gps->altitude[cont_altitude]=string_gps[i];
+ 580:Src/Eagle_TRT.c **** 											cont_altitude++;
+ 581:Src/Eagle_TRT.c **** 										}
+ 582:Src/Eagle_TRT.c **** 										else if(cont_comma==10){
+ 583:Src/Eagle_TRT.c **** 											i=100; //end the cicle
+ 584:Src/Eagle_TRT.c **** 										}
+ 585:Src/Eagle_TRT.c **** 									}
+ 586:Src/Eagle_TRT.c **** 
+ 587:Src/Eagle_TRT.c **** 								}
+ 588:Src/Eagle_TRT.c **** 								//-- operation to split data and send them --//
+ 589:Src/Eagle_TRT.c **** 								if(gps->fix_status=='0'){
+ 590:Src/Eagle_TRT.c **** 									gps->latitude_i_h=0;
+ 591:Src/Eagle_TRT.c **** 									gps->latitude_i_l=0;
+ 592:Src/Eagle_TRT.c **** 									gps->longitude_i_h=0;
+ 593:Src/Eagle_TRT.c **** 									gps->longitude_i_l=0;
+ 594:Src/Eagle_TRT.c **** 									gps->altitude_i=0;
+ 595:Src/Eagle_TRT.c **** 								}
+ 596:Src/Eagle_TRT.c **** 								else{
+ 597:Src/Eagle_TRT.c **** 									gps->latitude_i=(long int)(atof(gps->latitude)*10000);
+ 598:Src/Eagle_TRT.c **** 									gps->longitude_i=(long int)(atof(gps->longitude)*100000);
+ 599:Src/Eagle_TRT.c **** 									gps->altitude_i=(int)(atof(gps->altitude)*100);
+ 600:Src/Eagle_TRT.c **** 									gps->latitude_i_h=(int)(gps->latitude_i/10000);
+ 601:Src/Eagle_TRT.c **** 									gps->latitude_i_l=(int)(gps->latitude_i-gps->latitude_i_h*10000);
+ 602:Src/Eagle_TRT.c **** 									gps->longitude_i_h=(int)(gps->longitude_i/100000);
+ 603:Src/Eagle_TRT.c **** 									gps->longitude_i_l=(int)(gps->longitude_i-gps->longitude_i_h*100000);
+ 604:Src/Eagle_TRT.c **** 								}
+ 605:Src/Eagle_TRT.c **** 
+ 606:Src/Eagle_TRT.c **** 								can.dataTx[0] = 0x08;
+ 607:Src/Eagle_TRT.c **** 								can.dataTx[1] = gps->longitude_i_h / 256;
+ 608:Src/Eagle_TRT.c **** 								can.dataTx[2] = gps->longitude_i_h % 256;
+ 609:Src/Eagle_TRT.c **** 								can.dataTx[3] = gps->longitude_i_l / 256;
+ 610:Src/Eagle_TRT.c **** 								can.dataTx[4] = gps->longitude_i_l % 256;
+ 611:Src/Eagle_TRT.c **** 								can.dataTx[5] = (int)gps->longitude_o;
+ 612:Src/Eagle_TRT.c **** 								can.dataTx[6] = gps->altitude_i / 256;
+ 613:Src/Eagle_TRT.c **** 								can.dataTx[7] = gps->altitude_i % 256;
+ 614:Src/Eagle_TRT.c **** 								CAN_Send(&can);
+ 615:Src/Eagle_TRT.c **** 							}
+ 616:Src/Eagle_TRT.c **** 							else{
+ 617:Src/Eagle_TRT.c **** 								ret=0; //checksum failed
+ 618:Src/Eagle_TRT.c **** 							}
+ 619:Src/Eagle_TRT.c **** 						}
+ 620:Src/Eagle_TRT.c **** 						else if(string_gps[2]=='V'&&string_gps[3]=='T'&&string_gps[4]=='G'){ 	// operation when the s
+ 621:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 622:Src/Eagle_TRT.c **** 								cont_comma=0;
+ 623:Src/Eagle_TRT.c **** 								int cont_speed=0;
+ 624:Src/Eagle_TRT.c **** 								for(int i=5;i<cont_string;i++){
+ 625:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 626:Src/Eagle_TRT.c **** 									else{
+ 627:Src/Eagle_TRT.c **** 										if(cont_comma==7){ //save the speed
+ 628:Src/Eagle_TRT.c **** 											gps->speed[cont_speed]=string_gps[i];
+ 629:Src/Eagle_TRT.c **** 											cont_speed++;
+ 630:Src/Eagle_TRT.c **** 										}
+ 631:Src/Eagle_TRT.c **** 										else if(cont_comma==8){
+ 632:Src/Eagle_TRT.c **** 											i=cont_string;
+ARM GAS  /tmp/ccihUd1h.s 			page 14
+
+
+ 633:Src/Eagle_TRT.c **** 										}
+ 634:Src/Eagle_TRT.c **** 									}
+ 635:Src/Eagle_TRT.c **** 								}
+ 636:Src/Eagle_TRT.c **** 								//-- operation to split data and send them --//
+ 637:Src/Eagle_TRT.c **** 								if(gps->fix_status=='0'){
+ 638:Src/Eagle_TRT.c **** 									gps->speed_i=0;
+ 639:Src/Eagle_TRT.c **** 								}else{
+ 640:Src/Eagle_TRT.c **** 									gps->speed_i=(int)(atof(gps->speed)*100);
+ 641:Src/Eagle_TRT.c **** 								}
+ 642:Src/Eagle_TRT.c **** 								can.dataTx[0] = 0x07;
+ 643:Src/Eagle_TRT.c **** 								can.dataTx[1] = gps->latitude_i_h / 256;
+ 644:Src/Eagle_TRT.c **** 								can.dataTx[2] = gps->latitude_i_h % 256;
+ 645:Src/Eagle_TRT.c **** 								can.dataTx[3] = gps->latitude_i_l / 256;
+ 646:Src/Eagle_TRT.c **** 								can.dataTx[4] = gps->latitude_i_l % 256;
+ 647:Src/Eagle_TRT.c **** 								can.dataTx[5] = (int)gps->latitude_o;
+ 648:Src/Eagle_TRT.c **** 								can.dataTx[6] = gps->speed_i / 256;
+ 649:Src/Eagle_TRT.c **** 								can.dataTx[7] = gps->speed_i % 256;
+ 650:Src/Eagle_TRT.c **** 								CAN_Send(&can);
+ 651:Src/Eagle_TRT.c **** 								ret=1;
+ 652:Src/Eagle_TRT.c **** 							}
+ 653:Src/Eagle_TRT.c **** 							else{
+ 654:Src/Eagle_TRT.c **** 								ret=0;  //checksum failed
+ 655:Src/Eagle_TRT.c **** 							}
+ 656:Src/Eagle_TRT.c **** 						}
+ 657:Src/Eagle_TRT.c **** 					}
+ 658:Src/Eagle_TRT.c **** 				}
+ 659:Src/Eagle_TRT.c **** 				else{
+ 660:Src/Eagle_TRT.c **** 					if(data_string_gps=='$'){ //check if data indicates the start of new string
+ 661:Src/Eagle_TRT.c **** 						start_string_gps=1; //new string started
+ 662:Src/Eagle_TRT.c **** 						cont_string=0; //set the counter to 1
+ 663:Src/Eagle_TRT.c **** 					}
+ 664:Src/Eagle_TRT.c **** 				}
+ 665:Src/Eagle_TRT.c **** 
+ 666:Src/Eagle_TRT.c **** 
+ 667:Src/Eagle_TRT.c **** 			}
+ 668:Src/Eagle_TRT.c **** 			return ret;
+ 669:Src/Eagle_TRT.c **** 		}
+ 670:Src/Eagle_TRT.c **** 	static int checksum(char * string_checksum, int size_string_checksum){ //check the checksum
+ 117              		.loc 1 670 0
+ 118              		.cfi_startproc
+ 119              		@ args = 0, pretend = 0, frame = 8
+ 120              		@ frame_needed = 0, uses_anonymous_args = 0
+ 121              	.LVL8:
+ 122 0000 70B5     		push	{r4, r5, r6, lr}
+ 123              	.LCFI1:
+ 124              		.cfi_def_cfa_offset 16
+ 125              		.cfi_offset 4, -16
+ 126              		.cfi_offset 5, -12
+ 127              		.cfi_offset 6, -8
+ 128              		.cfi_offset 14, -4
+ 129 0002 82B0     		sub	sp, sp, #8
+ 130              	.LCFI2:
+ 131              		.cfi_def_cfa_offset 24
+ 132              	.LVL9:
+ 671:Src/Eagle_TRT.c **** 		//return 1;
+ 672:Src/Eagle_TRT.c **** 
+ 673:Src/Eagle_TRT.c **** 		int res=0;
+ARM GAS  /tmp/ccihUd1h.s 			page 15
+
+
+ 674:Src/Eagle_TRT.c **** 		int offset_maiusc=(int)('A')-(int)('a');
+ 675:Src/Eagle_TRT.c **** 		int i=0;
+ 676:Src/Eagle_TRT.c **** 
+ 677:Src/Eagle_TRT.c **** 		for(i=0;(i<size_string_checksum)&&(string_checksum[i]!='*');i++){
+ 133              		.loc 1 677 0
+ 134 0004 0023     		movs	r3, #0
+ 673:Src/Eagle_TRT.c **** 		int offset_maiusc=(int)('A')-(int)('a');
+ 135              		.loc 1 673 0
+ 136 0006 1C46     		mov	r4, r3
+ 137              	.LVL10:
+ 138              	.L6:
+ 139              		.loc 1 677 0 discriminator 1
+ 140 0008 8B42     		cmp	r3, r1
+ 141 000a 02DA     		bge	.L7
+ 142              		.loc 1 677 0 is_stmt 0 discriminator 3
+ 143 000c C25C     		ldrb	r2, [r0, r3]	@ zero_extendqisi2
+ 144 000e 2A2A     		cmp	r2, #42
+ 145 0010 1ED1     		bne	.L8
+ 146              	.L7:
+ 678:Src/Eagle_TRT.c **** 			res=res^string_checksum[i];
+ 679:Src/Eagle_TRT.c **** 		}
+ 680:Src/Eagle_TRT.c **** 		char check[2]={string_checksum[i+1],string_checksum[i+2]};
+ 147              		.loc 1 680 0 is_stmt 1
+ 148 0012 1844     		add	r0, r0, r3
+ 149              	.LVL11:
+ 150 0014 4578     		ldrb	r5, [r0, #1]	@ zero_extendqisi2
+ 151 0016 8678     		ldrb	r6, [r0, #2]	@ zero_extendqisi2
+ 681:Src/Eagle_TRT.c **** 		char res_char[3];
+ 682:Src/Eagle_TRT.c **** 		sprintf(res_char,"%x",res);
+ 152              		.loc 1 682 0
+ 153 0018 2246     		mov	r2, r4
+ 154 001a 1949     		ldr	r1, .L17
+ 155              	.LVL12:
+ 156 001c 01A8     		add	r0, sp, #4
+ 157 001e FFF7FEFF 		bl	sprintf
+ 158              	.LVL13:
+ 683:Src/Eagle_TRT.c **** 		if(res<17){
+ 159              		.loc 1 683 0
+ 160 0022 102C     		cmp	r4, #16
+ 161 0024 06DC     		bgt	.L9
+ 684:Src/Eagle_TRT.c **** 			res_char[1]=res_char[0];
+ 162              		.loc 1 684 0
+ 163 0026 9DF80430 		ldrb	r3, [sp, #4]	@ zero_extendqisi2
+ 164 002a 8DF80530 		strb	r3, [sp, #5]
+ 685:Src/Eagle_TRT.c **** 			res_char[0]='0';
+ 165              		.loc 1 685 0
+ 166 002e 3023     		movs	r3, #48
+ 167 0030 8DF80430 		strb	r3, [sp, #4]
+ 168              	.L9:
+ 673:Src/Eagle_TRT.c **** 		int offset_maiusc=(int)('A')-(int)('a');
+ 169              		.loc 1 673 0 discriminator 1
+ 170 0034 0023     		movs	r3, #0
+ 171              	.L10:
+ 172              	.LVL14:
+ 173              	.LBB2:
+ 686:Src/Eagle_TRT.c **** 		}
+ 687:Src/Eagle_TRT.c **** 		for(int j=0;j<2;j++){ //convert to upper case letter
+ARM GAS  /tmp/ccihUd1h.s 			page 16
+
+
+ 174              		.loc 1 687 0 discriminator 1
+ 175 0036 012B     		cmp	r3, #1
+ 176 0038 0DDD     		ble	.L12
+ 177              	.LBE2:
+ 688:Src/Eagle_TRT.c **** 			if((int)res_char[j]>='a'&&(int)res_char[j]<='f'){
+ 689:Src/Eagle_TRT.c **** 				res_char[j]=(char)((int)res_char[j]+offset_maiusc);
+ 690:Src/Eagle_TRT.c **** 			}
+ 691:Src/Eagle_TRT.c **** 		}
+ 692:Src/Eagle_TRT.c **** 		if(res_char[0]==check[0]&&res_char[1]==check[1]){
+ 178              		.loc 1 692 0
+ 179 003a 9DF80430 		ldrb	r3, [sp, #4]	@ zero_extendqisi2
+ 180              	.LVL15:
+ 181 003e 9D42     		cmp	r5, r3
+ 182 0040 19D1     		bne	.L14
+ 183              		.loc 1 692 0 is_stmt 0 discriminator 1
+ 184 0042 9DF80530 		ldrb	r3, [sp, #5]	@ zero_extendqisi2
+ 185 0046 9E42     		cmp	r6, r3
+ 186 0048 17D0     		beq	.L15
+ 693:Src/Eagle_TRT.c **** 			return 1; //checksum is correct
+ 694:Src/Eagle_TRT.c **** 		}
+ 695:Src/Eagle_TRT.c **** 		else {
+ 696:Src/Eagle_TRT.c **** 			return 0; //checksum failed
+ 187              		.loc 1 696 0 is_stmt 1
+ 188 004a 0020     		movs	r0, #0
+ 189              	.L5:
+ 697:Src/Eagle_TRT.c **** 		}
+ 698:Src/Eagle_TRT.c **** 	}
+ 190              		.loc 1 698 0
+ 191 004c 02B0     		add	sp, sp, #8
+ 192              	.LCFI3:
+ 193              		.cfi_remember_state
+ 194              		.cfi_def_cfa_offset 16
+ 195              		@ sp needed
+ 196 004e 70BD     		pop	{r4, r5, r6, pc}
+ 197              	.LVL16:
+ 198              	.L8:
+ 199              	.LCFI4:
+ 200              		.cfi_restore_state
+ 678:Src/Eagle_TRT.c **** 		}
+ 201              		.loc 1 678 0 discriminator 4
+ 202 0050 5440     		eors	r4, r4, r2
+ 203              	.LVL17:
+ 677:Src/Eagle_TRT.c **** 			res=res^string_checksum[i];
+ 204              		.loc 1 677 0 discriminator 4
+ 205 0052 0133     		adds	r3, r3, #1
+ 206              	.LVL18:
+ 207 0054 D8E7     		b	.L6
+ 208              	.LVL19:
+ 209              	.L12:
+ 210              	.LBB3:
+ 688:Src/Eagle_TRT.c **** 				res_char[j]=(char)((int)res_char[j]+offset_maiusc);
+ 211              		.loc 1 688 0
+ 212 0056 02AA     		add	r2, sp, #8
+ 213 0058 1A44     		add	r2, r2, r3
+ 214 005a 12F8042C 		ldrb	r2, [r2, #-4]	@ zero_extendqisi2
+ 215 005e A2F16101 		sub	r1, r2, #97
+ 216 0062 C9B2     		uxtb	r1, r1
+ARM GAS  /tmp/ccihUd1h.s 			page 17
+
+
+ 217 0064 0529     		cmp	r1, #5
+ 218 0066 04D8     		bhi	.L11
+ 689:Src/Eagle_TRT.c **** 			}
+ 219              		.loc 1 689 0
+ 220 0068 203A     		subs	r2, r2, #32
+ 221 006a 02A9     		add	r1, sp, #8
+ 222 006c 1944     		add	r1, r1, r3
+ 223 006e 01F8042C 		strb	r2, [r1, #-4]
+ 224              	.L11:
+ 687:Src/Eagle_TRT.c **** 			if((int)res_char[j]>='a'&&(int)res_char[j]<='f'){
+ 225              		.loc 1 687 0 discriminator 2
+ 226 0072 0133     		adds	r3, r3, #1
+ 227              	.LVL20:
+ 228 0074 DFE7     		b	.L10
+ 229              	.LVL21:
+ 230              	.L14:
+ 231              	.LBE3:
+ 696:Src/Eagle_TRT.c **** 		}
+ 232              		.loc 1 696 0
+ 233 0076 0020     		movs	r0, #0
+ 234 0078 E8E7     		b	.L5
+ 235              	.L15:
+ 693:Src/Eagle_TRT.c **** 		}
+ 236              		.loc 1 693 0
+ 237 007a 0120     		movs	r0, #1
+ 238 007c E6E7     		b	.L5
+ 239              	.L18:
+ 240 007e 00BF     		.align	2
+ 241              	.L17:
+ 242 0080 00000000 		.word	.LC0
+ 243              		.cfi_endproc
+ 244              	.LFE143:
+ 246              		.section	.text.CAN_Send,"ax",%progbits
+ 247              		.align	1
+ 248              		.global	CAN_Send
+ 249              		.syntax unified
+ 250              		.thumb
+ 251              		.thumb_func
+ 252              		.fpu fpv4-sp-d16
+ 254              	CAN_Send:
+ 255              	.LFB131:
+ 316:Src/Eagle_TRT.c **** 
+ 256              		.loc 1 316 0
+ 257              		.cfi_startproc
+ 258              		@ args = 0, pretend = 0, frame = 32
+ 259              		@ frame_needed = 0, uses_anonymous_args = 0
+ 260              	.LVL22:
+ 261 0000 10B5     		push	{r4, lr}
+ 262              	.LCFI5:
+ 263              		.cfi_def_cfa_offset 8
+ 264              		.cfi_offset 4, -8
+ 265              		.cfi_offset 14, -4
+ 266 0002 88B0     		sub	sp, sp, #32
+ 267              	.LCFI6:
+ 268              		.cfi_def_cfa_offset 40
+ 269 0004 0446     		mov	r4, r0
+ 270              	.LVL23:
+ARM GAS  /tmp/ccihUd1h.s 			page 18
+
+
+ 322:Src/Eagle_TRT.c **** 		TxHeader.IDE = CAN_ID_STD;
+ 271              		.loc 1 322 0
+ 272 0006 0368     		ldr	r3, [r0]
+ 273 0008 0193     		str	r3, [sp, #4]
+ 323:Src/Eagle_TRT.c **** 		TxHeader.RTR = CAN_RTR_DATA;
+ 274              		.loc 1 323 0
+ 275 000a 0023     		movs	r3, #0
+ 276 000c 0393     		str	r3, [sp, #12]
+ 324:Src/Eagle_TRT.c **** 		TxHeader.DLC = can->size;
+ 277              		.loc 1 324 0
+ 278 000e 0493     		str	r3, [sp, #16]
+ 325:Src/Eagle_TRT.c **** 		TxHeader.TransmitGlobalTime = DISABLE;
+ 279              		.loc 1 325 0
+ 280 0010 4268     		ldr	r2, [r0, #4]
+ 281 0012 0592     		str	r2, [sp, #20]
+ 326:Src/Eagle_TRT.c **** 
+ 282              		.loc 1 326 0
+ 283 0014 8DF81830 		strb	r3, [sp, #24]
+ 328:Src/Eagle_TRT.c **** 			HAL_CAN_AddTxMessage(can->hcan, &TxHeader, can->dataTx, &mailbox);
+ 284              		.loc 1 328 0
+ 285 0018 8069     		ldr	r0, [r0, #24]
+ 286              	.LVL24:
+ 287 001a FFF7FEFF 		bl	HAL_CAN_GetTxMailboxesFreeLevel
+ 288              	.LVL25:
+ 289 001e 10B9     		cbnz	r0, .L24
+ 319:Src/Eagle_TRT.c **** 
+ 290              		.loc 1 319 0
+ 291 0020 0020     		movs	r0, #0
+ 292              	.LVL26:
+ 293              	.L20:
+ 334:Src/Eagle_TRT.c **** 
+ 294              		.loc 1 334 0
+ 295 0022 08B0     		add	sp, sp, #32
+ 296              	.LCFI7:
+ 297              		.cfi_remember_state
+ 298              		.cfi_def_cfa_offset 8
+ 299              		@ sp needed
+ 300 0024 10BD     		pop	{r4, pc}
+ 301              	.LVL27:
+ 302              	.L24:
+ 303              	.LCFI8:
+ 304              		.cfi_restore_state
+ 328:Src/Eagle_TRT.c **** 			HAL_CAN_AddTxMessage(can->hcan, &TxHeader, can->dataTx, &mailbox);
+ 305              		.loc 1 328 0 discriminator 1
+ 306 0026 0121     		movs	r1, #1
+ 307 0028 A069     		ldr	r0, [r4, #24]
+ 308 002a FFF7FEFF 		bl	HAL_CAN_IsTxMessagePending
+ 309              	.LVL28:
+ 310 002e 08B1     		cbz	r0, .L25
+ 319:Src/Eagle_TRT.c **** 
+ 311              		.loc 1 319 0
+ 312 0030 0020     		movs	r0, #0
+ 313 0032 F6E7     		b	.L20
+ 314              	.L25:
+ 329:Src/Eagle_TRT.c **** 			flag = 1;
+ 315              		.loc 1 329 0
+ 316 0034 07AB     		add	r3, sp, #28
+ARM GAS  /tmp/ccihUd1h.s 			page 19
+
+
+ 317 0036 04F10802 		add	r2, r4, #8
+ 318 003a 01A9     		add	r1, sp, #4
+ 319 003c A069     		ldr	r0, [r4, #24]
+ 320 003e FFF7FEFF 		bl	HAL_CAN_AddTxMessage
+ 321              	.LVL29:
+ 330:Src/Eagle_TRT.c **** 		}
+ 322              		.loc 1 330 0
+ 323 0042 0120     		movs	r0, #1
+ 324 0044 EDE7     		b	.L20
+ 325              		.cfi_endproc
+ 326              	.LFE131:
+ 328              		.section	.text.CAN_Receive,"ax",%progbits
+ 329              		.align	1
+ 330              		.global	CAN_Receive
+ 331              		.syntax unified
+ 332              		.thumb
+ 333              		.thumb_func
+ 334              		.fpu fpv4-sp-d16
+ 336              	CAN_Receive:
+ 337              	.LFB132:
+ 341:Src/Eagle_TRT.c **** 
+ 338              		.loc 1 341 0
+ 339              		.cfi_startproc
+ 340              		@ args = 0, pretend = 0, frame = 32
+ 341              		@ frame_needed = 0, uses_anonymous_args = 0
+ 342              	.LVL30:
+ 343 0000 10B5     		push	{r4, lr}
+ 344              	.LCFI9:
+ 345              		.cfi_def_cfa_offset 8
+ 346              		.cfi_offset 4, -8
+ 347              		.cfi_offset 14, -4
+ 348 0002 88B0     		sub	sp, sp, #32
+ 349              	.LCFI10:
+ 350              		.cfi_def_cfa_offset 40
+ 351 0004 0446     		mov	r4, r0
+ 345:Src/Eagle_TRT.c **** 			HAL_CAN_GetRxMessage(can->hcan, CAN_RX_FIFO0, &RxHeader, can->dataRx);
+ 352              		.loc 1 345 0
+ 353 0006 0021     		movs	r1, #0
+ 354 0008 8069     		ldr	r0, [r0, #24]
+ 355              	.LVL31:
+ 356 000a FFF7FEFF 		bl	HAL_CAN_GetRxFifoFillLevel
+ 357              	.LVL32:
+ 358 000e 10B9     		cbnz	r0, .L29
+ 359              	.L27:
+ 360              	.LVL33:
+ 352:Src/Eagle_TRT.c **** #endif
+ 361              		.loc 1 352 0
+ 362 0010 0198     		ldr	r0, [sp, #4]
+ 363 0012 08B0     		add	sp, sp, #32
+ 364              	.LCFI11:
+ 365              		.cfi_remember_state
+ 366              		.cfi_def_cfa_offset 8
+ 367              		@ sp needed
+ 368 0014 10BD     		pop	{r4, pc}
+ 369              	.LVL34:
+ 370              	.L29:
+ 371              	.LCFI12:
+ARM GAS  /tmp/ccihUd1h.s 			page 20
+
+
+ 372              		.cfi_restore_state
+ 346:Src/Eagle_TRT.c **** 		}
+ 373              		.loc 1 346 0
+ 374 0016 04F11003 		add	r3, r4, #16
+ 375 001a 01AA     		add	r2, sp, #4
+ 376 001c 0021     		movs	r1, #0
+ 377 001e A069     		ldr	r0, [r4, #24]
+ 378 0020 FFF7FEFF 		bl	HAL_CAN_GetRxMessage
+ 379              	.LVL35:
+ 380 0024 F4E7     		b	.L27
+ 381              		.cfi_endproc
+ 382              	.LFE132:
+ 384              		.section	.text.init,"ax",%progbits
+ 385              		.align	1
+ 386              		.global	init
+ 387              		.syntax unified
+ 388              		.thumb
+ 389              		.thumb_func
+ 390              		.fpu fpv4-sp-d16
+ 392              	init:
+ 393              	.LFB134:
+ 365:Src/Eagle_TRT.c **** 
+ 394              		.loc 1 365 0
+ 395              		.cfi_startproc
+ 396              		@ args = 0, pretend = 0, frame = 0
+ 397              		@ frame_needed = 0, uses_anonymous_args = 0
+ 398              		@ link register save eliminated.
+ 399              	.LVL36:
+ 367:Src/Eagle_TRT.c **** 	  q->dim=40;
+ 400              		.loc 1 367 0
+ 401 0000 0023     		movs	r3, #0
+ 402 0002 0360     		str	r3, [r0]
+ 403 0004 4360     		str	r3, [r0, #4]
+ 368:Src/Eagle_TRT.c **** 	}
+ 404              		.loc 1 368 0
+ 405 0006 2823     		movs	r3, #40
+ 406 0008 8360     		str	r3, [r0, #8]
+ 407 000a 7047     		bx	lr
+ 408              		.cfi_endproc
+ 409              	.LFE134:
+ 411              		.section	.text.push,"ax",%progbits
+ 412              		.align	1
+ 413              		.global	push
+ 414              		.syntax unified
+ 415              		.thumb
+ 416              		.thumb_func
+ 417              		.fpu fpv4-sp-d16
+ 419              	push:
+ 420              	.LFB137:
+ 381:Src/Eagle_TRT.c **** 		int res;
+ 421              		.loc 1 381 0
+ 422              		.cfi_startproc
+ 423              		@ args = 0, pretend = 0, frame = 0
+ 424              		@ frame_needed = 0, uses_anonymous_args = 0
+ 425              	.LVL37:
+ 426 0000 70B5     		push	{r4, r5, r6, lr}
+ 427              	.LCFI13:
+ARM GAS  /tmp/ccihUd1h.s 			page 21
+
+
+ 428              		.cfi_def_cfa_offset 16
+ 429              		.cfi_offset 4, -16
+ 430              		.cfi_offset 5, -12
+ 431              		.cfi_offset 6, -8
+ 432              		.cfi_offset 14, -4
+ 433 0002 0646     		mov	r6, r0
+ 434 0004 0C46     		mov	r4, r1
+ 383:Src/Eagle_TRT.c **** 			res = FAIL;
+ 435              		.loc 1 383 0
+ 436 0006 0846     		mov	r0, r1
+ 437              	.LVL38:
+ 438 0008 FFF7FEFF 		bl	fullp
+ 439              	.LVL39:
+ 440 000c 08B1     		cbz	r0, .L36
+ 384:Src/Eagle_TRT.c **** 		}
+ 441              		.loc 1 384 0
+ 442 000e 0020     		movs	r0, #0
+ 443              	.LVL40:
+ 401:Src/Eagle_TRT.c **** 
+ 444              		.loc 1 401 0
+ 445 0010 70BD     		pop	{r4, r5, r6, pc}
+ 446              	.LVL41:
+ 447              	.L36:
+ 448              	.LBB4:
+ 387:Src/Eagle_TRT.c **** 			q->elem[q->tail] = (char*) malloc(sizeof(char)*length);
+ 449              		.loc 1 387 0
+ 450 0012 3046     		mov	r0, r6
+ 451 0014 FFF7FEFF 		bl	strlen
+ 452              	.LVL42:
+ 388:Src/Eagle_TRT.c **** 			strcpy(q->elem[q->tail],str);
+ 453              		.loc 1 388 0
+ 454 0018 6568     		ldr	r5, [r4, #4]
+ 455 001a FFF7FEFF 		bl	malloc
+ 456              	.LVL43:
+ 457 001e 0235     		adds	r5, r5, #2
+ 458 0020 04EB8505 		add	r5, r4, r5, lsl #2
+ 459 0024 6860     		str	r0, [r5, #4]
+ 389:Src/Eagle_TRT.c **** 			//q->tail = next(q->tail,q->dim);
+ 460              		.loc 1 389 0
+ 461 0026 3146     		mov	r1, r6
+ 462 0028 FFF7FEFF 		bl	strcpy
+ 463              	.LVL44:
+ 391:Src/Eagle_TRT.c **** 				q->tail=0;
+ 464              		.loc 1 391 0
+ 465 002c 6368     		ldr	r3, [r4, #4]
+ 466 002e 272B     		cmp	r3, #39
+ 467 0030 03D0     		beq	.L37
+ 395:Src/Eagle_TRT.c **** 			}
+ 468              		.loc 1 395 0
+ 469 0032 0133     		adds	r3, r3, #1
+ 470 0034 6360     		str	r3, [r4, #4]
+ 397:Src/Eagle_TRT.c **** 		}
+ 471              		.loc 1 397 0
+ 472 0036 0120     		movs	r0, #1
+ 473 0038 70BD     		pop	{r4, r5, r6, pc}
+ 474              	.LVL45:
+ 475              	.L37:
+ARM GAS  /tmp/ccihUd1h.s 			page 22
+
+
+ 392:Src/Eagle_TRT.c **** 			}
+ 476              		.loc 1 392 0
+ 477 003a 0023     		movs	r3, #0
+ 478 003c 6360     		str	r3, [r4, #4]
+ 397:Src/Eagle_TRT.c **** 		}
+ 479              		.loc 1 397 0
+ 480 003e 0120     		movs	r0, #1
+ 481 0040 70BD     		pop	{r4, r5, r6, pc}
+ 482              	.LBE4:
+ 483              		.cfi_endproc
+ 484              	.LFE137:
+ 486              		.section	.text.pop,"ax",%progbits
+ 487              		.align	1
+ 488              		.global	pop
+ 489              		.syntax unified
+ 490              		.thumb
+ 491              		.thumb_func
+ 492              		.fpu fpv4-sp-d16
+ 494              	pop:
+ 495              	.LFB138:
+ 403:Src/Eagle_TRT.c **** 		int res;
+ 496              		.loc 1 403 0
+ 497              		.cfi_startproc
+ 498              		@ args = 0, pretend = 0, frame = 0
+ 499              		@ frame_needed = 0, uses_anonymous_args = 0
+ 500              	.LVL46:
+ 501 0000 38B5     		push	{r3, r4, r5, lr}
+ 502              	.LCFI14:
+ 503              		.cfi_def_cfa_offset 16
+ 504              		.cfi_offset 3, -16
+ 505              		.cfi_offset 4, -12
+ 506              		.cfi_offset 5, -8
+ 507              		.cfi_offset 14, -4
+ 508 0002 0546     		mov	r5, r0
+ 509 0004 0C46     		mov	r4, r1
+ 405:Src/Eagle_TRT.c **** 			res = FAIL;
+ 510              		.loc 1 405 0
+ 511 0006 0846     		mov	r0, r1
+ 512              	.LVL47:
+ 513 0008 FFF7FEFF 		bl	emptyp
+ 514              	.LVL48:
+ 515 000c 08B1     		cbz	r0, .L43
+ 406:Src/Eagle_TRT.c **** 		}
+ 516              		.loc 1 406 0
+ 517 000e 0020     		movs	r0, #0
+ 518              	.LVL49:
+ 421:Src/Eagle_TRT.c **** 	/// ---- end queue ----///
+ 519              		.loc 1 421 0
+ 520 0010 38BD     		pop	{r3, r4, r5, pc}
+ 521              	.LVL50:
+ 522              	.L43:
+ 409:Src/Eagle_TRT.c **** 			free(q->elem[q->head]);
+ 523              		.loc 1 409 0
+ 524 0012 2368     		ldr	r3, [r4]
+ 525 0014 0233     		adds	r3, r3, #2
+ 526 0016 04EB8303 		add	r3, r4, r3, lsl #2
+ 527 001a 5968     		ldr	r1, [r3, #4]
+ARM GAS  /tmp/ccihUd1h.s 			page 23
+
+
+ 528 001c 2846     		mov	r0, r5
+ 529 001e FFF7FEFF 		bl	strcpy
+ 530              	.LVL51:
+ 410:Src/Eagle_TRT.c **** 			//q->head = next(q->head,q->dim);
+ 531              		.loc 1 410 0
+ 532 0022 2368     		ldr	r3, [r4]
+ 533 0024 0233     		adds	r3, r3, #2
+ 534 0026 04EB8303 		add	r3, r4, r3, lsl #2
+ 535 002a 5868     		ldr	r0, [r3, #4]
+ 536 002c FFF7FEFF 		bl	free
+ 537              	.LVL52:
+ 412:Src/Eagle_TRT.c **** 				q->head=0;
+ 538              		.loc 1 412 0
+ 539 0030 2368     		ldr	r3, [r4]
+ 540 0032 272B     		cmp	r3, #39
+ 541 0034 03D0     		beq	.L44
+ 415:Src/Eagle_TRT.c **** 			}
+ 542              		.loc 1 415 0
+ 543 0036 0133     		adds	r3, r3, #1
+ 544 0038 2360     		str	r3, [r4]
+ 417:Src/Eagle_TRT.c **** 		}
+ 545              		.loc 1 417 0
+ 546 003a 0120     		movs	r0, #1
+ 547 003c 38BD     		pop	{r3, r4, r5, pc}
+ 548              	.LVL53:
+ 549              	.L44:
+ 413:Src/Eagle_TRT.c **** 			}else{
+ 550              		.loc 1 413 0
+ 551 003e 0023     		movs	r3, #0
+ 552 0040 2360     		str	r3, [r4]
+ 417:Src/Eagle_TRT.c **** 		}
+ 553              		.loc 1 417 0
+ 554 0042 0120     		movs	r0, #1
+ 555 0044 38BD     		pop	{r3, r4, r5, pc}
+ 556              		.cfi_endproc
+ 557              	.LFE138:
+ 559              		.section	.text.print,"ax",%progbits
+ 560              		.align	1
+ 561              		.global	print
+ 562              		.syntax unified
+ 563              		.thumb
+ 564              		.thumb_func
+ 565              		.fpu fpv4-sp-d16
+ 567              	print:
+ 568              	.LFB139:
+ 425:Src/Eagle_TRT.c **** 
+ 569              		.loc 1 425 0
+ 570              		.cfi_startproc
+ 571              		@ args = 0, pretend = 0, frame = 0
+ 572              		@ frame_needed = 0, uses_anonymous_args = 0
+ 573              	.LVL54:
+ 574 0000 38B5     		push	{r3, r4, r5, lr}
+ 575              	.LCFI15:
+ 576              		.cfi_def_cfa_offset 16
+ 577              		.cfi_offset 3, -16
+ 578              		.cfi_offset 4, -12
+ 579              		.cfi_offset 5, -8
+ARM GAS  /tmp/ccihUd1h.s 			page 24
+
+
+ 580              		.cfi_offset 14, -4
+ 581 0002 0546     		mov	r5, r0
+ 582 0004 0C46     		mov	r4, r1
+ 583              	.LVL55:
+ 429:Src/Eagle_TRT.c **** 			ret=1;
+ 584              		.loc 1 429 0
+ 585 0006 0846     		mov	r0, r1
+ 586              	.LVL56:
+ 587 0008 FFF7FEFF 		bl	strlen
+ 588              	.LVL57:
+ 589 000c 82B2     		uxth	r2, r0
+ 590 000e 2146     		mov	r1, r4
+ 591 0010 2846     		mov	r0, r5
+ 592 0012 FFF7FEFF 		bl	HAL_UART_Transmit_IT
+ 593              	.LVL58:
+ 594 0016 10B9     		cbnz	r0, .L50
+ 430:Src/Eagle_TRT.c **** 		}else{
+ 595              		.loc 1 430 0
+ 596 0018 0123     		movs	r3, #1
+ 597              	.LVL59:
+ 598              	.L45:
+ 440:Src/Eagle_TRT.c **** 
+ 599              		.loc 1 440 0
+ 600 001a 1846     		mov	r0, r3
+ 601 001c 38BD     		pop	{r3, r4, r5, pc}
+ 602              	.LVL60:
+ 603              	.L50:
+ 432:Src/Eagle_TRT.c **** 				ret=0;
+ 604              		.loc 1 432 0
+ 605 001e 0449     		ldr	r1, .L51
+ 606 0020 2046     		mov	r0, r4
+ 607 0022 FFF7FEFF 		bl	push
+ 608              	.LVL61:
+ 609 0026 0346     		mov	r3, r0
+ 610 0028 0028     		cmp	r0, #0
+ 611 002a F6D0     		beq	.L45
+ 435:Src/Eagle_TRT.c **** 			}
+ 612              		.loc 1 435 0
+ 613 002c 0123     		movs	r3, #1
+ 614              	.LVL62:
+ 439:Src/Eagle_TRT.c **** 	}
+ 615              		.loc 1 439 0
+ 616 002e F4E7     		b	.L45
+ 617              	.L52:
+ 618              		.align	2
+ 619              	.L51:
+ 620 0030 00000000 		.word	.LANCHOR0
+ 621              		.cfi_endproc
+ 622              	.LFE139:
+ 624              		.section	.text.print_it,"ax",%progbits
+ 625              		.align	1
+ 626              		.global	print_it
+ 627              		.syntax unified
+ 628              		.thumb
+ 629              		.thumb_func
+ 630              		.fpu fpv4-sp-d16
+ 632              	print_it:
+ARM GAS  /tmp/ccihUd1h.s 			page 25
+
+
+ 633              	.LFB140:
+ 442:Src/Eagle_TRT.c **** 
+ 634              		.loc 1 442 0
+ 635              		.cfi_startproc
+ 636              		@ args = 0, pretend = 0, frame = 56
+ 637              		@ frame_needed = 0, uses_anonymous_args = 0
+ 638              	.LVL63:
+ 639 0000 10B5     		push	{r4, lr}
+ 640              	.LCFI16:
+ 641              		.cfi_def_cfa_offset 8
+ 642              		.cfi_offset 4, -8
+ 643              		.cfi_offset 14, -4
+ 644 0002 8EB0     		sub	sp, sp, #56
+ 645              	.LCFI17:
+ 646              		.cfi_def_cfa_offset 64
+ 647 0004 0446     		mov	r4, r0
+ 446:Src/Eagle_TRT.c **** 			HAL_UART_Transmit_IT(huart, (uint8_t*)text_print_function, strlen(text_print_function));
+ 648              		.loc 1 446 0
+ 649 0006 0849     		ldr	r1, .L57
+ 650 0008 01A8     		add	r0, sp, #4
+ 651              	.LVL64:
+ 652 000a FFF7FEFF 		bl	pop
+ 653              	.LVL65:
+ 654 000e 0128     		cmp	r0, #1
+ 655 0010 01D0     		beq	.L56
+ 656              	.L53:
+ 449:Src/Eagle_TRT.c **** 
+ 657              		.loc 1 449 0
+ 658 0012 0EB0     		add	sp, sp, #56
+ 659              	.LCFI18:
+ 660              		.cfi_remember_state
+ 661              		.cfi_def_cfa_offset 8
+ 662              		@ sp needed
+ 663 0014 10BD     		pop	{r4, pc}
+ 664              	.LVL66:
+ 665              	.L56:
+ 666              	.LCFI19:
+ 667              		.cfi_restore_state
+ 447:Src/Eagle_TRT.c **** 		}
+ 668              		.loc 1 447 0
+ 669 0016 01A8     		add	r0, sp, #4
+ 670 0018 FFF7FEFF 		bl	strlen
+ 671              	.LVL67:
+ 672 001c 82B2     		uxth	r2, r0
+ 673 001e 01A9     		add	r1, sp, #4
+ 674 0020 2046     		mov	r0, r4
+ 675 0022 FFF7FEFF 		bl	HAL_UART_Transmit_IT
+ 676              	.LVL68:
+ 449:Src/Eagle_TRT.c **** 
+ 677              		.loc 1 449 0
+ 678 0026 F4E7     		b	.L53
+ 679              	.L58:
+ 680              		.align	2
+ 681              	.L57:
+ 682 0028 00000000 		.word	.LANCHOR0
+ 683              		.cfi_endproc
+ 684              	.LFE140:
+ARM GAS  /tmp/ccihUd1h.s 			page 26
+
+
+ 686              		.section	.text.gps_init,"ax",%progbits
+ 687              		.align	1
+ 688              		.global	gps_init
+ 689              		.syntax unified
+ 690              		.thumb
+ 691              		.thumb_func
+ 692              		.fpu fpv4-sp-d16
+ 694              	gps_init:
+ 695              	.LFB141:
+ 470:Src/Eagle_TRT.c **** 
+ 696              		.loc 1 470 0
+ 697              		.cfi_startproc
+ 698              		@ args = 0, pretend = 0, frame = 0
+ 699              		@ frame_needed = 0, uses_anonymous_args = 0
+ 700              	.LVL69:
+ 701 0000 70B5     		push	{r4, r5, r6, lr}
+ 702              	.LCFI20:
+ 703              		.cfi_def_cfa_offset 16
+ 704              		.cfi_offset 4, -16
+ 705              		.cfi_offset 5, -12
+ 706              		.cfi_offset 6, -8
+ 707              		.cfi_offset 14, -4
+ 708 0002 0C46     		mov	r4, r1
+ 473:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 9600;
+ 709              		.loc 1 473 0
+ 710 0004 3D4D     		ldr	r5, .L61
+ 711 0006 2860     		str	r0, [r5]
+ 474:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 712              		.loc 1 474 0
+ 713 0008 4FF41652 		mov	r2, #9600
+ 714 000c 4260     		str	r2, [r0, #4]
+ 475:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 715              		.loc 1 475 0
+ 716 000e FFF7FEFF 		bl	HAL_UART_Init
+ 717              	.LVL70:
+ 476:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 718              		.loc 1 476 0
+ 719 0012 3B4E     		ldr	r6, .L61+4
+ 720 0014 C823     		movs	r3, #200
+ 721 0016 1422     		movs	r2, #20
+ 722 0018 3146     		mov	r1, r6
+ 723 001a 2868     		ldr	r0, [r5]
+ 724 001c FFF7FEFF 		bl	HAL_UART_Transmit
+ 725              	.LVL71:
+ 477:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 57600;
+ 726              		.loc 1 477 0
+ 727 0020 4FF4FA70 		mov	r0, #500
+ 728 0024 FFF7FEFF 		bl	HAL_Delay
+ 729              	.LVL72:
+ 478:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 730              		.loc 1 478 0
+ 731 0028 2868     		ldr	r0, [r5]
+ 732 002a 4FF46143 		mov	r3, #57600
+ 733 002e 4360     		str	r3, [r0, #4]
+ 479:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 734              		.loc 1 479 0
+ 735 0030 FFF7FEFF 		bl	HAL_UART_Init
+ARM GAS  /tmp/ccihUd1h.s 			page 27
+
+
+ 736              	.LVL73:
+ 480:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 737              		.loc 1 480 0
+ 738 0034 C823     		movs	r3, #200
+ 739 0036 1422     		movs	r2, #20
+ 740 0038 3146     		mov	r1, r6
+ 741 003a 2868     		ldr	r0, [r5]
+ 742 003c FFF7FEFF 		bl	HAL_UART_Transmit
+ 743              	.LVL74:
+ 481:Src/Eagle_TRT.c **** 		huart_GPS->Init.BaudRate = 115200;
+ 744              		.loc 1 481 0
+ 745 0040 4FF4FA70 		mov	r0, #500
+ 746 0044 FFF7FEFF 		bl	HAL_Delay
+ 747              	.LVL75:
+ 482:Src/Eagle_TRT.c **** 		HAL_UART_Init(huart_GPS);
+ 748              		.loc 1 482 0
+ 749 0048 2868     		ldr	r0, [r5]
+ 750 004a 4FF4E133 		mov	r3, #115200
+ 751 004e 4360     		str	r3, [r0, #4]
+ 483:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_BAUD_115200, strlen(PMTK_SET_BAUD_115200), 200);
+ 752              		.loc 1 483 0
+ 753 0050 FFF7FEFF 		bl	HAL_UART_Init
+ 754              	.LVL76:
+ 484:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 755              		.loc 1 484 0
+ 756 0054 C823     		movs	r3, #200
+ 757 0056 1422     		movs	r2, #20
+ 758 0058 3146     		mov	r1, r6
+ 759 005a 2868     		ldr	r0, [r5]
+ 760 005c FFF7FEFF 		bl	HAL_UART_Transmit
+ 761              	.LVL77:
+ 485:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_NMEA_UPDATE_10HZ, strlen(PMTK_SET_NMEA_UPDATE_10H
+ 762              		.loc 1 485 0
+ 763 0060 4FF4FA70 		mov	r0, #500
+ 764 0064 FFF7FEFF 		bl	HAL_Delay
+ 765              	.LVL78:
+ 486:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 766              		.loc 1 486 0
+ 767 0068 C823     		movs	r3, #200
+ 768 006a 1122     		movs	r2, #17
+ 769 006c 2549     		ldr	r1, .L61+8
+ 770 006e 2868     		ldr	r0, [r5]
+ 771 0070 FFF7FEFF 		bl	HAL_UART_Transmit
+ 772              	.LVL79:
+ 487:Src/Eagle_TRT.c **** 		HAL_UART_Transmit(huart_GPS, (uint8_t*)PMTK_SET_NMEA_OUTPUT_GGAVTG, strlen(PMTK_SET_NMEA_OUTPUT_G
+ 773              		.loc 1 487 0
+ 774 0074 4FF4FA70 		mov	r0, #500
+ 775 0078 FFF7FEFF 		bl	HAL_Delay
+ 776              	.LVL80:
+ 488:Src/Eagle_TRT.c **** 		HAL_Delay(500);
+ 777              		.loc 1 488 0
+ 778 007c C823     		movs	r3, #200
+ 779 007e 3322     		movs	r2, #51
+ 780 0080 2149     		ldr	r1, .L61+12
+ 781 0082 2868     		ldr	r0, [r5]
+ 782 0084 FFF7FEFF 		bl	HAL_UART_Transmit
+ 783              	.LVL81:
+ARM GAS  /tmp/ccihUd1h.s 			page 28
+
+
+ 489:Src/Eagle_TRT.c **** 		strcpy(gps->speed,"000.00");
+ 784              		.loc 1 489 0
+ 785 0088 4FF4FA70 		mov	r0, #500
+ 786 008c FFF7FEFF 		bl	HAL_Delay
+ 787              	.LVL82:
+ 490:Src/Eagle_TRT.c **** 		strcpy(gps->latitude,"0000.0000");
+ 788              		.loc 1 490 0
+ 789 0090 1E4B     		ldr	r3, .L61+16
+ 790 0092 1868     		ldr	r0, [r3]
+ 791 0094 2060     		str	r0, [r4]	@ unaligned
+ 792 0096 9A88     		ldrh	r2, [r3, #4]	@ unaligned
+ 793 0098 9B79     		ldrb	r3, [r3, #6]	@ zero_extendqisi2
+ 794 009a A280     		strh	r2, [r4, #4]	@ unaligned
+ 795 009c A371     		strb	r3, [r4, #6]
+ 491:Src/Eagle_TRT.c **** 		strcpy(gps->latitude_o,"N");
+ 796              		.loc 1 491 0
+ 797 009e 1C4B     		ldr	r3, .L61+20
+ 798 00a0 03CB     		ldmia	r3!, {r0, r1}
+ 799 00a2 E060     		str	r0, [r4, #12]	@ unaligned
+ 800 00a4 2161     		str	r1, [r4, #16]	@ unaligned
+ 801 00a6 1B88     		ldrh	r3, [r3]	@ unaligned
+ 802 00a8 A382     		strh	r3, [r4, #20]	@ unaligned
+ 492:Src/Eagle_TRT.c **** 		strcpy(gps->longitude,"00000.0000");
+ 803              		.loc 1 492 0
+ 804 00aa 1A4B     		ldr	r3, .L61+24
+ 805 00ac 1B88     		ldrh	r3, [r3]	@ unaligned
+ 806 00ae A383     		strh	r3, [r4, #28]	@ unaligned
+ 493:Src/Eagle_TRT.c **** 		strcpy(gps->longitude_o,"W");
+ 807              		.loc 1 493 0
+ 808 00b0 194B     		ldr	r3, .L61+28
+ 809 00b2 03CB     		ldmia	r3!, {r0, r1}
+ 810 00b4 E062     		str	r0, [r4, #44]	@ unaligned
+ 811 00b6 2163     		str	r1, [r4, #48]	@ unaligned
+ 812 00b8 1988     		ldrh	r1, [r3]	@ unaligned
+ 813 00ba 9B78     		ldrb	r3, [r3, #2]	@ zero_extendqisi2
+ 814 00bc A186     		strh	r1, [r4, #52]	@ unaligned
+ 815 00be 84F83630 		strb	r3, [r4, #54]
+ 494:Src/Eagle_TRT.c **** 		strcpy(gps->altitude,"0000.0");
+ 816              		.loc 1 494 0
+ 817 00c2 164B     		ldr	r3, .L61+32
+ 818 00c4 1B88     		ldrh	r3, [r3]	@ unaligned
+ 819 00c6 A387     		strh	r3, [r4, #60]	@ unaligned
+ 495:Src/Eagle_TRT.c **** 		strcpy(gps->time,"000000");
+ 820              		.loc 1 495 0
+ 821 00c8 154B     		ldr	r3, .L61+36
+ 822 00ca 1868     		ldr	r0, [r3]
+ 823 00cc E064     		str	r0, [r4, #76]	@ unaligned
+ 824 00ce 9988     		ldrh	r1, [r3, #4]	@ unaligned
+ 825 00d0 9B79     		ldrb	r3, [r3, #6]	@ zero_extendqisi2
+ 826 00d2 A4F85010 		strh	r1, [r4, #80]	@ unaligned
+ 827 00d6 84F85230 		strb	r3, [r4, #82]
+ 496:Src/Eagle_TRT.c **** 		HAL_UART_Receive_IT(huart_GPS, (uint8_t *)buffer_gps, 1); //request of rx buffer interrupt
+ 828              		.loc 1 496 0
+ 829 00da 124B     		ldr	r3, .L61+40
+ 830 00dc 1868     		ldr	r0, [r3]
+ 831 00de A065     		str	r0, [r4, #88]	@ unaligned
+ 832 00e0 9988     		ldrh	r1, [r3, #4]	@ unaligned
+ARM GAS  /tmp/ccihUd1h.s 			page 29
+
+
+ 833 00e2 9B79     		ldrb	r3, [r3, #6]	@ zero_extendqisi2
+ 834 00e4 A4F85C10 		strh	r1, [r4, #92]	@ unaligned
+ 835 00e8 84F85E30 		strb	r3, [r4, #94]
+ 497:Src/Eagle_TRT.c **** 
+ 836              		.loc 1 497 0
+ 837 00ec 0122     		movs	r2, #1
+ 838 00ee 0E49     		ldr	r1, .L61+44
+ 839 00f0 2868     		ldr	r0, [r5]
+ 840 00f2 FFF7FEFF 		bl	HAL_UART_Receive_IT
+ 841              	.LVL83:
+ 500:Src/Eagle_TRT.c **** 
+ 842              		.loc 1 500 0
+ 843 00f6 0120     		movs	r0, #1
+ 844 00f8 70BD     		pop	{r4, r5, r6, pc}
+ 845              	.LVL84:
+ 846              	.L62:
+ 847 00fa 00BF     		.align	2
+ 848              	.L61:
+ 849 00fc 00000000 		.word	huart_GPS
+ 850 0100 00000000 		.word	.LC1
+ 851 0104 18000000 		.word	.LC2
+ 852 0108 2C000000 		.word	.LC3
+ 853 010c 60000000 		.word	.LC4
+ 854 0110 68000000 		.word	.LC5
+ 855 0114 74000000 		.word	.LC6
+ 856 0118 78000000 		.word	.LC7
+ 857 011c 84000000 		.word	.LC8
+ 858 0120 88000000 		.word	.LC9
+ 859 0124 90000000 		.word	.LC10
+ 860 0128 00000000 		.word	buffer_gps
+ 861              		.cfi_endproc
+ 862              	.LFE141:
+ 864              		.global	__aeabi_dmul
+ 865              		.global	__aeabi_d2iz
+ 866              		.section	.text.gps_read_it,"ax",%progbits
+ 867              		.align	1
+ 868              		.global	gps_read_it
+ 869              		.syntax unified
+ 870              		.thumb
+ 871              		.thumb_func
+ 872              		.fpu fpv4-sp-d16
+ 874              	gps_read_it:
+ 875              	.LFB142:
+ 502:Src/Eagle_TRT.c **** 
+ 876              		.loc 1 502 0
+ 877              		.cfi_startproc
+ 878              		@ args = 0, pretend = 0, frame = 0
+ 879              		@ frame_needed = 0, uses_anonymous_args = 0
+ 880              	.LVL85:
+ 881 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 882              	.LCFI21:
+ 883              		.cfi_def_cfa_offset 24
+ 884              		.cfi_offset 3, -24
+ 885              		.cfi_offset 4, -20
+ 886              		.cfi_offset 5, -16
+ 887              		.cfi_offset 6, -12
+ 888              		.cfi_offset 7, -8
+ARM GAS  /tmp/ccihUd1h.s 			page 30
+
+
+ 889              		.cfi_offset 14, -4
+ 890              	.LVL86:
+ 540:Src/Eagle_TRT.c **** 				//check if it's the huart_gps interrupt
+ 891              		.loc 1 540 0
+ 892 0002 A14B     		ldr	r3, .L117+16
+ 893 0004 1B68     		ldr	r3, [r3]
+ 894 0006 8342     		cmp	r3, r0
+ 895 0008 02D0     		beq	.L99
+ 504:Src/Eagle_TRT.c **** 
+ 896              		.loc 1 504 0
+ 897 000a 0024     		movs	r4, #0
+ 898              	.LVL87:
+ 899              	.L63:
+ 669:Src/Eagle_TRT.c **** 	static int checksum(char * string_checksum, int size_string_checksum){ //check the checksum
+ 900              		.loc 1 669 0
+ 901 000c 2046     		mov	r0, r4
+ 902 000e F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 903              	.LVL88:
+ 904              	.L99:
+ 905 0010 0D46     		mov	r5, r1
+ 542:Src/Eagle_TRT.c **** 				data_string_gps=buffer_gps[0]; //convert a pointer into a char
+ 906              		.loc 1 542 0
+ 907 0012 9E4C     		ldr	r4, .L117+20
+ 908 0014 0122     		movs	r2, #1
+ 909 0016 2146     		mov	r1, r4
+ 910              	.LVL89:
+ 911 0018 1846     		mov	r0, r3
+ 912              	.LVL90:
+ 913 001a FFF7FEFF 		bl	HAL_UART_Receive_IT
+ 914              	.LVL91:
+ 543:Src/Eagle_TRT.c **** 				if((start_string_gps==1)&&(data_string_gps!='$')){ //check that the new string has not started 
+ 915              		.loc 1 543 0
+ 916 001e 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 917 0020 9B4A     		ldr	r2, .L117+24
+ 918 0022 1370     		strb	r3, [r2]
+ 544:Src/Eagle_TRT.c **** 					string_gps[cont_string]=data_string_gps; //save the data into the array
+ 919              		.loc 1 544 0
+ 920 0024 9B4A     		ldr	r2, .L117+28
+ 921 0026 1268     		ldr	r2, [r2]
+ 922 0028 012A     		cmp	r2, #1
+ 923 002a 04D0     		beq	.L100
+ 924              	.L65:
+ 660:Src/Eagle_TRT.c **** 						start_string_gps=1; //new string started
+ 925              		.loc 1 660 0
+ 926 002c 242B     		cmp	r3, #36
+ 927 002e 00F06F81 		beq	.L101
+ 504:Src/Eagle_TRT.c **** 
+ 928              		.loc 1 504 0
+ 929 0032 0024     		movs	r4, #0
+ 668:Src/Eagle_TRT.c **** 		}
+ 930              		.loc 1 668 0
+ 931 0034 EAE7     		b	.L63
+ 932              	.L100:
+ 544:Src/Eagle_TRT.c **** 					string_gps[cont_string]=data_string_gps; //save the data into the array
+ 933              		.loc 1 544 0 discriminator 1
+ 934 0036 242B     		cmp	r3, #36
+ 935 0038 F8D0     		beq	.L65
+ARM GAS  /tmp/ccihUd1h.s 			page 31
+
+
+ 545:Src/Eagle_TRT.c **** 					cont_string++;
+ 936              		.loc 1 545 0
+ 937 003a 974A     		ldr	r2, .L117+32
+ 938 003c 1168     		ldr	r1, [r2]
+ 939 003e 9748     		ldr	r0, .L117+36
+ 940 0040 4354     		strb	r3, [r0, r1]
+ 546:Src/Eagle_TRT.c **** 					if(string_gps[cont_string-1]=='\r'||string_gps[cont_string-1]=='\n'){  //indicates that the st
+ 941              		.loc 1 546 0
+ 942 0042 481C     		adds	r0, r1, #1
+ 943 0044 1060     		str	r0, [r2]
+ 547:Src/Eagle_TRT.c **** 						cont_string--;
+ 944              		.loc 1 547 0
+ 945 0046 0D2B     		cmp	r3, #13
+ 946 0048 03D0     		beq	.L66
+ 547:Src/Eagle_TRT.c **** 						cont_string--;
+ 947              		.loc 1 547 0 is_stmt 0 discriminator 1
+ 948 004a 0A2B     		cmp	r3, #10
+ 949 004c 01D0     		beq	.L66
+ 504:Src/Eagle_TRT.c **** 
+ 950              		.loc 1 504 0 is_stmt 1
+ 951 004e 0024     		movs	r4, #0
+ 952 0050 DCE7     		b	.L63
+ 953              	.L66:
+ 548:Src/Eagle_TRT.c **** 						string_gps[cont_string]='\0'; // '\0'=end of the string
+ 954              		.loc 1 548 0
+ 955 0052 914B     		ldr	r3, .L117+32
+ 956 0054 1960     		str	r1, [r3]
+ 549:Src/Eagle_TRT.c **** 						start_string_gps=0; //end of string
+ 957              		.loc 1 549 0
+ 958 0056 914B     		ldr	r3, .L117+36
+ 959 0058 0022     		movs	r2, #0
+ 960 005a 5A54     		strb	r2, [r3, r1]
+ 550:Src/Eagle_TRT.c **** 						if(string_gps[2]=='G'&&string_gps[3]=='G'&&string_gps[4]=='A'){ // operation when the string 
+ 961              		.loc 1 550 0
+ 962 005c 8D48     		ldr	r0, .L117+28
+ 963 005e 0260     		str	r2, [r0]
+ 551:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 964              		.loc 1 551 0
+ 965 0060 9B78     		ldrb	r3, [r3, #2]	@ zero_extendqisi2
+ 966 0062 472B     		cmp	r3, #71
+ 967 0064 04D0     		beq	.L102
+ 968              	.L67:
+ 620:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 969              		.loc 1 620 0
+ 970 0066 562B     		cmp	r3, #86
+ 971 0068 00F0C380 		beq	.L103
+ 504:Src/Eagle_TRT.c **** 
+ 972              		.loc 1 504 0
+ 973 006c 0024     		movs	r4, #0
+ 974 006e CDE7     		b	.L63
+ 975              	.L102:
+ 551:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 976              		.loc 1 551 0 discriminator 1
+ 977 0070 8A4A     		ldr	r2, .L117+36
+ 978 0072 D278     		ldrb	r2, [r2, #3]	@ zero_extendqisi2
+ 979 0074 472A     		cmp	r2, #71
+ 980 0076 F6D1     		bne	.L67
+ARM GAS  /tmp/ccihUd1h.s 			page 32
+
+
+ 551:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 981              		.loc 1 551 0 is_stmt 0 discriminator 2
+ 982 0078 884A     		ldr	r2, .L117+36
+ 983 007a 1279     		ldrb	r2, [r2, #4]	@ zero_extendqisi2
+ 984 007c 412A     		cmp	r2, #65
+ 985 007e F2D1     		bne	.L67
+ 552:Src/Eagle_TRT.c **** 								int cont_comma=0,cont_latitude=0,cont_longitude=0,cont_altitude=0,cont_time=0;
+ 986              		.loc 1 552 0 is_stmt 1
+ 987 0080 8648     		ldr	r0, .L117+36
+ 988 0082 FFF7FEFF 		bl	checksum
+ 989              	.LVL92:
+ 990 0086 0128     		cmp	r0, #1
+ 991 0088 3BD0     		beq	.L90
+ 617:Src/Eagle_TRT.c **** 							}
+ 992              		.loc 1 617 0
+ 993 008a 0024     		movs	r4, #0
+ 994 008c BEE7     		b	.L63
+ 995              	.LVL93:
+ 996              	.L105:
+ 997              	.LBB5:
+ 998              	.LBB6:
+ 555:Src/Eagle_TRT.c **** 									else{
+ 999              		.loc 1 555 0 discriminator 1
+ 1000 008e 0133     		adds	r3, r3, #1
+ 1001              	.LVL94:
+ 1002              	.L70:
+ 554:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 1003              		.loc 1 554 0 discriminator 2
+ 1004 0090 0130     		adds	r0, r0, #1
+ 1005              	.LVL95:
+ 1006              	.L68:
+ 554:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 1007              		.loc 1 554 0 is_stmt 0 discriminator 1
+ 1008 0092 6328     		cmp	r0, #99
+ 1009 0094 3CDC     		bgt	.L104
+ 555:Src/Eagle_TRT.c **** 									else{
+ 1010              		.loc 1 555 0 is_stmt 1
+ 1011 0096 814A     		ldr	r2, .L117+36
+ 1012 0098 125C     		ldrb	r2, [r2, r0]	@ zero_extendqisi2
+ 1013 009a 2C2A     		cmp	r2, #44
+ 1014 009c F7D0     		beq	.L105
+ 557:Src/Eagle_TRT.c **** 											gps->time[cont_time]=string_gps[i];
+ 1015              		.loc 1 557 0
+ 1016 009e 012B     		cmp	r3, #1
+ 1017 00a0 07D0     		beq	.L106
+ 561:Src/Eagle_TRT.c **** 											gps->latitude[cont_latitude]=string_gps[i];
+ 1018              		.loc 1 561 0
+ 1019 00a2 022B     		cmp	r3, #2
+ 1020 00a4 0BD1     		bne	.L72
+ 562:Src/Eagle_TRT.c **** 											cont_latitude++;
+ 1021              		.loc 1 562 0
+ 1022 00a6 05EB040E 		add	lr, r5, r4
+ 1023 00aa 8EF80C20 		strb	r2, [lr, #12]
+ 563:Src/Eagle_TRT.c **** 										}
+ 1024              		.loc 1 563 0
+ 1025 00ae 0134     		adds	r4, r4, #1
+ 1026              	.LVL96:
+ARM GAS  /tmp/ccihUd1h.s 			page 33
+
+
+ 1027 00b0 EEE7     		b	.L70
+ 1028              	.L106:
+ 558:Src/Eagle_TRT.c **** 											cont_time++;
+ 1029              		.loc 1 558 0
+ 1030 00b2 05EB010E 		add	lr, r5, r1
+ 1031 00b6 8EF85820 		strb	r2, [lr, #88]
+ 559:Src/Eagle_TRT.c **** 										}
+ 1032              		.loc 1 559 0
+ 1033 00ba 0131     		adds	r1, r1, #1
+ 1034              	.LVL97:
+ 1035 00bc E8E7     		b	.L70
+ 1036              	.L72:
+ 565:Src/Eagle_TRT.c **** 											gps->latitude_o[0]=string_gps[i];
+ 1037              		.loc 1 565 0
+ 1038 00be 032B     		cmp	r3, #3
+ 1039 00c0 01D1     		bne	.L73
+ 566:Src/Eagle_TRT.c **** 										}
+ 1040              		.loc 1 566 0
+ 1041 00c2 2A77     		strb	r2, [r5, #28]
+ 1042 00c4 E4E7     		b	.L70
+ 1043              	.L73:
+ 568:Src/Eagle_TRT.c **** 											gps->longitude[cont_longitude]=string_gps[i];
+ 1044              		.loc 1 568 0
+ 1045 00c6 042B     		cmp	r3, #4
+ 1046 00c8 0BD0     		beq	.L107
+ 572:Src/Eagle_TRT.c **** 											gps->longitude_o[0]=string_gps[i];
+ 1047              		.loc 1 572 0
+ 1048 00ca 052B     		cmp	r3, #5
+ 1049 00cc 0FD0     		beq	.L108
+ 575:Src/Eagle_TRT.c **** 											gps->fix_status=string_gps[i];
+ 1050              		.loc 1 575 0
+ 1051 00ce 062B     		cmp	r3, #6
+ 1052 00d0 10D0     		beq	.L109
+ 578:Src/Eagle_TRT.c **** 											gps->altitude[cont_altitude]=string_gps[i];
+ 1053              		.loc 1 578 0
+ 1054 00d2 092B     		cmp	r3, #9
+ 1055 00d4 11D1     		bne	.L77
+ 579:Src/Eagle_TRT.c **** 											cont_altitude++;
+ 1056              		.loc 1 579 0
+ 1057 00d6 05EB070E 		add	lr, r5, r7
+ 1058 00da 8EF84C20 		strb	r2, [lr, #76]
+ 580:Src/Eagle_TRT.c **** 										}
+ 1059              		.loc 1 580 0
+ 1060 00de 0137     		adds	r7, r7, #1
+ 1061              	.LVL98:
+ 1062 00e0 D6E7     		b	.L70
+ 1063              	.L107:
+ 569:Src/Eagle_TRT.c **** 											cont_longitude++;
+ 1064              		.loc 1 569 0
+ 1065 00e2 05EB060E 		add	lr, r5, r6
+ 1066 00e6 8EF82C20 		strb	r2, [lr, #44]
+ 570:Src/Eagle_TRT.c **** 										}
+ 1067              		.loc 1 570 0
+ 1068 00ea 0136     		adds	r6, r6, #1
+ 1069              	.LVL99:
+ 1070 00ec D0E7     		b	.L70
+ 1071              	.L108:
+ARM GAS  /tmp/ccihUd1h.s 			page 34
+
+
+ 573:Src/Eagle_TRT.c **** 										}
+ 1072              		.loc 1 573 0
+ 1073 00ee 85F83C20 		strb	r2, [r5, #60]
+ 1074 00f2 CDE7     		b	.L70
+ 1075              	.L109:
+ 576:Src/Eagle_TRT.c **** 										}
+ 1076              		.loc 1 576 0
+ 1077 00f4 85F86320 		strb	r2, [r5, #99]
+ 1078 00f8 CAE7     		b	.L70
+ 1079              	.L77:
+ 582:Src/Eagle_TRT.c **** 											i=100; //end the cicle
+ 1080              		.loc 1 582 0
+ 1081 00fa 0A2B     		cmp	r3, #10
+ 1082 00fc C8D1     		bne	.L70
+ 583:Src/Eagle_TRT.c **** 										}
+ 1083              		.loc 1 583 0
+ 1084 00fe 6420     		movs	r0, #100
+ 1085              	.LVL100:
+ 1086 0100 C6E7     		b	.L70
+ 1087              	.LVL101:
+ 1088              	.L90:
+ 1089              	.LBE6:
+ 1090              	.LBE5:
+ 1091 0102 0520     		movs	r0, #5
+ 1092 0104 0021     		movs	r1, #0
+ 1093 0106 0F46     		mov	r7, r1
+ 1094 0108 0E46     		mov	r6, r1
+ 1095 010a 0C46     		mov	r4, r1
+ 1096 010c 0B46     		mov	r3, r1
+ 1097 010e C0E7     		b	.L68
+ 1098              	.LVL102:
+ 1099              	.L104:
+ 1100              	.LBB7:
+ 589:Src/Eagle_TRT.c **** 									gps->latitude_i_h=0;
+ 1101              		.loc 1 589 0
+ 1102 0110 95F86330 		ldrb	r3, [r5, #99]	@ zero_extendqisi2
+ 1103              	.LVL103:
+ 1104 0114 302B     		cmp	r3, #48
+ 1105 0116 2FD1     		bne	.L79
+ 590:Src/Eagle_TRT.c **** 									gps->latitude_i_l=0;
+ 1106              		.loc 1 590 0
+ 1107 0118 0023     		movs	r3, #0
+ 1108 011a 6B62     		str	r3, [r5, #36]
+ 591:Src/Eagle_TRT.c **** 									gps->longitude_i_h=0;
+ 1109              		.loc 1 591 0
+ 1110 011c AB62     		str	r3, [r5, #40]
+ 592:Src/Eagle_TRT.c **** 									gps->longitude_i_l=0;
+ 1111              		.loc 1 592 0
+ 1112 011e 6B64     		str	r3, [r5, #68]
+ 593:Src/Eagle_TRT.c **** 									gps->altitude_i=0;
+ 1113              		.loc 1 593 0
+ 1114 0120 AB64     		str	r3, [r5, #72]
+ 594:Src/Eagle_TRT.c **** 								}
+ 1115              		.loc 1 594 0
+ 1116 0122 6B65     		str	r3, [r5, #84]
+ 1117              	.LVL104:
+ 1118              	.L80:
+ARM GAS  /tmp/ccihUd1h.s 			page 35
+
+
+ 606:Src/Eagle_TRT.c **** 								can.dataTx[1] = gps->longitude_i_h / 256;
+ 1119              		.loc 1 606 0
+ 1120 0124 5E48     		ldr	r0, .L117+40
+ 1121 0126 0823     		movs	r3, #8
+ 1122 0128 0372     		strb	r3, [r0, #8]
+ 607:Src/Eagle_TRT.c **** 								can.dataTx[2] = gps->longitude_i_h % 256;
+ 1123              		.loc 1 607 0
+ 1124 012a 6B6C     		ldr	r3, [r5, #68]
+ 1125 012c 4FF48072 		mov	r2, #256
+ 1126 0130 93FBF2F1 		sdiv	r1, r3, r2
+ 1127 0134 4172     		strb	r1, [r0, #9]
+ 608:Src/Eagle_TRT.c **** 								can.dataTx[3] = gps->longitude_i_l / 256;
+ 1128              		.loc 1 608 0
+ 1129 0136 5942     		rsbs	r1, r3, #0
+ 1130 0138 DBB2     		uxtb	r3, r3
+ 1131 013a C9B2     		uxtb	r1, r1
+ 1132 013c 58BF     		it	pl
+ 1133 013e 4B42     		rsbpl	r3, r1, #0
+ 1134 0140 8372     		strb	r3, [r0, #10]
+ 609:Src/Eagle_TRT.c **** 								can.dataTx[4] = gps->longitude_i_l % 256;
+ 1135              		.loc 1 609 0
+ 1136 0142 AB6C     		ldr	r3, [r5, #72]
+ 1137 0144 93FBF2F1 		sdiv	r1, r3, r2
+ 1138 0148 C172     		strb	r1, [r0, #11]
+ 610:Src/Eagle_TRT.c **** 								can.dataTx[5] = (int)gps->longitude_o;
+ 1139              		.loc 1 610 0
+ 1140 014a 5942     		rsbs	r1, r3, #0
+ 1141 014c DBB2     		uxtb	r3, r3
+ 1142 014e C9B2     		uxtb	r1, r1
+ 1143 0150 58BF     		it	pl
+ 1144 0152 4B42     		rsbpl	r3, r1, #0
+ 1145 0154 0373     		strb	r3, [r0, #12]
+ 611:Src/Eagle_TRT.c **** 								can.dataTx[6] = gps->altitude_i / 256;
+ 1146              		.loc 1 611 0
+ 1147 0156 05F13C03 		add	r3, r5, #60
+ 1148 015a 4373     		strb	r3, [r0, #13]
+ 612:Src/Eagle_TRT.c **** 								can.dataTx[7] = gps->altitude_i % 256;
+ 1149              		.loc 1 612 0
+ 1150 015c 6B6D     		ldr	r3, [r5, #84]
+ 1151 015e 93FBF2F2 		sdiv	r2, r3, r2
+ 1152 0162 8273     		strb	r2, [r0, #14]
+ 613:Src/Eagle_TRT.c **** 								CAN_Send(&can);
+ 1153              		.loc 1 613 0
+ 1154 0164 5A42     		rsbs	r2, r3, #0
+ 1155 0166 DBB2     		uxtb	r3, r3
+ 1156 0168 D2B2     		uxtb	r2, r2
+ 1157 016a 58BF     		it	pl
+ 1158 016c 5342     		rsbpl	r3, r2, #0
+ 1159 016e C373     		strb	r3, [r0, #15]
+ 614:Src/Eagle_TRT.c **** 							}
+ 1160              		.loc 1 614 0
+ 1161 0170 FFF7FEFF 		bl	CAN_Send
+ 1162              	.LVL105:
+ 1163              	.LBE7:
+ 504:Src/Eagle_TRT.c **** 
+ 1164              		.loc 1 504 0
+ 1165 0174 0024     		movs	r4, #0
+ARM GAS  /tmp/ccihUd1h.s 			page 36
+
+
+ 1166              	.LVL106:
+ 1167 0176 49E7     		b	.L63
+ 1168              	.LVL107:
+ 1169              	.L79:
+ 1170              	.LBB8:
+ 597:Src/Eagle_TRT.c **** 									gps->longitude_i=(long int)(atof(gps->longitude)*100000);
+ 1171              		.loc 1 597 0
+ 1172 0178 05F10C00 		add	r0, r5, #12
+ 1173              	.LVL108:
+ 1174 017c FFF7FEFF 		bl	atof
+ 1175              	.LVL109:
+ 1176 0180 3DA3     		adr	r3, .L117
+ 1177 0182 D3E90023 		ldrd	r2, [r3]
+ 1178 0186 51EC100B 		vmov	r0, r1, d0
+ 1179 018a FFF7FEFF 		bl	__aeabi_dmul
+ 1180              	.LVL110:
+ 1181 018e FFF7FEFF 		bl	__aeabi_d2iz
+ 1182              	.LVL111:
+ 1183 0192 2862     		str	r0, [r5, #32]
+ 598:Src/Eagle_TRT.c **** 									gps->altitude_i=(int)(atof(gps->altitude)*100);
+ 1184              		.loc 1 598 0
+ 1185 0194 05F12C00 		add	r0, r5, #44
+ 1186 0198 FFF7FEFF 		bl	atof
+ 1187              	.LVL112:
+ 1188 019c 38A3     		adr	r3, .L117+8
+ 1189 019e D3E90023 		ldrd	r2, [r3]
+ 1190 01a2 51EC100B 		vmov	r0, r1, d0
+ 1191 01a6 FFF7FEFF 		bl	__aeabi_dmul
+ 1192              	.LVL113:
+ 1193 01aa FFF7FEFF 		bl	__aeabi_d2iz
+ 1194              	.LVL114:
+ 1195 01ae 2864     		str	r0, [r5, #64]
+ 599:Src/Eagle_TRT.c **** 									gps->latitude_i_h=(int)(gps->latitude_i/10000);
+ 1196              		.loc 1 599 0
+ 1197 01b0 05F14C00 		add	r0, r5, #76
+ 1198 01b4 FFF7FEFF 		bl	atof
+ 1199              	.LVL115:
+ 1200 01b8 0022     		movs	r2, #0
+ 1201 01ba 3A4B     		ldr	r3, .L117+44
+ 1202 01bc 51EC100B 		vmov	r0, r1, d0
+ 1203 01c0 FFF7FEFF 		bl	__aeabi_dmul
+ 1204              	.LVL116:
+ 1205 01c4 FFF7FEFF 		bl	__aeabi_d2iz
+ 1206              	.LVL117:
+ 1207 01c8 6865     		str	r0, [r5, #84]
+ 600:Src/Eagle_TRT.c **** 									gps->latitude_i_l=(int)(gps->latitude_i-gps->latitude_i_h*10000);
+ 1208              		.loc 1 600 0
+ 1209 01ca 2A6A     		ldr	r2, [r5, #32]
+ 1210 01cc 42F21073 		movw	r3, #10000
+ 1211 01d0 92FBF3F3 		sdiv	r3, r2, r3
+ 1212 01d4 6B62     		str	r3, [r5, #36]
+ 601:Src/Eagle_TRT.c **** 									gps->longitude_i_h=(int)(gps->longitude_i/100000);
+ 1213              		.loc 1 601 0
+ 1214 01d6 3449     		ldr	r1, .L117+48
+ 1215 01d8 01FB0323 		mla	r3, r1, r3, r2
+ 1216 01dc AB62     		str	r3, [r5, #40]
+ 602:Src/Eagle_TRT.c **** 									gps->longitude_i_l=(int)(gps->longitude_i-gps->longitude_i_h*100000);
+ARM GAS  /tmp/ccihUd1h.s 			page 37
+
+
+ 1217              		.loc 1 602 0
+ 1218 01de 2A6C     		ldr	r2, [r5, #64]
+ 1219 01e0 324B     		ldr	r3, .L117+52
+ 1220 01e2 92FBF3F3 		sdiv	r3, r2, r3
+ 1221 01e6 6B64     		str	r3, [r5, #68]
+ 603:Src/Eagle_TRT.c **** 								}
+ 1222              		.loc 1 603 0
+ 1223 01e8 3149     		ldr	r1, .L117+56
+ 1224 01ea 01FB0323 		mla	r3, r1, r3, r2
+ 1225 01ee AB64     		str	r3, [r5, #72]
+ 1226 01f0 98E7     		b	.L80
+ 1227              	.LVL118:
+ 1228              	.L103:
+ 1229              	.LBE8:
+ 620:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 1230              		.loc 1 620 0 discriminator 1
+ 1231 01f2 2A4B     		ldr	r3, .L117+36
+ 1232 01f4 DB78     		ldrb	r3, [r3, #3]	@ zero_extendqisi2
+ 1233 01f6 542B     		cmp	r3, #84
+ 1234 01f8 01D0     		beq	.L110
+ 504:Src/Eagle_TRT.c **** 
+ 1235              		.loc 1 504 0
+ 1236 01fa 0024     		movs	r4, #0
+ 1237 01fc 06E7     		b	.L63
+ 1238              	.L110:
+ 620:Src/Eagle_TRT.c **** 							if(checksum(string_gps,cont_string)==1){ //check the checksum (if==true -> enter)
+ 1239              		.loc 1 620 0 discriminator 2
+ 1240 01fe 274B     		ldr	r3, .L117+36
+ 1241 0200 1B79     		ldrb	r3, [r3, #4]	@ zero_extendqisi2
+ 1242 0202 472B     		cmp	r3, #71
+ 1243 0204 01D0     		beq	.L111
+ 504:Src/Eagle_TRT.c **** 
+ 1244              		.loc 1 504 0
+ 1245 0206 0024     		movs	r4, #0
+ 1246 0208 00E7     		b	.L63
+ 1247              	.L111:
+ 621:Src/Eagle_TRT.c **** 								cont_comma=0;
+ 1248              		.loc 1 621 0
+ 1249 020a 2448     		ldr	r0, .L117+36
+ 1250 020c FFF7FEFF 		bl	checksum
+ 1251              	.LVL119:
+ 1252 0210 0446     		mov	r4, r0
+ 1253 0212 0128     		cmp	r0, #1
+ 1254 0214 01D0     		beq	.L112
+ 654:Src/Eagle_TRT.c **** 							}
+ 1255              		.loc 1 654 0
+ 1256 0216 0024     		movs	r4, #0
+ 1257 0218 F8E6     		b	.L63
+ 1258              	.L112:
+ 1259              	.LBB9:
+ 622:Src/Eagle_TRT.c **** 								int cont_speed=0;
+ 1260              		.loc 1 622 0
+ 1261 021a 0023     		movs	r3, #0
+ 1262 021c 254A     		ldr	r2, .L117+60
+ 1263 021e 1360     		str	r3, [r2]
+ 1264              	.LVL120:
+ 1265              	.LBB10:
+ARM GAS  /tmp/ccihUd1h.s 			page 38
+
+
+ 624:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 1266              		.loc 1 624 0
+ 1267 0220 0522     		movs	r2, #5
+ 1268 0222 04E0     		b	.L81
+ 1269              	.LVL121:
+ 1270              	.L114:
+ 625:Src/Eagle_TRT.c **** 									else{
+ 1271              		.loc 1 625 0 discriminator 1
+ 1272 0224 2348     		ldr	r0, .L117+60
+ 1273 0226 0168     		ldr	r1, [r0]
+ 1274 0228 0131     		adds	r1, r1, #1
+ 1275 022a 0160     		str	r1, [r0]
+ 1276              	.LVL122:
+ 1277              	.L83:
+ 624:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 1278              		.loc 1 624 0 discriminator 2
+ 1279 022c 0132     		adds	r2, r2, #1
+ 1280              	.LVL123:
+ 1281              	.L81:
+ 624:Src/Eagle_TRT.c **** 									if(string_gps[i]==',')cont_comma++;
+ 1282              		.loc 1 624 0 is_stmt 0 discriminator 1
+ 1283 022e 1A49     		ldr	r1, .L117+32
+ 1284 0230 0968     		ldr	r1, [r1]
+ 1285 0232 8A42     		cmp	r2, r1
+ 1286 0234 0EDA     		bge	.L113
+ 625:Src/Eagle_TRT.c **** 									else{
+ 1287              		.loc 1 625 0 is_stmt 1
+ 1288 0236 1948     		ldr	r0, .L117+36
+ 1289 0238 865C     		ldrb	r6, [r0, r2]	@ zero_extendqisi2
+ 1290 023a 2C2E     		cmp	r6, #44
+ 1291 023c F2D0     		beq	.L114
+ 627:Src/Eagle_TRT.c **** 											gps->speed[cont_speed]=string_gps[i];
+ 1292              		.loc 1 627 0
+ 1293 023e 1D48     		ldr	r0, .L117+60
+ 1294 0240 0068     		ldr	r0, [r0]
+ 1295 0242 0728     		cmp	r0, #7
+ 1296 0244 03D0     		beq	.L115
+ 631:Src/Eagle_TRT.c **** 											i=cont_string;
+ 1297              		.loc 1 631 0
+ 1298 0246 0828     		cmp	r0, #8
+ 1299 0248 F0D1     		bne	.L83
+ 632:Src/Eagle_TRT.c **** 										}
+ 1300              		.loc 1 632 0
+ 1301 024a 0A46     		mov	r2, r1
+ 1302              	.LVL124:
+ 1303 024c EEE7     		b	.L83
+ 1304              	.LVL125:
+ 1305              	.L115:
+ 628:Src/Eagle_TRT.c **** 											cont_speed++;
+ 1306              		.loc 1 628 0
+ 1307 024e EE54     		strb	r6, [r5, r3]
+ 629:Src/Eagle_TRT.c **** 										}
+ 1308              		.loc 1 629 0
+ 1309 0250 0133     		adds	r3, r3, #1
+ 1310              	.LVL126:
+ 1311 0252 EBE7     		b	.L83
+ 1312              	.L113:
+ARM GAS  /tmp/ccihUd1h.s 			page 39
+
+
+ 1313              	.LBE10:
+ 637:Src/Eagle_TRT.c **** 									gps->speed_i=0;
+ 1314              		.loc 1 637 0
+ 1315 0254 95F86330 		ldrb	r3, [r5, #99]	@ zero_extendqisi2
+ 1316              	.LVL127:
+ 1317 0258 302B     		cmp	r3, #48
+ 1318 025a 2DD0     		beq	.L116
+ 640:Src/Eagle_TRT.c **** 								}
+ 1319              		.loc 1 640 0
+ 1320 025c 2846     		mov	r0, r5
+ 1321 025e FFF7FEFF 		bl	atof
+ 1322              	.LVL128:
+ 1323 0262 0022     		movs	r2, #0
+ 1324 0264 0F4B     		ldr	r3, .L117+44
+ 1325 0266 51EC100B 		vmov	r0, r1, d0
+ 1326 026a FFF7FEFF 		bl	__aeabi_dmul
+ 1327              	.LVL129:
+ 1328 026e FFF7FEFF 		bl	__aeabi_d2iz
+ 1329              	.LVL130:
+ 1330 0272 A860     		str	r0, [r5, #8]
+ 1331 0274 22E0     		b	.L87
+ 1332              	.L118:
+ 1333 0276 00BF     		.align	3
+ 1334              	.L117:
+ 1335 0278 00000000 		.word	0
+ 1336 027c 0088C340 		.word	1086556160
+ 1337 0280 00000000 		.word	0
+ 1338 0284 006AF840 		.word	1090021888
+ 1339 0288 00000000 		.word	huart_GPS
+ 1340 028c 00000000 		.word	buffer_gps
+ 1341 0290 00000000 		.word	data_string_gps
+ 1342 0294 00000000 		.word	.LANCHOR1
+ 1343 0298 00000000 		.word	cont_string
+ 1344 029c 00000000 		.word	string_gps
+ 1345 02a0 00000000 		.word	can
+ 1346 02a4 00005940 		.word	1079574528
+ 1347 02a8 F0D8FFFF 		.word	-10000
+ 1348 02ac A0860100 		.word	100000
+ 1349 02b0 6079FEFF 		.word	-100000
+ 1350 02b4 00000000 		.word	cont_comma
+ 1351              	.LVL131:
+ 1352              	.L116:
+ 638:Src/Eagle_TRT.c **** 								}else{
+ 1353              		.loc 1 638 0
+ 1354 02b8 0023     		movs	r3, #0
+ 1355 02ba AB60     		str	r3, [r5, #8]
+ 1356              	.LVL132:
+ 1357              	.L87:
+ 642:Src/Eagle_TRT.c **** 								can.dataTx[1] = gps->latitude_i_h / 256;
+ 1358              		.loc 1 642 0
+ 1359 02bc 1848     		ldr	r0, .L119
+ 1360 02be 0723     		movs	r3, #7
+ 1361 02c0 0372     		strb	r3, [r0, #8]
+ 643:Src/Eagle_TRT.c **** 								can.dataTx[2] = gps->latitude_i_h % 256;
+ 1362              		.loc 1 643 0
+ 1363 02c2 6B6A     		ldr	r3, [r5, #36]
+ 1364 02c4 4FF48072 		mov	r2, #256
+ARM GAS  /tmp/ccihUd1h.s 			page 40
+
+
+ 1365 02c8 93FBF2F1 		sdiv	r1, r3, r2
+ 1366 02cc 4172     		strb	r1, [r0, #9]
+ 644:Src/Eagle_TRT.c **** 								can.dataTx[3] = gps->latitude_i_l / 256;
+ 1367              		.loc 1 644 0
+ 1368 02ce 5942     		rsbs	r1, r3, #0
+ 1369 02d0 DBB2     		uxtb	r3, r3
+ 1370 02d2 C9B2     		uxtb	r1, r1
+ 1371 02d4 58BF     		it	pl
+ 1372 02d6 4B42     		rsbpl	r3, r1, #0
+ 1373 02d8 8372     		strb	r3, [r0, #10]
+ 645:Src/Eagle_TRT.c **** 								can.dataTx[4] = gps->latitude_i_l % 256;
+ 1374              		.loc 1 645 0
+ 1375 02da AB6A     		ldr	r3, [r5, #40]
+ 1376 02dc 93FBF2F1 		sdiv	r1, r3, r2
+ 1377 02e0 C172     		strb	r1, [r0, #11]
+ 646:Src/Eagle_TRT.c **** 								can.dataTx[5] = (int)gps->latitude_o;
+ 1378              		.loc 1 646 0
+ 1379 02e2 5942     		rsbs	r1, r3, #0
+ 1380 02e4 DBB2     		uxtb	r3, r3
+ 1381 02e6 C9B2     		uxtb	r1, r1
+ 1382 02e8 58BF     		it	pl
+ 1383 02ea 4B42     		rsbpl	r3, r1, #0
+ 1384 02ec 0373     		strb	r3, [r0, #12]
+ 647:Src/Eagle_TRT.c **** 								can.dataTx[6] = gps->speed_i / 256;
+ 1385              		.loc 1 647 0
+ 1386 02ee 05F11C03 		add	r3, r5, #28
+ 1387 02f2 4373     		strb	r3, [r0, #13]
+ 648:Src/Eagle_TRT.c **** 								can.dataTx[7] = gps->speed_i % 256;
+ 1388              		.loc 1 648 0
+ 1389 02f4 AB68     		ldr	r3, [r5, #8]
+ 1390 02f6 93FBF2F3 		sdiv	r3, r3, r2
+ 1391 02fa 8373     		strb	r3, [r0, #14]
+ 649:Src/Eagle_TRT.c **** 								CAN_Send(&can);
+ 1392              		.loc 1 649 0
+ 1393 02fc AB68     		ldr	r3, [r5, #8]
+ 1394 02fe 5A42     		rsbs	r2, r3, #0
+ 1395 0300 DBB2     		uxtb	r3, r3
+ 1396 0302 D2B2     		uxtb	r2, r2
+ 1397 0304 58BF     		it	pl
+ 1398 0306 5342     		rsbpl	r3, r2, #0
+ 1399 0308 C373     		strb	r3, [r0, #15]
+ 650:Src/Eagle_TRT.c **** 								ret=1;
+ 1400              		.loc 1 650 0
+ 1401 030a FFF7FEFF 		bl	CAN_Send
+ 1402              	.LVL133:
+ 1403              	.LBE9:
+ 1404 030e 7DE6     		b	.L63
+ 1405              	.LVL134:
+ 1406              	.L101:
+ 661:Src/Eagle_TRT.c **** 						cont_string=0; //set the counter to 1
+ 1407              		.loc 1 661 0
+ 1408 0310 0122     		movs	r2, #1
+ 1409 0312 044B     		ldr	r3, .L119+4
+ 1410 0314 1A60     		str	r2, [r3]
+ 662:Src/Eagle_TRT.c **** 					}
+ 1411              		.loc 1 662 0
+ 1412 0316 0024     		movs	r4, #0
+ARM GAS  /tmp/ccihUd1h.s 			page 41
+
+
+ 1413 0318 034B     		ldr	r3, .L119+8
+ 1414 031a 1C60     		str	r4, [r3]
+ 1415 031c 76E6     		b	.L63
+ 1416              	.L120:
+ 1417 031e 00BF     		.align	2
+ 1418              	.L119:
+ 1419 0320 00000000 		.word	can
+ 1420 0324 00000000 		.word	.LANCHOR1
+ 1421 0328 00000000 		.word	cont_string
+ 1422              		.cfi_endproc
+ 1423              	.LFE142:
+ 1425              		.global	__aeabi_i2d
+ 1426              		.global	__aeabi_f2d
+ 1427              		.global	__aeabi_ddiv
+ 1428              		.section	.text.get_speed_encoder,"ax",%progbits
+ 1429              		.align	1
+ 1430              		.global	get_speed_encoder
+ 1431              		.syntax unified
+ 1432              		.thumb
+ 1433              		.thumb_func
+ 1434              		.fpu fpv4-sp-d16
+ 1436              	get_speed_encoder:
+ 1437              	.LFB146:
+ 699:Src/Eagle_TRT.c **** 
+ 700:Src/Eagle_TRT.c **** #endif
+ 701:Src/Eagle_TRT.c **** 
+ 702:Src/Eagle_TRT.c **** #ifdef HAL_TIM_MODULE_ENABLED
+ 703:Src/Eagle_TRT.c **** #include "stm32f4xx_hal_tim.h"
+ 704:Src/Eagle_TRT.c **** 
+ 705:Src/Eagle_TRT.c **** 	extern UART_HandleTypeDef huart2;
+ 706:Src/Eagle_TRT.c **** 
+ 707:Src/Eagle_TRT.c **** 
+ 708:Src/Eagle_TRT.c **** 	//function to request data from encoder via SSI communication
+ 709:Src/Eagle_TRT.c **** 	//this function is called from the interrupt callback of the timer that you are using for the enco
+ 710:Src/Eagle_TRT.c **** 	//the tim used for this function must be initialized at most at 2 microsecond per tick
+ 711:Src/Eagle_TRT.c **** 	//lower the number of microseconds per tick better it is
+ 712:Src/Eagle_TRT.c **** 	//TimerInstance = struct of the tim used for the encoder
+ 713:Src/Eagle_TRT.c **** 	enc_stc enc;
+ 714:Src/Eagle_TRT.c **** 	double read_encoder(enc_stc *enc){
+ 715:Src/Eagle_TRT.c **** 
+ 716:Src/Eagle_TRT.c **** 		int clock_loop = 16;
+ 717:Src/Eagle_TRT.c **** 		double int_data = 0;
+ 718:Src/Eagle_TRT.c **** 		int clock_period = 2;
+ 719:Src/Eagle_TRT.c **** 		int Data[50];
+ 720:Src/Eagle_TRT.c **** 
+ 721:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);	//clock was high: reset to low
+ 722:Src/Eagle_TRT.c **** 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ 723:Src/Eagle_TRT.c **** 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 724:Src/Eagle_TRT.c **** 		}
+ 725:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 726:Src/Eagle_TRT.c **** 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ 727:Src/Eagle_TRT.c **** 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 728:Src/Eagle_TRT.c **** 		}
+ 729:Src/Eagle_TRT.c **** 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);	//clock was high: reset to low
+ 730:Src/Eagle_TRT.c **** 		for(int i = 0; i < clock_loop; i++){
+ 731:Src/Eagle_TRT.c **** 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 732:Src/Eagle_TRT.c **** 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ARM GAS  /tmp/ccihUd1h.s 			page 42
+
+
+ 733:Src/Eagle_TRT.c **** 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 734:Src/Eagle_TRT.c **** 			}
+ 735:Src/Eagle_TRT.c **** 			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET && i <= 15){	//reading the data input
+ 736:Src/Eagle_TRT.c **** 				Data[i] = 1;
+ 737:Src/Eagle_TRT.c **** 			}
+ 738:Src/Eagle_TRT.c **** 			else{
+ 739:Src/Eagle_TRT.c **** 				Data[i] = 0;
+ 740:Src/Eagle_TRT.c **** 			}
+ 741:Src/Eagle_TRT.c **** 			if(i == clock_loop-1){												//if it is the last loop set the clock pin to high, else set t
+ 742:Src/Eagle_TRT.c **** 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+ 743:Src/Eagle_TRT.c **** 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 20 microsecond like from datasheet
+ 744:Src/Eagle_TRT.c **** 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= 40){
+ 745:Src/Eagle_TRT.c **** 				}
+ 746:Src/Eagle_TRT.c **** 			}
+ 747:Src/Eagle_TRT.c **** 			else{
+ 748:Src/Eagle_TRT.c **** 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+ 749:Src/Eagle_TRT.c **** 			}
+ 750:Src/Eagle_TRT.c **** 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);					//delay of anothe 1 micros like from datasheet
+ 751:Src/Eagle_TRT.c **** 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 752:Src/Eagle_TRT.c **** 			}
+ 753:Src/Eagle_TRT.c **** 			if(i == 15){												//if it is the last loop cast the sata from binary to decimal
+ 754:Src/Eagle_TRT.c **** 				int_data = bin_dec(Data,14);
+ 755:Src/Eagle_TRT.c **** 				int_data = int_data / 45.5055;							//conversions from raw data to angle
+ 756:Src/Eagle_TRT.c **** 				int_data /= 2;
+ 757:Src/Eagle_TRT.c **** 			}
+ 758:Src/Eagle_TRT.c **** 		}
+ 759:Src/Eagle_TRT.c **** 
+ 760:Src/Eagle_TRT.c **** 		return int_data;
+ 761:Src/Eagle_TRT.c **** 	}
+ 762:Src/Eagle_TRT.c **** 
+ 763:Src/Eagle_TRT.c **** 	//interrupt function of tim 2
+ 764:Src/Eagle_TRT.c **** 	//call this function in the timer callback function of the stm
+ 765:Src/Eagle_TRT.c **** 	//htim = timer TimerInstance of the timer that you are using for the clock of the encoder
+ 766:Src/Eagle_TRT.c **** 	//interrupt_flag = initilize a int variable in the main file
+ 767:Src/Eagle_TRT.c **** 	//angles_array = array to store the last angles
+ 768:Src/Eagle_TRT.c **** 	//speed = pointer to the speed value
+ 769:Src/Eagle_TRT.c **** 	void encoder_tim_interrupt(enc_stc* enc){
+ 770:Src/Eagle_TRT.c **** 
+ 771:Src/Eagle_TRT.c **** 
+ 772:Src/Eagle_TRT.c **** 		if(enc->interrupt_flag == 0){									//every 3 times request the angle from encoder
+ 773:Src/Eagle_TRT.c **** 			enc->angles_array[0] = read_encoder(enc);
+ 774:Src/Eagle_TRT.c **** 			enc->interrupt_flag ++;
+ 775:Src/Eagle_TRT.c **** 		}
+ 776:Src/Eagle_TRT.c **** 		else{
+ 777:Src/Eagle_TRT.c **** 			if(enc->interrupt_flag == 1){									//every 3 times request the angle from encoder
+ 778:Src/Eagle_TRT.c **** 				enc->angles_array[1] = read_encoder(enc);
+ 779:Src/Eagle_TRT.c **** 				enc->interrupt_flag++;
+ 780:Src/Eagle_TRT.c **** 			}
+ 781:Src/Eagle_TRT.c **** 			else{
+ 782:Src/Eagle_TRT.c **** 				if(enc->interrupt_flag == 2){									//calculate the speed from the two last angles
+ 783:Src/Eagle_TRT.c **** 					enc->refresh=1000;
+ 784:Src/Eagle_TRT.c **** 					enc->wheel_diameter=0.4064;
+ 785:Src/Eagle_TRT.c **** 					double Speed = get_speed_encoder(enc);
+ 786:Src/Eagle_TRT.c **** 					if(abs(Speed - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
+ 787:Src/Eagle_TRT.c **** 						shift_array(enc->speed, 15, Speed);
+ 788:Src/Eagle_TRT.c **** 						enc->average_speed = dynamic_average(enc->speed, 15);
+ 789:Src/Eagle_TRT.c **** 					}
+ARM GAS  /tmp/ccihUd1h.s 			page 43
+
+
+ 790:Src/Eagle_TRT.c **** 					enc->interrupt_flag = 0;
+ 791:Src/Eagle_TRT.c **** 				}
+ 792:Src/Eagle_TRT.c **** 			}
+ 793:Src/Eagle_TRT.c **** 		}
+ 794:Src/Eagle_TRT.c **** 	}
+ 795:Src/Eagle_TRT.c **** 
+ 796:Src/Eagle_TRT.c **** 	//funtion to calculate the speed
+ 797:Src/Eagle_TRT.c **** 	//angle0 = last angle calculated
+ 798:Src/Eagle_TRT.c **** 	//angle1 = previous angle calculated
+ 799:Src/Eagle_TRT.c **** 	//refresh = delta-time from the two calculations, express it in microseconds
+ 800:Src/Eagle_TRT.c **** 	//wheel_diameter = diameter of the wheel expressed meters
+ 801:Src/Eagle_TRT.c **** 	double get_speed_encoder(enc_stc* enc){
+ 1438              		.loc 1 801 0
+ 1439              		.cfi_startproc
+ 1440              		@ args = 0, pretend = 0, frame = 0
+ 1441              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1442              	.LVL135:
+ 1443 0000 2DE9D043 		push	{r4, r6, r7, r8, r9, lr}
+ 1444              	.LCFI22:
+ 1445              		.cfi_def_cfa_offset 24
+ 1446              		.cfi_offset 4, -24
+ 1447              		.cfi_offset 6, -20
+ 1448              		.cfi_offset 7, -16
+ 1449              		.cfi_offset 8, -12
+ 1450              		.cfi_offset 9, -8
+ 1451              		.cfi_offset 14, -4
+ 1452 0004 0446     		mov	r4, r0
+ 1453              	.LVL136:
+ 802:Src/Eagle_TRT.c **** 
+ 803:Src/Eagle_TRT.c **** 		double meters_per_second = 0;
+ 804:Src/Eagle_TRT.c **** 		double dt = 0;
+ 805:Src/Eagle_TRT.c **** 
+ 806:Src/Eagle_TRT.c **** 		dt = enc->refresh / 1000000;
+ 1454              		.loc 1 806 0
+ 1455 0006 D0F85831 		ldr	r3, [r0, #344]
+ 1456 000a 1B48     		ldr	r0, .L123+8
+ 1457              	.LVL137:
+ 1458 000c 80FB0320 		smull	r2, r0, r0, r3
+ 1459 0010 DB17     		asrs	r3, r3, #31
+ 1460 0012 C3EBA040 		rsb	r0, r3, r0, asr #18
+ 1461 0016 FFF7FEFF 		bl	__aeabi_i2d
+ 1462              	.LVL138:
+ 1463 001a 0646     		mov	r6, r0
+ 1464 001c 0F46     		mov	r7, r1
+ 1465              	.LVL139:
+ 807:Src/Eagle_TRT.c **** 		meters_per_second = ((enc->angle0 - enc->angle1)/360)*3.14159265359*(enc->wheel_diameter);			//ca
+ 1466              		.loc 1 807 0
+ 1467 001e D4ED547A 		vldr.32	s15, [r4, #336]
+ 1468 0022 94ED557A 		vldr.32	s14, [r4, #340]
+ 1469 0026 77EEC77A 		vsub.f32	s15, s15, s14
+ 1470 002a 9FED147A 		vldr.32	s14, .L123+12
+ 1471 002e C7EE876A 		vdiv.f32	s13, s15, s14
+ 1472 0032 16EE900A 		vmov	r0, s13
+ 1473 0036 FFF7FEFF 		bl	__aeabi_f2d
+ 1474              	.LVL140:
+ 1475 003a 0DA3     		adr	r3, .L123
+ 1476 003c D3E90023 		ldrd	r2, [r3]
+ARM GAS  /tmp/ccihUd1h.s 			page 44
+
+
+ 1477 0040 FFF7FEFF 		bl	__aeabi_dmul
+ 1478              	.LVL141:
+ 1479 0044 8046     		mov	r8, r0
+ 1480 0046 8946     		mov	r9, r1
+ 1481 0048 D4F85C01 		ldr	r0, [r4, #348]	@ float
+ 1482 004c FFF7FEFF 		bl	__aeabi_f2d
+ 1483              	.LVL142:
+ 1484 0050 0246     		mov	r2, r0
+ 1485 0052 0B46     		mov	r3, r1
+ 1486 0054 4046     		mov	r0, r8
+ 1487 0056 4946     		mov	r1, r9
+ 1488 0058 FFF7FEFF 		bl	__aeabi_dmul
+ 1489              	.LVL143:
+ 808:Src/Eagle_TRT.c **** 		meters_per_second /= dt;
+ 1490              		.loc 1 808 0
+ 1491 005c 3246     		mov	r2, r6
+ 1492 005e 3B46     		mov	r3, r7
+ 1493 0060 FFF7FEFF 		bl	__aeabi_ddiv
+ 1494              	.LVL144:
+ 809:Src/Eagle_TRT.c **** 
+ 810:Src/Eagle_TRT.c **** 		return meters_per_second;
+ 811:Src/Eagle_TRT.c **** 	}
+ 1495              		.loc 1 811 0
+ 1496 0064 41EC100B 		vmov	d0, r0, r1
+ 1497 0068 BDE8D083 		pop	{r4, r6, r7, r8, r9, pc}
+ 1498              	.LVL145:
+ 1499              	.L124:
+ 1500 006c AFF30080 		.align	3
+ 1501              	.L123:
+ 1502 0070 EA2E4454 		.word	1413754602
+ 1503 0074 FB210940 		.word	1074340347
+ 1504 0078 83DE1B43 		.word	1125899907
+ 1505 007c 0000B443 		.word	1135869952
+ 1506              		.cfi_endproc
+ 1507              	.LFE146:
+ 1509              		.section	.text.implausibility_check,"ax",%progbits
+ 1510              		.align	1
+ 1511              		.global	implausibility_check
+ 1512              		.syntax unified
+ 1513              		.thumb
+ 1514              		.thumb_func
+ 1515              		.fpu fpv4-sp-d16
+ 1517              	implausibility_check:
+ 1518              	.LFB148:
+ 812:Src/Eagle_TRT.c **** 
+ 813:Src/Eagle_TRT.c **** 	pot_stc pot_1;
+ 814:Src/Eagle_TRT.c **** 	pot_stc pot_2;
+ 815:Src/Eagle_TRT.c **** 	pot_stc pot_3;
+ 816:Src/Eagle_TRT.c **** 
+ 817:Src/Eagle_TRT.c **** 	int calc_pot_value(pot_stc *pot){
+ 818:Src/Eagle_TRT.c **** 
+ 819:Src/Eagle_TRT.c **** 		shift_array((pot->average), 20, pot->val);
+ 820:Src/Eagle_TRT.c **** 		pot->val = dynamic_average(pot->average, 20);
+ 821:Src/Eagle_TRT.c **** 		pot->val_100 = (int)(abs(pot->val - pot->min)*100/(pot->range)); //val0_100 -->STEER --> 0 = SX |
+ 822:Src/Eagle_TRT.c **** 
+ 823:Src/Eagle_TRT.c **** 		if (pot->val_100 >= 100){
+ 824:Src/Eagle_TRT.c **** 			pot->val_100 = 100;
+ARM GAS  /tmp/ccihUd1h.s 			page 45
+
+
+ 825:Src/Eagle_TRT.c **** 		}
+ 826:Src/Eagle_TRT.c **** 		if (pot->val_100 <= 5){
+ 827:Src/Eagle_TRT.c **** 			pot->val_100 = 0;
+ 828:Src/Eagle_TRT.c **** 		}
+ 829:Src/Eagle_TRT.c **** 		return 1;
+ 830:Src/Eagle_TRT.c **** 	}
+ 831:Src/Eagle_TRT.c **** 
+ 832:Src/Eagle_TRT.c **** 	//Function to check if the two ADC values are approximately the same
+ 833:Src/Eagle_TRT.c **** 	//if the values are different for more tha 10 points percentage for more than 100 milliseconds ret
+ 834:Src/Eagle_TRT.c **** 	//TimerInstance = pointer to the timer needed to check the SCS error
+ 835:Src/Eagle_TRT.c **** 	//val0_100 = pointer to the first potentiometer
+ 836:Src/Eagle_TRT.c **** 	//val1_100 = pointer to the second potentiometer
+ 837:Src/Eagle_TRT.c **** 	int implausibility_check(pot_stc * pot_1, pot_stc * pot_2){
+ 1519              		.loc 1 837 0
+ 1520              		.cfi_startproc
+ 1521              		@ args = 0, pretend = 0, frame = 0
+ 1522              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1523              		@ link register save eliminated.
+ 1524              	.LVL146:
+ 838:Src/Eagle_TRT.c **** 
+ 839:Src/Eagle_TRT.c **** 		int SCS1 = 0;
+ 840:Src/Eagle_TRT.c **** 
+ 841:Src/Eagle_TRT.c **** 		if(100 - abs(pot_1->val_100 - pot_2->val_100) >= 10){
+ 1525              		.loc 1 841 0
+ 1526 0000 0368     		ldr	r3, [r0]
+ 1527 0002 0A68     		ldr	r2, [r1]
+ 1528 0004 9B1A     		subs	r3, r3, r2
+ 1529 0006 002B     		cmp	r3, #0
+ 1530 0008 B8BF     		it	lt
+ 1531 000a 5B42     		rsblt	r3, r3, #0
+ 1532 000c C3F16403 		rsb	r3, r3, #100
+ 1533 0010 092B     		cmp	r3, #9
+ 1534 0012 07DD     		ble	.L126
+ 842:Src/Eagle_TRT.c **** 			if(__HAL_TIM_GET_COUNTER(pot_1->TimerInstance) > 100){
+ 1535              		.loc 1 842 0
+ 1536 0014 D0F8A831 		ldr	r3, [r0, #424]
+ 1537 0018 1B68     		ldr	r3, [r3]
+ 1538 001a 5B6A     		ldr	r3, [r3, #36]
+ 1539 001c 642B     		cmp	r3, #100
+ 1540 001e 07D8     		bhi	.L128
+ 839:Src/Eagle_TRT.c **** 
+ 1541              		.loc 1 839 0
+ 1542 0020 0020     		movs	r0, #0
+ 1543              	.LVL147:
+ 1544 0022 7047     		bx	lr
+ 1545              	.LVL148:
+ 1546              	.L126:
+ 843:Src/Eagle_TRT.c **** 				SCS1 = 1;
+ 844:Src/Eagle_TRT.c **** 				//pot_1-> val = 0;
+ 845:Src/Eagle_TRT.c **** 				//pot_1-> val_100 = 0;
+ 846:Src/Eagle_TRT.c **** 				//pot_2-> val = 0;
+ 847:Src/Eagle_TRT.c **** 				//pot_2 -> val_100 = 0;
+ 848:Src/Eagle_TRT.c **** 				//HAL_UART_Transmit(&huart2, (uint8_t*)"tex_diocane\r\n", 13, 10);
+ 849:Src/Eagle_TRT.c **** 			}
+ 850:Src/Eagle_TRT.c **** 		}
+ 851:Src/Eagle_TRT.c **** 		else{
+ 852:Src/Eagle_TRT.c **** 			__HAL_TIM_SET_COUNTER(pot_1->TimerInstance, 0);
+ARM GAS  /tmp/ccihUd1h.s 			page 46
+
+
+ 1547              		.loc 1 852 0
+ 1548 0024 D0F8A831 		ldr	r3, [r0, #424]
+ 1549 0028 1B68     		ldr	r3, [r3]
+ 1550 002a 0020     		movs	r0, #0
+ 1551              	.LVL149:
+ 1552 002c 5862     		str	r0, [r3, #36]
+ 1553 002e 7047     		bx	lr
+ 1554              	.LVL150:
+ 1555              	.L128:
+ 843:Src/Eagle_TRT.c **** 				SCS1 = 1;
+ 1556              		.loc 1 843 0
+ 1557 0030 0120     		movs	r0, #1
+ 1558              	.LVL151:
+ 853:Src/Eagle_TRT.c **** 			//HAL_UART_Transmit(&huart2, (uint8_t*)"grazie gesu\r\n", 13, 10);
+ 854:Src/Eagle_TRT.c **** 			SCS1 = 0;
+ 855:Src/Eagle_TRT.c **** 		}
+ 856:Src/Eagle_TRT.c **** 
+ 857:Src/Eagle_TRT.c **** 		return SCS1;
+ 858:Src/Eagle_TRT.c **** 	}
+ 1559              		.loc 1 858 0
+ 1560 0032 7047     		bx	lr
+ 1561              		.cfi_endproc
+ 1562              	.LFE148:
+ 1564              		.section	.text.set_max,"ax",%progbits
+ 1565              		.align	1
+ 1566              		.global	set_max
+ 1567              		.syntax unified
+ 1568              		.thumb
+ 1569              		.thumb_func
+ 1570              		.fpu fpv4-sp-d16
+ 1572              	set_max:
+ 1573              	.LFB149:
+ 859:Src/Eagle_TRT.c **** 
+ 860:Src/Eagle_TRT.c **** 	//function to set the value of the potentiometer when the pedal is released
+ 861:Src/Eagle_TRT.c **** 	//val = array pointer to the potentiometer values
+ 862:Src/Eagle_TRT.c **** 	//max1 = pointer to the maximum value of the APPS1
+ 863:Src/Eagle_TRT.c **** 	//max2 = pointer to the maximum value of the APPS2
+ 864:Src/Eagle_TRT.c **** 	void set_max(pot_stc *pot){
+ 1574              		.loc 1 864 0
+ 1575              		.cfi_startproc
+ 1576              		@ args = 0, pretend = 0, frame = 0
+ 1577              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1578              		@ link register save eliminated.
+ 1579              	.LVL152:
+ 865:Src/Eagle_TRT.c **** 
+ 866:Src/Eagle_TRT.c **** 		pot->max = pot->val;
+ 1580              		.loc 1 866 0
+ 1581 0000 0369     		ldr	r3, [r0, #16]
+ 1582 0002 4360     		str	r3, [r0, #4]
+ 1583 0004 7047     		bx	lr
+ 1584              		.cfi_endproc
+ 1585              	.LFE149:
+ 1587              		.section	.text.set_min,"ax",%progbits
+ 1588              		.align	1
+ 1589              		.global	set_min
+ 1590              		.syntax unified
+ 1591              		.thumb
+ARM GAS  /tmp/ccihUd1h.s 			page 47
+
+
+ 1592              		.thumb_func
+ 1593              		.fpu fpv4-sp-d16
+ 1595              	set_min:
+ 1596              	.LFB150:
+ 867:Src/Eagle_TRT.c **** 	}
+ 868:Src/Eagle_TRT.c **** 
+ 869:Src/Eagle_TRT.c **** 	//function to set the value of the potentiometer when the pedal is pressed
+ 870:Src/Eagle_TRT.c **** 	//val = array pointer to the potentiometer values
+ 871:Src/Eagle_TRT.c **** 	//min1 = pointer to the minimum value of the APPS1
+ 872:Src/Eagle_TRT.c **** 	//min2 = pointer to the minimum value of the APPS2
+ 873:Src/Eagle_TRT.c **** 	void set_min(pot_stc *pot){
+ 1597              		.loc 1 873 0
+ 1598              		.cfi_startproc
+ 1599              		@ args = 0, pretend = 0, frame = 0
+ 1600              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1601              		@ link register save eliminated.
+ 1602              	.LVL153:
+ 874:Src/Eagle_TRT.c **** 
+ 875:Src/Eagle_TRT.c **** 		pot->min = pot->val;
+ 1603              		.loc 1 875 0
+ 1604 0000 0369     		ldr	r3, [r0, #16]
+ 1605 0002 8360     		str	r3, [r0, #8]
+ 1606 0004 7047     		bx	lr
+ 1607              		.cfi_endproc
+ 1608              	.LFE150:
+ 1610              		.section	.text.Power,"ax",%progbits
+ 1611              		.align	1
+ 1612              		.global	Power
+ 1613              		.syntax unified
+ 1614              		.thumb
+ 1615              		.thumb_func
+ 1616              		.fpu fpv4-sp-d16
+ 1618              	Power:
+ 1619              	.LFB152:
+ 876:Src/Eagle_TRT.c **** 	}
+ 877:Src/Eagle_TRT.c **** 
+ 878:Src/Eagle_TRT.c **** #endif
+ 879:Src/Eagle_TRT.c **** 
+ 880:Src/Eagle_TRT.c **** //function to calculate the decimal value from MSB binary array
+ 881:Src/Eagle_TRT.c **** //bin = pointer to binary array
+ 882:Src/Eagle_TRT.c **** //max = size of the array
+ 883:Src/Eagle_TRT.c **** int bin_dec(int* bin, int size){
+ 884:Src/Eagle_TRT.c **** 
+ 885:Src/Eagle_TRT.c **** 	int dec = 0;
+ 886:Src/Eagle_TRT.c **** 
+ 887:Src/Eagle_TRT.c **** 	for(int i = 0; i < size; i++){
+ 888:Src/Eagle_TRT.c **** 		if(bin[i] == 1){
+ 889:Src/Eagle_TRT.c **** 			dec += Power(2, size-i-1);
+ 890:Src/Eagle_TRT.c **** 		}
+ 891:Src/Eagle_TRT.c **** 	}
+ 892:Src/Eagle_TRT.c **** 
+ 893:Src/Eagle_TRT.c **** 	return dec;
+ 894:Src/Eagle_TRT.c **** }
+ 895:Src/Eagle_TRT.c **** 
+ 896:Src/Eagle_TRT.c **** //function to calculate the power of a given number
+ 897:Src/Eagle_TRT.c **** double Power(int base, int expn){
+ 1620              		.loc 1 897 0
+ARM GAS  /tmp/ccihUd1h.s 			page 48
+
+
+ 1621              		.cfi_startproc
+ 1622              		@ args = 0, pretend = 0, frame = 0
+ 1623              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1624              	.LVL154:
+ 1625 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 1626              	.LCFI23:
+ 1627              		.cfi_def_cfa_offset 24
+ 1628              		.cfi_offset 4, -24
+ 1629              		.cfi_offset 5, -20
+ 1630              		.cfi_offset 6, -16
+ 1631              		.cfi_offset 7, -12
+ 1632              		.cfi_offset 8, -8
+ 1633              		.cfi_offset 14, -4
+ 1634              	.LVL155:
+ 898:Src/Eagle_TRT.c **** 
+ 899:Src/Eagle_TRT.c **** 	double result = 1;
+ 900:Src/Eagle_TRT.c **** 
+ 901:Src/Eagle_TRT.c **** 	if(expn != 0){
+ 1635              		.loc 1 901 0
+ 1636 0004 29B1     		cbz	r1, .L137
+ 1637 0006 0D46     		mov	r5, r1
+ 1638 0008 8046     		mov	r8, r0
+ 1639 000a 0024     		movs	r4, #0
+ 1640 000c 0026     		movs	r6, #0
+ 1641 000e 0B4F     		ldr	r7, .L138
+ 1642 0010 0EE0     		b	.L132
+ 1643              	.L137:
+ 899:Src/Eagle_TRT.c **** 
+ 1644              		.loc 1 899 0
+ 1645 0012 0026     		movs	r6, #0
+ 1646 0014 094F     		ldr	r7, .L138
+ 1647 0016 0DE0     		b	.L131
+ 1648              	.LVL156:
+ 1649              	.L134:
+ 1650              	.LBB11:
+ 902:Src/Eagle_TRT.c **** 		for(int j = 0; j < expn; j++){
+ 903:Src/Eagle_TRT.c **** 			result = result * base;
+ 1651              		.loc 1 903 0 discriminator 3
+ 1652 0018 4046     		mov	r0, r8
+ 1653 001a FFF7FEFF 		bl	__aeabi_i2d
+ 1654              	.LVL157:
+ 1655 001e 0246     		mov	r2, r0
+ 1656 0020 0B46     		mov	r3, r1
+ 1657 0022 3046     		mov	r0, r6
+ 1658 0024 3946     		mov	r1, r7
+ 1659 0026 FFF7FEFF 		bl	__aeabi_dmul
+ 1660              	.LVL158:
+ 1661 002a 0646     		mov	r6, r0
+ 1662              	.LVL159:
+ 1663 002c 0F46     		mov	r7, r1
+ 1664              	.LVL160:
+ 902:Src/Eagle_TRT.c **** 		for(int j = 0; j < expn; j++){
+ 1665              		.loc 1 902 0 discriminator 3
+ 1666 002e 0134     		adds	r4, r4, #1
+ 1667              	.LVL161:
+ 1668              	.L132:
+ 902:Src/Eagle_TRT.c **** 		for(int j = 0; j < expn; j++){
+ARM GAS  /tmp/ccihUd1h.s 			page 49
+
+
+ 1669              		.loc 1 902 0 is_stmt 0 discriminator 1
+ 1670 0030 AC42     		cmp	r4, r5
+ 1671 0032 F1DB     		blt	.L134
+ 1672              	.LVL162:
+ 1673              	.L131:
+ 1674              	.LBE11:
+ 904:Src/Eagle_TRT.c **** 		}
+ 905:Src/Eagle_TRT.c **** 	}
+ 906:Src/Eagle_TRT.c **** 
+ 907:Src/Eagle_TRT.c **** 	return result;
+ 908:Src/Eagle_TRT.c **** }
+ 1675              		.loc 1 908 0 is_stmt 1
+ 1676 0034 47EC106B 		vmov	d0, r6, r7
+ 1677 0038 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 1678              	.L139:
+ 1679              		.align	2
+ 1680              	.L138:
+ 1681 003c 0000F03F 		.word	1072693248
+ 1682              		.cfi_endproc
+ 1683              	.LFE152:
+ 1685              		.global	__aeabi_dadd
+ 1686              		.section	.text.bin_dec,"ax",%progbits
+ 1687              		.align	1
+ 1688              		.global	bin_dec
+ 1689              		.syntax unified
+ 1690              		.thumb
+ 1691              		.thumb_func
+ 1692              		.fpu fpv4-sp-d16
+ 1694              	bin_dec:
+ 1695              	.LFB151:
+ 883:Src/Eagle_TRT.c **** 
+ 1696              		.loc 1 883 0
+ 1697              		.cfi_startproc
+ 1698              		@ args = 0, pretend = 0, frame = 0
+ 1699              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1700              	.LVL163:
+ 1701 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 1702              	.LCFI24:
+ 1703              		.cfi_def_cfa_offset 32
+ 1704              		.cfi_offset 3, -32
+ 1705              		.cfi_offset 4, -28
+ 1706              		.cfi_offset 5, -24
+ 1707              		.cfi_offset 6, -20
+ 1708              		.cfi_offset 7, -16
+ 1709              		.cfi_offset 8, -12
+ 1710              		.cfi_offset 9, -8
+ 1711              		.cfi_offset 14, -4
+ 1712 0004 0646     		mov	r6, r0
+ 1713 0006 0D46     		mov	r5, r1
+ 1714              	.LVL164:
+ 1715              	.LBB12:
+ 887:Src/Eagle_TRT.c **** 		if(bin[i] == 1){
+ 1716              		.loc 1 887 0
+ 1717 0008 0024     		movs	r4, #0
+ 1718              	.LBE12:
+ 885:Src/Eagle_TRT.c **** 
+ 1719              		.loc 1 885 0
+ARM GAS  /tmp/ccihUd1h.s 			page 50
+
+
+ 1720 000a 2746     		mov	r7, r4
+ 1721              	.LBB13:
+ 887:Src/Eagle_TRT.c **** 		if(bin[i] == 1){
+ 1722              		.loc 1 887 0
+ 1723 000c 00E0     		b	.L141
+ 1724              	.LVL165:
+ 1725              	.L142:
+ 887:Src/Eagle_TRT.c **** 		if(bin[i] == 1){
+ 1726              		.loc 1 887 0 is_stmt 0 discriminator 2
+ 1727 000e 0134     		adds	r4, r4, #1
+ 1728              	.LVL166:
+ 1729              	.L141:
+ 887:Src/Eagle_TRT.c **** 		if(bin[i] == 1){
+ 1730              		.loc 1 887 0 discriminator 1
+ 1731 0010 AC42     		cmp	r4, r5
+ 1732 0012 15DA     		bge	.L145
+ 888:Src/Eagle_TRT.c **** 			dec += Power(2, size-i-1);
+ 1733              		.loc 1 888 0 is_stmt 1
+ 1734 0014 56F82430 		ldr	r3, [r6, r4, lsl #2]
+ 1735 0018 012B     		cmp	r3, #1
+ 1736 001a F8D1     		bne	.L142
+ 889:Src/Eagle_TRT.c **** 		}
+ 1737              		.loc 1 889 0
+ 1738 001c 291B     		subs	r1, r5, r4
+ 1739 001e 0139     		subs	r1, r1, #1
+ 1740 0020 0220     		movs	r0, #2
+ 1741 0022 FFF7FEFF 		bl	Power
+ 1742              	.LVL167:
+ 1743 0026 59EC108B 		vmov	r8, r9, d0
+ 1744 002a 3846     		mov	r0, r7
+ 1745 002c FFF7FEFF 		bl	__aeabi_i2d
+ 1746              	.LVL168:
+ 1747 0030 4246     		mov	r2, r8
+ 1748 0032 4B46     		mov	r3, r9
+ 1749 0034 FFF7FEFF 		bl	__aeabi_dadd
+ 1750              	.LVL169:
+ 1751 0038 FFF7FEFF 		bl	__aeabi_d2iz
+ 1752              	.LVL170:
+ 1753 003c 0746     		mov	r7, r0
+ 1754              	.LVL171:
+ 1755 003e E6E7     		b	.L142
+ 1756              	.LVL172:
+ 1757              	.L145:
+ 1758              	.LBE13:
+ 894:Src/Eagle_TRT.c **** 
+ 1759              		.loc 1 894 0
+ 1760 0040 3846     		mov	r0, r7
+ 1761 0042 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 1762              		.cfi_endproc
+ 1763              	.LFE151:
+ 1765              		.section	.text.read_encoder,"ax",%progbits
+ 1766              		.align	1
+ 1767              		.global	read_encoder
+ 1768              		.syntax unified
+ 1769              		.thumb
+ 1770              		.thumb_func
+ 1771              		.fpu fpv4-sp-d16
+ARM GAS  /tmp/ccihUd1h.s 			page 51
+
+
+ 1773              	read_encoder:
+ 1774              	.LFB144:
+ 714:Src/Eagle_TRT.c **** 
+ 1775              		.loc 1 714 0
+ 1776              		.cfi_startproc
+ 1777              		@ args = 0, pretend = 0, frame = 200
+ 1778              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1779              	.LVL173:
+ 1780 0000 30B5     		push	{r4, r5, lr}
+ 1781              	.LCFI25:
+ 1782              		.cfi_def_cfa_offset 12
+ 1783              		.cfi_offset 4, -12
+ 1784              		.cfi_offset 5, -8
+ 1785              		.cfi_offset 14, -4
+ 1786 0002 2DED028B 		vpush.64	{d8}
+ 1787              	.LCFI26:
+ 1788              		.cfi_def_cfa_offset 20
+ 1789              		.cfi_offset 80, -20
+ 1790              		.cfi_offset 81, -16
+ 1791 0006 B3B0     		sub	sp, sp, #204
+ 1792              	.LCFI27:
+ 1793              		.cfi_def_cfa_offset 224
+ 1794 0008 0446     		mov	r4, r0
+ 1795              	.LVL174:
+ 721:Src/Eagle_TRT.c **** 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ 1796              		.loc 1 721 0
+ 1797 000a 0022     		movs	r2, #0
+ 1798 000c 4FF40071 		mov	r1, #512
+ 1799 0010 4D48     		ldr	r0, .L164+16
+ 1800              	.LVL175:
+ 1801 0012 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1802              	.LVL176:
+ 722:Src/Eagle_TRT.c **** 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 1803              		.loc 1 722 0
+ 1804 0016 D4F86031 		ldr	r3, [r4, #352]
+ 1805 001a 1B68     		ldr	r3, [r3]
+ 1806 001c 0022     		movs	r2, #0
+ 1807 001e 5A62     		str	r2, [r3, #36]
+ 1808              	.L147:
+ 723:Src/Eagle_TRT.c **** 		}
+ 1809              		.loc 1 723 0 discriminator 1
+ 1810 0020 D4F86031 		ldr	r3, [r4, #352]
+ 1811 0024 1B68     		ldr	r3, [r3]
+ 1812 0026 5B6A     		ldr	r3, [r3, #36]
+ 1813 0028 022B     		cmp	r3, #2
+ 1814 002a F9D9     		bls	.L147
+ 725:Src/Eagle_TRT.c **** 		__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ 1815              		.loc 1 725 0
+ 1816 002c 0122     		movs	r2, #1
+ 1817 002e 4FF40071 		mov	r1, #512
+ 1818 0032 4548     		ldr	r0, .L164+16
+ 1819 0034 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1820              	.LVL177:
+ 726:Src/Eagle_TRT.c **** 		while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 1821              		.loc 1 726 0
+ 1822 0038 D4F86031 		ldr	r3, [r4, #352]
+ 1823 003c 1B68     		ldr	r3, [r3]
+ARM GAS  /tmp/ccihUd1h.s 			page 52
+
+
+ 1824 003e 0022     		movs	r2, #0
+ 1825 0040 5A62     		str	r2, [r3, #36]
+ 1826              	.L148:
+ 727:Src/Eagle_TRT.c **** 		}
+ 1827              		.loc 1 727 0 discriminator 1
+ 1828 0042 D4F86031 		ldr	r3, [r4, #352]
+ 1829 0046 1B68     		ldr	r3, [r3]
+ 1830 0048 5B6A     		ldr	r3, [r3, #36]
+ 1831 004a 022B     		cmp	r3, #2
+ 1832 004c F9D9     		bls	.L148
+ 729:Src/Eagle_TRT.c **** 		for(int i = 0; i < clock_loop; i++){
+ 1833              		.loc 1 729 0
+ 1834 004e 0022     		movs	r2, #0
+ 1835 0050 4FF40071 		mov	r1, #512
+ 1836 0054 3C48     		ldr	r0, .L164+16
+ 1837 0056 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1838              	.LVL178:
+ 1839              	.LBB14:
+ 730:Src/Eagle_TRT.c **** 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 1840              		.loc 1 730 0
+ 1841 005a 0025     		movs	r5, #0
+ 1842              	.LBE14:
+ 717:Src/Eagle_TRT.c **** 		int clock_period = 2;
+ 1843              		.loc 1 717 0
+ 1844 005c 9FED368B 		vldr.64	d8, .L164
+ 1845              	.LBB15:
+ 730:Src/Eagle_TRT.c **** 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 1846              		.loc 1 730 0
+ 1847 0060 1BE0     		b	.L149
+ 1848              	.LVL179:
+ 1849              	.L163:
+ 736:Src/Eagle_TRT.c **** 			}
+ 1850              		.loc 1 736 0
+ 1851 0062 0122     		movs	r2, #1
+ 1852 0064 32AB     		add	r3, sp, #200
+ 1853 0066 03EB8503 		add	r3, r3, r5, lsl #2
+ 1854 006a 43F8C82C 		str	r2, [r3, #-200]
+ 1855              	.L152:
+ 741:Src/Eagle_TRT.c **** 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+ 1856              		.loc 1 741 0
+ 1857 006e 0F2D     		cmp	r5, #15
+ 1858 0070 34D0     		beq	.L160
+ 748:Src/Eagle_TRT.c **** 			}
+ 1859              		.loc 1 748 0
+ 1860 0072 0022     		movs	r2, #0
+ 1861 0074 4FF40071 		mov	r1, #512
+ 1862 0078 3348     		ldr	r0, .L164+16
+ 1863 007a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1864              	.LVL180:
+ 1865              	.L155:
+ 750:Src/Eagle_TRT.c **** 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 1866              		.loc 1 750 0
+ 1867 007e D4F86031 		ldr	r3, [r4, #352]
+ 1868 0082 1B68     		ldr	r3, [r3]
+ 1869 0084 0022     		movs	r2, #0
+ 1870 0086 5A62     		str	r2, [r3, #36]
+ 1871              	.L156:
+ARM GAS  /tmp/ccihUd1h.s 			page 53
+
+
+ 751:Src/Eagle_TRT.c **** 			}
+ 1872              		.loc 1 751 0 discriminator 1
+ 1873 0088 D4F86031 		ldr	r3, [r4, #352]
+ 1874 008c 1B68     		ldr	r3, [r3]
+ 1875 008e 5B6A     		ldr	r3, [r3, #36]
+ 1876 0090 022B     		cmp	r3, #2
+ 1877 0092 F9D9     		bls	.L156
+ 753:Src/Eagle_TRT.c **** 				int_data = bin_dec(Data,14);
+ 1878              		.loc 1 753 0
+ 1879 0094 0F2D     		cmp	r5, #15
+ 1880 0096 33D0     		beq	.L161
+ 1881              	.L157:
+ 730:Src/Eagle_TRT.c **** 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 1882              		.loc 1 730 0 discriminator 2
+ 1883 0098 0135     		adds	r5, r5, #1
+ 1884              	.LVL181:
+ 1885              	.L149:
+ 730:Src/Eagle_TRT.c **** 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);	//clock set to high to request the bit
+ 1886              		.loc 1 730 0 is_stmt 0 discriminator 1
+ 1887 009a 0F2D     		cmp	r5, #15
+ 1888 009c 42DC     		bgt	.L162
+ 731:Src/Eagle_TRT.c **** 			__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 1 microsecond like from datasheet
+ 1889              		.loc 1 731 0 is_stmt 1
+ 1890 009e 0122     		movs	r2, #1
+ 1891 00a0 4FF40071 		mov	r1, #512
+ 1892 00a4 2848     		ldr	r0, .L164+16
+ 1893 00a6 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1894              	.LVL182:
+ 732:Src/Eagle_TRT.c **** 			while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= clock_period){
+ 1895              		.loc 1 732 0
+ 1896 00aa D4F86031 		ldr	r3, [r4, #352]
+ 1897 00ae 1B68     		ldr	r3, [r3]
+ 1898 00b0 0022     		movs	r2, #0
+ 1899 00b2 5A62     		str	r2, [r3, #36]
+ 1900              	.L150:
+ 733:Src/Eagle_TRT.c **** 			}
+ 1901              		.loc 1 733 0 discriminator 1
+ 1902 00b4 D4F86031 		ldr	r3, [r4, #352]
+ 1903 00b8 1B68     		ldr	r3, [r3]
+ 1904 00ba 5B6A     		ldr	r3, [r3, #36]
+ 1905 00bc 022B     		cmp	r3, #2
+ 1906 00be F9D9     		bls	.L150
+ 735:Src/Eagle_TRT.c **** 				Data[i] = 1;
+ 1907              		.loc 1 735 0
+ 1908 00c0 4FF48071 		mov	r1, #256
+ 1909 00c4 2048     		ldr	r0, .L164+16
+ 1910 00c6 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1911              	.LVL183:
+ 1912 00ca 0128     		cmp	r0, #1
+ 1913 00cc C9D0     		beq	.L163
+ 739:Src/Eagle_TRT.c **** 			}
+ 1914              		.loc 1 739 0
+ 1915 00ce 0022     		movs	r2, #0
+ 1916 00d0 32AB     		add	r3, sp, #200
+ 1917 00d2 03EB8503 		add	r3, r3, r5, lsl #2
+ 1918 00d6 43F8C82C 		str	r2, [r3, #-200]
+ 1919 00da C8E7     		b	.L152
+ARM GAS  /tmp/ccihUd1h.s 			page 54
+
+
+ 1920              	.L160:
+ 742:Src/Eagle_TRT.c **** 				__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);			//delay of 20 microsecond like from datasheet
+ 1921              		.loc 1 742 0
+ 1922 00dc 0122     		movs	r2, #1
+ 1923 00de 4FF40071 		mov	r1, #512
+ 1924 00e2 1948     		ldr	r0, .L164+16
+ 1925 00e4 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1926              	.LVL184:
+ 743:Src/Eagle_TRT.c **** 				while(__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= 40){
+ 1927              		.loc 1 743 0
+ 1928 00e8 D4F86031 		ldr	r3, [r4, #352]
+ 1929 00ec 1B68     		ldr	r3, [r3]
+ 1930 00ee 0022     		movs	r2, #0
+ 1931 00f0 5A62     		str	r2, [r3, #36]
+ 1932              	.L154:
+ 744:Src/Eagle_TRT.c **** 				}
+ 1933              		.loc 1 744 0 discriminator 1
+ 1934 00f2 D4F86031 		ldr	r3, [r4, #352]
+ 1935 00f6 1B68     		ldr	r3, [r3]
+ 1936 00f8 5B6A     		ldr	r3, [r3, #36]
+ 1937 00fa 282B     		cmp	r3, #40
+ 1938 00fc F9D9     		bls	.L154
+ 1939 00fe BEE7     		b	.L155
+ 1940              	.L161:
+ 754:Src/Eagle_TRT.c **** 				int_data = int_data / 45.5055;							//conversions from raw data to angle
+ 1941              		.loc 1 754 0
+ 1942 0100 0E21     		movs	r1, #14
+ 1943 0102 6846     		mov	r0, sp
+ 1944 0104 FFF7FEFF 		bl	bin_dec
+ 1945              	.LVL185:
+ 1946 0108 FFF7FEFF 		bl	__aeabi_i2d
+ 1947              	.LVL186:
+ 755:Src/Eagle_TRT.c **** 				int_data /= 2;
+ 1948              		.loc 1 755 0
+ 1949 010c 0CA3     		adr	r3, .L164+8
+ 1950 010e D3E90023 		ldrd	r2, [r3]
+ 1951 0112 FFF7FEFF 		bl	__aeabi_ddiv
+ 1952              	.LVL187:
+ 756:Src/Eagle_TRT.c **** 			}
+ 1953              		.loc 1 756 0
+ 1954 0116 0022     		movs	r2, #0
+ 1955 0118 0C4B     		ldr	r3, .L164+20
+ 1956 011a FFF7FEFF 		bl	__aeabi_dmul
+ 1957              	.LVL188:
+ 1958 011e 41EC180B 		vmov	d8, r0, r1
+ 1959              	.LVL189:
+ 1960 0122 B9E7     		b	.L157
+ 1961              	.LVL190:
+ 1962              	.L162:
+ 1963              	.LBE15:
+ 761:Src/Eagle_TRT.c **** 
+ 1964              		.loc 1 761 0
+ 1965 0124 B0EE480A 		vmov.f32	s0, s16
+ 1966 0128 F0EE680A 		vmov.f32	s1, s17
+ 1967 012c 33B0     		add	sp, sp, #204
+ 1968              	.LCFI28:
+ 1969              		.cfi_def_cfa_offset 20
+ARM GAS  /tmp/ccihUd1h.s 			page 55
+
+
+ 1970              		@ sp needed
+ 1971 012e BDEC028B 		vldm	sp!, {d8}
+ 1972              	.LCFI29:
+ 1973              		.cfi_restore 80
+ 1974              		.cfi_restore 81
+ 1975              		.cfi_def_cfa_offset 12
+ 1976              	.LVL191:
+ 1977 0132 30BD     		pop	{r4, r5, pc}
+ 1978              	.LVL192:
+ 1979              	.L165:
+ 1980 0134 AFF30080 		.align	3
+ 1981              	.L164:
+ 1982 0138 00000000 		.word	0
+ 1983 013c 00000000 		.word	0
+ 1984 0140 62105839 		.word	962072674
+ 1985 0144 B4C04640 		.word	1078378676
+ 1986 0148 00080240 		.word	1073874944
+ 1987 014c 0000E03F 		.word	1071644672
+ 1988              		.cfi_endproc
+ 1989              	.LFE144:
+ 1991              		.section	.text.shift_array,"ax",%progbits
+ 1992              		.align	1
+ 1993              		.global	shift_array
+ 1994              		.syntax unified
+ 1995              		.thumb
+ 1996              		.thumb_func
+ 1997              		.fpu fpv4-sp-d16
+ 1999              	shift_array:
+ 2000              	.LFB153:
+ 909:Src/Eagle_TRT.c **** 
+ 910:Src/Eagle_TRT.c **** //shift all the data of a numeric array and add another one value
+ 911:Src/Eagle_TRT.c **** //array = array to be shifted
+ 912:Src/Eagle_TRT.c **** //size = size of the array
+ 913:Src/Eagle_TRT.c **** //data = value to be added in the last position of the array
+ 914:Src/Eagle_TRT.c **** void shift_array(double *array, int size, double data){
+ 2001              		.loc 1 914 0
+ 2002              		.cfi_startproc
+ 2003              		@ args = 0, pretend = 0, frame = 0
+ 2004              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2005              		@ link register save eliminated.
+ 2006              	.LVL193:
+ 2007              	.LBB16:
+ 915:Src/Eagle_TRT.c **** 
+ 916:Src/Eagle_TRT.c **** 	for(int i = 1; i < size; i++){
+ 2008              		.loc 1 916 0
+ 2009 0000 0122     		movs	r2, #1
+ 2010              	.LVL194:
+ 2011 0002 8A42     		cmp	r2, r1
+ 2012 0004 17DA     		bge	.L173
+ 2013              	.LBE16:
+ 914:Src/Eagle_TRT.c **** 
+ 2014              		.loc 1 914 0
+ 2015 0006 30B4     		push	{r4, r5}
+ 2016              	.LCFI30:
+ 2017              		.cfi_def_cfa_offset 8
+ 2018              		.cfi_offset 4, -8
+ 2019              		.cfi_offset 5, -4
+ARM GAS  /tmp/ccihUd1h.s 			page 56
+
+
+ 2020              	.L168:
+ 2021              	.LBB17:
+ 917:Src/Eagle_TRT.c **** 		array[i-1] = array[i];
+ 2022              		.loc 1 917 0 discriminator 3
+ 2023 0008 02F10053 		add	r3, r2, #536870912
+ 2024 000c 013B     		subs	r3, r3, #1
+ 2025 000e 00EBC303 		add	r3, r0, r3, lsl #3
+ 2026 0012 00EBC204 		add	r4, r0, r2, lsl #3
+ 2027 0016 D4E90045 		ldrd	r4, [r4]
+ 2028 001a C3E90045 		strd	r4, [r3]
+ 916:Src/Eagle_TRT.c **** 		array[i-1] = array[i];
+ 2029              		.loc 1 916 0 discriminator 3
+ 2030 001e 0132     		adds	r2, r2, #1
+ 2031              	.LVL195:
+ 2032 0020 8A42     		cmp	r2, r1
+ 2033 0022 F1DB     		blt	.L168
+ 2034              	.LBE17:
+ 918:Src/Eagle_TRT.c **** 	}
+ 919:Src/Eagle_TRT.c **** 	array[size-1] = data;
+ 2035              		.loc 1 919 0
+ 2036 0024 01F10051 		add	r1, r1, #536870912
+ 2037              	.LVL196:
+ 2038 0028 0139     		subs	r1, r1, #1
+ 2039              	.LVL197:
+ 2040 002a 00EBC100 		add	r0, r0, r1, lsl #3
+ 2041              	.LVL198:
+ 2042 002e 80ED000B 		vstr.64	d0, [r0]
+ 920:Src/Eagle_TRT.c **** }
+ 2043              		.loc 1 920 0
+ 2044 0032 30BC     		pop	{r4, r5}
+ 2045              	.LCFI31:
+ 2046              		.cfi_restore 5
+ 2047              		.cfi_restore 4
+ 2048              		.cfi_def_cfa_offset 0
+ 2049 0034 7047     		bx	lr
+ 2050              	.LVL199:
+ 2051              	.L173:
+ 919:Src/Eagle_TRT.c **** }
+ 2052              		.loc 1 919 0
+ 2053 0036 01F10051 		add	r1, r1, #536870912
+ 2054              	.LVL200:
+ 2055 003a 0139     		subs	r1, r1, #1
+ 2056              	.LVL201:
+ 2057 003c 00EBC100 		add	r0, r0, r1, lsl #3
+ 2058              	.LVL202:
+ 2059 0040 80ED000B 		vstr.64	d0, [r0]
+ 2060 0044 7047     		bx	lr
+ 2061              		.cfi_endproc
+ 2062              	.LFE153:
+ 2064              		.section	.text.dynamic_average,"ax",%progbits
+ 2065              		.align	1
+ 2066              		.global	dynamic_average
+ 2067              		.syntax unified
+ 2068              		.thumb
+ 2069              		.thumb_func
+ 2070              		.fpu fpv4-sp-d16
+ 2072              	dynamic_average:
+ARM GAS  /tmp/ccihUd1h.s 			page 57
+
+
+ 2073              	.LFB154:
+ 921:Src/Eagle_TRT.c **** 
+ 922:Src/Eagle_TRT.c **** //function that calculate the average of all the numbers in one array
+ 923:Src/Eagle_TRT.c **** double dynamic_average(double *array, int size){
+ 2074              		.loc 1 923 0
+ 2075              		.cfi_startproc
+ 2076              		@ args = 0, pretend = 0, frame = 0
+ 2077              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2078              	.LVL203:
+ 2079 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 2080              	.LCFI32:
+ 2081              		.cfi_def_cfa_offset 24
+ 2082              		.cfi_offset 4, -24
+ 2083              		.cfi_offset 5, -20
+ 2084              		.cfi_offset 6, -16
+ 2085              		.cfi_offset 7, -12
+ 2086              		.cfi_offset 8, -8
+ 2087              		.cfi_offset 14, -4
+ 2088 0004 8046     		mov	r8, r0
+ 2089 0006 0D46     		mov	r5, r1
+ 2090              	.LVL204:
+ 2091              	.LBB18:
+ 924:Src/Eagle_TRT.c **** 
+ 925:Src/Eagle_TRT.c **** 	double sum = 0;
+ 926:Src/Eagle_TRT.c **** 	double average = 0;
+ 927:Src/Eagle_TRT.c **** 
+ 928:Src/Eagle_TRT.c **** 	for(int i = 0; i < size; i++){
+ 2092              		.loc 1 928 0
+ 2093 0008 0024     		movs	r4, #0
+ 2094              	.LBE18:
+ 925:Src/Eagle_TRT.c **** 	double average = 0;
+ 2095              		.loc 1 925 0
+ 2096 000a 0026     		movs	r6, #0
+ 2097 000c 0027     		movs	r7, #0
+ 2098              	.LBB19:
+ 2099              		.loc 1 928 0
+ 2100 000e 0AE0     		b	.L175
+ 2101              	.LVL205:
+ 2102              	.L176:
+ 929:Src/Eagle_TRT.c **** 		sum += array[i];
+ 2103              		.loc 1 929 0 discriminator 3
+ 2104 0010 08EBC403 		add	r3, r8, r4, lsl #3
+ 2105 0014 D3E90023 		ldrd	r2, [r3]
+ 2106 0018 3046     		mov	r0, r6
+ 2107 001a 3946     		mov	r1, r7
+ 2108 001c FFF7FEFF 		bl	__aeabi_dadd
+ 2109              	.LVL206:
+ 2110 0020 0646     		mov	r6, r0
+ 2111              	.LVL207:
+ 2112 0022 0F46     		mov	r7, r1
+ 2113              	.LVL208:
+ 928:Src/Eagle_TRT.c **** 		sum += array[i];
+ 2114              		.loc 1 928 0 discriminator 3
+ 2115 0024 0134     		adds	r4, r4, #1
+ 2116              	.LVL209:
+ 2117              	.L175:
+ 928:Src/Eagle_TRT.c **** 		sum += array[i];
+ARM GAS  /tmp/ccihUd1h.s 			page 58
+
+
+ 2118              		.loc 1 928 0 is_stmt 0 discriminator 1
+ 2119 0026 AC42     		cmp	r4, r5
+ 2120 0028 F2DB     		blt	.L176
+ 2121              	.LBE19:
+ 930:Src/Eagle_TRT.c **** 	}
+ 931:Src/Eagle_TRT.c **** 	average = sum / size;
+ 2122              		.loc 1 931 0 is_stmt 1
+ 2123 002a 2846     		mov	r0, r5
+ 2124 002c FFF7FEFF 		bl	__aeabi_i2d
+ 2125              	.LVL210:
+ 2126 0030 0246     		mov	r2, r0
+ 2127 0032 0B46     		mov	r3, r1
+ 2128 0034 3046     		mov	r0, r6
+ 2129 0036 3946     		mov	r1, r7
+ 2130 0038 FFF7FEFF 		bl	__aeabi_ddiv
+ 2131              	.LVL211:
+ 932:Src/Eagle_TRT.c **** 
+ 933:Src/Eagle_TRT.c **** 	return average;
+ 934:Src/Eagle_TRT.c **** }
+ 2132              		.loc 1 934 0
+ 2133 003c 41EC100B 		vmov	d0, r0, r1
+ 2134 0040 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 2135              		.cfi_endproc
+ 2136              	.LFE154:
+ 2138              		.global	__aeabi_dsub
+ 2139              		.section	.text.encoder_tim_interrupt,"ax",%progbits
+ 2140              		.align	1
+ 2141              		.global	encoder_tim_interrupt
+ 2142              		.syntax unified
+ 2143              		.thumb
+ 2144              		.thumb_func
+ 2145              		.fpu fpv4-sp-d16
+ 2147              	encoder_tim_interrupt:
+ 2148              	.LFB145:
+ 769:Src/Eagle_TRT.c **** 
+ 2149              		.loc 1 769 0
+ 2150              		.cfi_startproc
+ 2151              		@ args = 0, pretend = 0, frame = 0
+ 2152              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2153              	.LVL212:
+ 2154 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 2155              	.LCFI33:
+ 2156              		.cfi_def_cfa_offset 24
+ 2157              		.cfi_offset 3, -24
+ 2158              		.cfi_offset 4, -20
+ 2159              		.cfi_offset 5, -16
+ 2160              		.cfi_offset 6, -12
+ 2161              		.cfi_offset 7, -8
+ 2162              		.cfi_offset 14, -4
+ 2163 0002 2DED028B 		vpush.64	{d8}
+ 2164              	.LCFI34:
+ 2165              		.cfi_def_cfa_offset 32
+ 2166              		.cfi_offset 80, -32
+ 2167              		.cfi_offset 81, -28
+ 2168 0006 0446     		mov	r4, r0
+ 772:Src/Eagle_TRT.c **** 			enc->angles_array[0] = read_encoder(enc);
+ 2169              		.loc 1 772 0
+ARM GAS  /tmp/ccihUd1h.s 			page 59
+
+
+ 2170 0008 0368     		ldr	r3, [r0]
+ 2171 000a 33B1     		cbz	r3, .L184
+ 777:Src/Eagle_TRT.c **** 				enc->angles_array[1] = read_encoder(enc);
+ 2172              		.loc 1 777 0
+ 2173 000c 012B     		cmp	r3, #1
+ 2174 000e 0CD0     		beq	.L185
+ 782:Src/Eagle_TRT.c **** 					enc->refresh=1000;
+ 2175              		.loc 1 782 0
+ 2176 0010 022B     		cmp	r3, #2
+ 2177 0012 12D0     		beq	.L186
+ 2178              	.LVL213:
+ 2179              	.L178:
+ 794:Src/Eagle_TRT.c **** 
+ 2180              		.loc 1 794 0
+ 2181 0014 BDEC028B 		vldm	sp!, {d8}
+ 2182              	.LCFI35:
+ 2183              		.cfi_remember_state
+ 2184              		.cfi_restore 80
+ 2185              		.cfi_restore 81
+ 2186              		.cfi_def_cfa_offset 24
+ 2187 0018 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 2188              	.LVL214:
+ 2189              	.L184:
+ 2190              	.LCFI36:
+ 2191              		.cfi_restore_state
+ 773:Src/Eagle_TRT.c **** 			enc->interrupt_flag ++;
+ 2192              		.loc 1 773 0
+ 2193 001a FFF7FEFF 		bl	read_encoder
+ 2194              	.LVL215:
+ 2195 001e 84ED020B 		vstr.64	d0, [r4, #8]
+ 774:Src/Eagle_TRT.c **** 		}
+ 2196              		.loc 1 774 0
+ 2197 0022 2368     		ldr	r3, [r4]
+ 2198 0024 0133     		adds	r3, r3, #1
+ 2199 0026 2360     		str	r3, [r4]
+ 2200 0028 F4E7     		b	.L178
+ 2201              	.LVL216:
+ 2202              	.L185:
+ 778:Src/Eagle_TRT.c **** 				enc->interrupt_flag++;
+ 2203              		.loc 1 778 0
+ 2204 002a FFF7FEFF 		bl	read_encoder
+ 2205              	.LVL217:
+ 2206 002e 84ED040B 		vstr.64	d0, [r4, #16]
+ 779:Src/Eagle_TRT.c **** 			}
+ 2207              		.loc 1 779 0
+ 2208 0032 2368     		ldr	r3, [r4]
+ 2209 0034 0133     		adds	r3, r3, #1
+ 2210 0036 2360     		str	r3, [r4]
+ 2211 0038 ECE7     		b	.L178
+ 2212              	.LVL218:
+ 2213              	.L186:
+ 2214              	.LBB20:
+ 783:Src/Eagle_TRT.c **** 					enc->wheel_diameter=0.4064;
+ 2215              		.loc 1 783 0
+ 2216 003a 4FF47A73 		mov	r3, #1000
+ 2217 003e C0F85831 		str	r3, [r0, #344]
+ 784:Src/Eagle_TRT.c **** 					double Speed = get_speed_encoder(enc);
+ARM GAS  /tmp/ccihUd1h.s 			page 60
+
+
+ 2218              		.loc 1 784 0
+ 2219 0042 1C4B     		ldr	r3, .L188
+ 2220 0044 C0F85C31 		str	r3, [r0, #348]	@ float
+ 785:Src/Eagle_TRT.c **** 					if(abs(Speed - enc->speed[8]) <= abs(enc->speed[8] * 10)){			//exclude the wrong speeds
+ 2221              		.loc 1 785 0
+ 2222 0048 FFF7FEFF 		bl	get_speed_encoder
+ 2223              	.LVL219:
+ 2224 004c B0EE408A 		vmov.f32	s16, s0
+ 2225 0050 F0EE608A 		vmov.f32	s17, s1
+ 2226              	.LVL220:
+ 786:Src/Eagle_TRT.c **** 						shift_array(enc->speed, 15, Speed);
+ 2227              		.loc 1 786 0
+ 2228 0054 D4E93A67 		ldrd	r6, [r4, #232]
+ 2229 0058 3246     		mov	r2, r6
+ 2230 005a 3B46     		mov	r3, r7
+ 2231 005c 51EC100B 		vmov	r0, r1, d0
+ 2232 0060 FFF7FEFF 		bl	__aeabi_dsub
+ 2233              	.LVL221:
+ 2234 0064 FFF7FEFF 		bl	__aeabi_d2iz
+ 2235              	.LVL222:
+ 2236 0068 80EAE075 		eor	r5, r0, r0, asr #31
+ 2237 006c A5EBE075 		sub	r5, r5, r0, asr #31
+ 2238 0070 0022     		movs	r2, #0
+ 2239 0072 114B     		ldr	r3, .L188+4
+ 2240 0074 3046     		mov	r0, r6
+ 2241 0076 3946     		mov	r1, r7
+ 2242 0078 FFF7FEFF 		bl	__aeabi_dmul
+ 2243              	.LVL223:
+ 2244 007c FFF7FEFF 		bl	__aeabi_d2iz
+ 2245              	.LVL224:
+ 2246 0080 0028     		cmp	r0, #0
+ 2247 0082 B8BF     		it	lt
+ 2248 0084 4042     		rsblt	r0, r0, #0
+ 2249 0086 8542     		cmp	r5, r0
+ 2250 0088 02DD     		ble	.L187
+ 2251              	.L182:
+ 790:Src/Eagle_TRT.c **** 				}
+ 2252              		.loc 1 790 0
+ 2253 008a 0023     		movs	r3, #0
+ 2254 008c 2360     		str	r3, [r4]
+ 2255              	.LBE20:
+ 794:Src/Eagle_TRT.c **** 
+ 2256              		.loc 1 794 0
+ 2257 008e C1E7     		b	.L178
+ 2258              	.L187:
+ 2259              	.LBB21:
+ 787:Src/Eagle_TRT.c **** 						enc->average_speed = dynamic_average(enc->speed, 15);
+ 2260              		.loc 1 787 0
+ 2261 0090 04F1A805 		add	r5, r4, #168
+ 2262 0094 B0EE480A 		vmov.f32	s0, s16
+ 2263 0098 F0EE680A 		vmov.f32	s1, s17
+ 2264 009c 0F21     		movs	r1, #15
+ 2265 009e 2846     		mov	r0, r5
+ 2266 00a0 FFF7FEFF 		bl	shift_array
+ 2267              	.LVL225:
+ 788:Src/Eagle_TRT.c **** 					}
+ 2268              		.loc 1 788 0
+ARM GAS  /tmp/ccihUd1h.s 			page 61
+
+
+ 2269 00a4 0F21     		movs	r1, #15
+ 2270 00a6 2846     		mov	r0, r5
+ 2271 00a8 FFF7FEFF 		bl	dynamic_average
+ 2272              	.LVL226:
+ 2273 00ac 84ED520B 		vstr.64	d0, [r4, #328]
+ 2274 00b0 EBE7     		b	.L182
+ 2275              	.L189:
+ 2276 00b2 00BF     		.align	2
+ 2277              	.L188:
+ 2278 00b4 A913D03E 		.word	1053823913
+ 2279 00b8 00002440 		.word	1076101120
+ 2280              	.LBE21:
+ 2281              		.cfi_endproc
+ 2282              	.LFE145:
+ 2284              		.section	.text.calc_pot_value,"ax",%progbits
+ 2285              		.align	1
+ 2286              		.global	calc_pot_value
+ 2287              		.syntax unified
+ 2288              		.thumb
+ 2289              		.thumb_func
+ 2290              		.fpu fpv4-sp-d16
+ 2292              	calc_pot_value:
+ 2293              	.LFB147:
+ 817:Src/Eagle_TRT.c **** 
+ 2294              		.loc 1 817 0
+ 2295              		.cfi_startproc
+ 2296              		@ args = 0, pretend = 0, frame = 0
+ 2297              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2298              	.LVL227:
+ 2299 0000 38B5     		push	{r3, r4, r5, lr}
+ 2300              	.LCFI37:
+ 2301              		.cfi_def_cfa_offset 16
+ 2302              		.cfi_offset 3, -16
+ 2303              		.cfi_offset 4, -12
+ 2304              		.cfi_offset 5, -8
+ 2305              		.cfi_offset 14, -4
+ 2306 0002 0446     		mov	r4, r0
+ 819:Src/Eagle_TRT.c **** 		pot->val = dynamic_average(pot->average, 20);
+ 2307              		.loc 1 819 0
+ 2308 0004 00F11805 		add	r5, r0, #24
+ 2309 0008 0069     		ldr	r0, [r0, #16]
+ 2310              	.LVL228:
+ 2311 000a FFF7FEFF 		bl	__aeabi_i2d
+ 2312              	.LVL229:
+ 2313 000e 41EC100B 		vmov	d0, r0, r1
+ 2314 0012 1421     		movs	r1, #20
+ 2315 0014 2846     		mov	r0, r5
+ 2316 0016 FFF7FEFF 		bl	shift_array
+ 2317              	.LVL230:
+ 820:Src/Eagle_TRT.c **** 		pot->val_100 = (int)(abs(pot->val - pot->min)*100/(pot->range)); //val0_100 -->STEER --> 0 = SX |
+ 2318              		.loc 1 820 0
+ 2319 001a 1421     		movs	r1, #20
+ 2320 001c 2846     		mov	r0, r5
+ 2321 001e FFF7FEFF 		bl	dynamic_average
+ 2322              	.LVL231:
+ 2323 0022 51EC100B 		vmov	r0, r1, d0
+ 2324 0026 FFF7FEFF 		bl	__aeabi_d2iz
+ARM GAS  /tmp/ccihUd1h.s 			page 62
+
+
+ 2325              	.LVL232:
+ 2326 002a 2061     		str	r0, [r4, #16]
+ 821:Src/Eagle_TRT.c **** 
+ 2327              		.loc 1 821 0
+ 2328 002c A368     		ldr	r3, [r4, #8]
+ 2329 002e C01A     		subs	r0, r0, r3
+ 2330 0030 0028     		cmp	r0, #0
+ 2331 0032 B8BF     		it	lt
+ 2332 0034 4042     		rsblt	r0, r0, #0
+ 2333 0036 6423     		movs	r3, #100
+ 2334 0038 03FB00F3 		mul	r3, r3, r0
+ 2335 003c E268     		ldr	r2, [r4, #12]
+ 2336 003e 93FBF2F3 		sdiv	r3, r3, r2
+ 2337 0042 2360     		str	r3, [r4]
+ 823:Src/Eagle_TRT.c **** 			pot->val_100 = 100;
+ 2338              		.loc 1 823 0
+ 2339 0044 632B     		cmp	r3, #99
+ 2340 0046 01DD     		ble	.L191
+ 824:Src/Eagle_TRT.c **** 		}
+ 2341              		.loc 1 824 0
+ 2342 0048 6423     		movs	r3, #100
+ 2343 004a 2360     		str	r3, [r4]
+ 2344              	.L191:
+ 826:Src/Eagle_TRT.c **** 			pot->val_100 = 0;
+ 2345              		.loc 1 826 0
+ 2346 004c 2368     		ldr	r3, [r4]
+ 2347 004e 052B     		cmp	r3, #5
+ 2348 0050 01DC     		bgt	.L192
+ 827:Src/Eagle_TRT.c **** 		}
+ 2349              		.loc 1 827 0
+ 2350 0052 0023     		movs	r3, #0
+ 2351 0054 2360     		str	r3, [r4]
+ 2352              	.L192:
+ 830:Src/Eagle_TRT.c **** 
+ 2353              		.loc 1 830 0
+ 2354 0056 0120     		movs	r0, #1
+ 2355 0058 38BD     		pop	{r3, r4, r5, pc}
+ 2356              		.cfi_endproc
+ 2357              	.LFE147:
+ 2359              		.comm	pot_3,432,8
+ 2360              		.comm	pot_2,432,8
+ 2361              		.comm	pot_1,432,8
+ 2362              		.comm	enc,360,8
+ 2363              		.comm	buffer_gps,2,4
+ 2364              		.comm	data_string_gps,1,1
+ 2365              		.comm	cont_comma,4,4
+ 2366              		.comm	cont_string,4,4
+ 2367              		.comm	string_gps,100,4
+ 2368              		.global	start_string_gps
+ 2369              		.comm	huart_GPS,4,4
+ 2370              		.global	print_q
+ 2371              		.comm	can,28,4
+ 2372              		.section	.bss.print_q,"aw",%nobits
+ 2373              		.align	2
+ 2374              		.set	.LANCHOR0,. + 0
+ 2377              	print_q:
+ 2378 0000 00000000 		.space	224
+ARM GAS  /tmp/ccihUd1h.s 			page 63
+
+
+ 2378      00000000 
+ 2378      00000000 
+ 2378      00000000 
+ 2378      00000000 
+ 2379              		.section	.bss.start_string_gps,"aw",%nobits
+ 2380              		.align	2
+ 2381              		.set	.LANCHOR1,. + 0
+ 2384              	start_string_gps:
+ 2385 0000 00000000 		.space	4
+ 2386              		.section	.rodata.checksum.str1.4,"aMS",%progbits,1
+ 2387              		.align	2
+ 2388              	.LC0:
+ 2389 0000 257800   		.ascii	"%x\000"
+ 2390              		.section	.rodata.gps_init.str1.4,"aMS",%progbits,1
+ 2391              		.align	2
+ 2392              	.LC1:
+ 2393 0000 24504D54 		.ascii	"$PMTK251,115200*1F\015\012\000"
+ 2393      4B323531 
+ 2393      2C313135 
+ 2393      3230302A 
+ 2393      31460D0A 
+ 2394 0015 000000   		.space	3
+ 2395              	.LC2:
+ 2396 0018 24504D54 		.ascii	"$PMTK220,100*2F\015\012\000"
+ 2396      4B323230 
+ 2396      2C313030 
+ 2396      2A32460D 
+ 2396      0A00
+ 2397 002a 0000     		.space	2
+ 2398              	.LC3:
+ 2399 002c 24504D54 		.ascii	"$PMTK314,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\015"
+ 2399      4B333134 
+ 2399      2C302C30 
+ 2399      2C312C31 
+ 2399      2C302C30 
+ 2400 005e 0A00     		.ascii	"\012\000"
+ 2401              	.LC4:
+ 2402 0060 3030302E 		.ascii	"000.00\000"
+ 2402      303000
+ 2403 0067 00       		.space	1
+ 2404              	.LC5:
+ 2405 0068 30303030 		.ascii	"0000.0000\000"
+ 2405      2E303030 
+ 2405      3000
+ 2406 0072 0000     		.space	2
+ 2407              	.LC6:
+ 2408 0074 4E00     		.ascii	"N\000"
+ 2409 0076 0000     		.space	2
+ 2410              	.LC7:
+ 2411 0078 30303030 		.ascii	"00000.0000\000"
+ 2411      302E3030 
+ 2411      303000
+ 2412 0083 00       		.space	1
+ 2413              	.LC8:
+ 2414 0084 5700     		.ascii	"W\000"
+ 2415 0086 0000     		.space	2
+ 2416              	.LC9:
+ARM GAS  /tmp/ccihUd1h.s 			page 64
+
+
+ 2417 0088 30303030 		.ascii	"0000.0\000"
+ 2417      2E3000
+ 2418 008f 00       		.space	1
+ 2419              	.LC10:
+ 2420 0090 30303030 		.ascii	"000000\000"
+ 2420      303000
+ 2421              		.text
+ 2422              	.Letext0:
+ 2423              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 2424              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 2425              		.file 4 "Drivers/CMSIS/Include/core_cm4.h"
+ 2426              		.file 5 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h"
+ 2427              		.file 6 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
+ 2428              		.file 7 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
+ 2429              		.file 8 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
+ 2430              		.file 9 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h"
+ 2431              		.file 10 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
+ 2432              		.file 11 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h"
+ 2433              		.file 12 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h"
+ 2434              		.file 13 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h"
+ 2435              		.file 14 "/usr/include/newlib/sys/lock.h"
+ 2436              		.file 15 "/usr/include/newlib/sys/_types.h"
+ 2437              		.file 16 "/usr/lib/gcc/arm-none-eabi/6.3.1/include/stddef.h"
+ 2438              		.file 17 "/usr/include/newlib/sys/reent.h"
+ 2439              		.file 18 "/usr/include/newlib/stdlib.h"
+ 2440              		.file 19 "Inc/Eagle_TRT.h"
+ 2441              		.file 20 "/usr/include/newlib/stdio.h"
+ 2442              		.file 21 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h"
+ 2443              		.file 22 "/usr/include/newlib/string.h"
+ 2444              		.file 23 "/usr/include/newlib/malloc.h"
+ARM GAS  /tmp/ccihUd1h.s 			page 65
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 Eagle_TRT.c
+     /tmp/ccihUd1h.s:18     .text.next:0000000000000000 $t
+     /tmp/ccihUd1h.s:24     .text.next:0000000000000000 next
+     /tmp/ccihUd1h.s:45     .text.emptyp:0000000000000000 $t
+     /tmp/ccihUd1h.s:51     .text.emptyp:0000000000000000 emptyp
+     /tmp/ccihUd1h.s:73     .text.fullp:0000000000000000 $t
+     /tmp/ccihUd1h.s:79     .text.fullp:0000000000000000 fullp
+     /tmp/ccihUd1h.s:109    .text.checksum:0000000000000000 $t
+     /tmp/ccihUd1h.s:115    .text.checksum:0000000000000000 checksum
+     /tmp/ccihUd1h.s:242    .text.checksum:0000000000000080 $d
+     /tmp/ccihUd1h.s:247    .text.CAN_Send:0000000000000000 $t
+     /tmp/ccihUd1h.s:254    .text.CAN_Send:0000000000000000 CAN_Send
+     /tmp/ccihUd1h.s:329    .text.CAN_Receive:0000000000000000 $t
+     /tmp/ccihUd1h.s:336    .text.CAN_Receive:0000000000000000 CAN_Receive
+     /tmp/ccihUd1h.s:385    .text.init:0000000000000000 $t
+     /tmp/ccihUd1h.s:392    .text.init:0000000000000000 init
+     /tmp/ccihUd1h.s:412    .text.push:0000000000000000 $t
+     /tmp/ccihUd1h.s:419    .text.push:0000000000000000 push
+     /tmp/ccihUd1h.s:487    .text.pop:0000000000000000 $t
+     /tmp/ccihUd1h.s:494    .text.pop:0000000000000000 pop
+     /tmp/ccihUd1h.s:560    .text.print:0000000000000000 $t
+     /tmp/ccihUd1h.s:567    .text.print:0000000000000000 print
+     /tmp/ccihUd1h.s:620    .text.print:0000000000000030 $d
+     /tmp/ccihUd1h.s:625    .text.print_it:0000000000000000 $t
+     /tmp/ccihUd1h.s:632    .text.print_it:0000000000000000 print_it
+     /tmp/ccihUd1h.s:682    .text.print_it:0000000000000028 $d
+     /tmp/ccihUd1h.s:687    .text.gps_init:0000000000000000 $t
+     /tmp/ccihUd1h.s:694    .text.gps_init:0000000000000000 gps_init
+     /tmp/ccihUd1h.s:849    .text.gps_init:00000000000000fc $d
+                            *COM*:0000000000000004 huart_GPS
+                            *COM*:0000000000000002 buffer_gps
+     /tmp/ccihUd1h.s:867    .text.gps_read_it:0000000000000000 $t
+     /tmp/ccihUd1h.s:874    .text.gps_read_it:0000000000000000 gps_read_it
+     /tmp/ccihUd1h.s:1335   .text.gps_read_it:0000000000000278 $d
+                            *COM*:0000000000000001 data_string_gps
+                            *COM*:0000000000000004 cont_string
+                            *COM*:0000000000000064 string_gps
+                            *COM*:000000000000001c can
+                            *COM*:0000000000000004 cont_comma
+     /tmp/ccihUd1h.s:1354   .text.gps_read_it:00000000000002b8 $t
+     /tmp/ccihUd1h.s:1419   .text.gps_read_it:0000000000000320 $d
+     /tmp/ccihUd1h.s:1429   .text.get_speed_encoder:0000000000000000 $t
+     /tmp/ccihUd1h.s:1436   .text.get_speed_encoder:0000000000000000 get_speed_encoder
+     /tmp/ccihUd1h.s:1502   .text.get_speed_encoder:0000000000000070 $d
+     /tmp/ccihUd1h.s:1510   .text.implausibility_check:0000000000000000 $t
+     /tmp/ccihUd1h.s:1517   .text.implausibility_check:0000000000000000 implausibility_check
+     /tmp/ccihUd1h.s:1565   .text.set_max:0000000000000000 $t
+     /tmp/ccihUd1h.s:1572   .text.set_max:0000000000000000 set_max
+     /tmp/ccihUd1h.s:1588   .text.set_min:0000000000000000 $t
+     /tmp/ccihUd1h.s:1595   .text.set_min:0000000000000000 set_min
+     /tmp/ccihUd1h.s:1611   .text.Power:0000000000000000 $t
+     /tmp/ccihUd1h.s:1618   .text.Power:0000000000000000 Power
+     /tmp/ccihUd1h.s:1681   .text.Power:000000000000003c $d
+     /tmp/ccihUd1h.s:1687   .text.bin_dec:0000000000000000 $t
+     /tmp/ccihUd1h.s:1694   .text.bin_dec:0000000000000000 bin_dec
+     /tmp/ccihUd1h.s:1766   .text.read_encoder:0000000000000000 $t
+ARM GAS  /tmp/ccihUd1h.s 			page 66
+
+
+     /tmp/ccihUd1h.s:1773   .text.read_encoder:0000000000000000 read_encoder
+     /tmp/ccihUd1h.s:1982   .text.read_encoder:0000000000000138 $d
+     /tmp/ccihUd1h.s:1992   .text.shift_array:0000000000000000 $t
+     /tmp/ccihUd1h.s:1999   .text.shift_array:0000000000000000 shift_array
+     /tmp/ccihUd1h.s:2065   .text.dynamic_average:0000000000000000 $t
+     /tmp/ccihUd1h.s:2072   .text.dynamic_average:0000000000000000 dynamic_average
+     /tmp/ccihUd1h.s:2140   .text.encoder_tim_interrupt:0000000000000000 $t
+     /tmp/ccihUd1h.s:2147   .text.encoder_tim_interrupt:0000000000000000 encoder_tim_interrupt
+     /tmp/ccihUd1h.s:2278   .text.encoder_tim_interrupt:00000000000000b4 $d
+     /tmp/ccihUd1h.s:2285   .text.calc_pot_value:0000000000000000 $t
+     /tmp/ccihUd1h.s:2292   .text.calc_pot_value:0000000000000000 calc_pot_value
+                            *COM*:00000000000001b0 pot_3
+                            *COM*:00000000000001b0 pot_2
+                            *COM*:00000000000001b0 pot_1
+                            *COM*:0000000000000168 enc
+     /tmp/ccihUd1h.s:2384   .bss.start_string_gps:0000000000000000 start_string_gps
+     /tmp/ccihUd1h.s:2377   .bss.print_q:0000000000000000 print_q
+     /tmp/ccihUd1h.s:2373   .bss.print_q:0000000000000000 $d
+     /tmp/ccihUd1h.s:2380   .bss.start_string_gps:0000000000000000 $d
+     /tmp/ccihUd1h.s:2387   .rodata.checksum.str1.4:0000000000000000 $d
+     /tmp/ccihUd1h.s:2391   .rodata.gps_init.str1.4:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+sprintf
+HAL_CAN_GetTxMailboxesFreeLevel
+HAL_CAN_IsTxMessagePending
+HAL_CAN_AddTxMessage
+HAL_CAN_GetRxFifoFillLevel
+HAL_CAN_GetRxMessage
+strlen
+malloc
+strcpy
+free
+HAL_UART_Transmit_IT
+HAL_UART_Init
+HAL_UART_Transmit
+HAL_Delay
+HAL_UART_Receive_IT
+__aeabi_dmul
+__aeabi_d2iz
+atof
+__aeabi_i2d
+__aeabi_f2d
+__aeabi_ddiv
+__aeabi_dadd
+HAL_GPIO_WritePin
+HAL_GPIO_ReadPin
+__aeabi_dsub

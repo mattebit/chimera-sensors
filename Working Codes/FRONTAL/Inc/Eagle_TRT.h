@@ -33,6 +33,7 @@ typedef struct
 	int altitude_i;			  //altitude converted into a string
 	char time[11];			  //time string
 	char fix_status;
+	char string[100];
 } gps_struct;
 int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps);
 int gps_init(UART_HandleTypeDef *huart, gps_struct *gps);
