@@ -812,13 +812,13 @@ int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps)
 						}
 						else
 						{
-							gps->latitude_i = (long int)(atof(gps->latitude) * 10000);
-							gps->longitude_i = (long int)(atof(gps->longitude) * 100000);
-							gps->altitude_i = (int)(atof(gps->altitude) * 100);
-							gps->latitude_i_h = (int)(gps->latitude_i / 10000);
-							gps->latitude_i_l = (int)(gps->latitude_i - gps->latitude_i_h * 10000);
-							gps->longitude_i_h = (int)(gps->longitude_i / 100000);
-							gps->longitude_i_l = (int)(gps->longitude_i - gps->longitude_i_h * 100000);
+							gps->latitude_i = (long int)(atof(gps->latitude) * 100);
+							gps->longitude_i = (long int)(atof(gps->longitude) * 100);
+							gps->altitude_i = (int)(atof(gps->altitude) * 10);
+							gps->latitude_i_h = (int)(gps->latitude_i >> 16);
+							gps->latitude_i_l = (int)(gps->latitude_i - gps->latitude_i_h << 16);
+							gps->longitude_i_h = (int)(gps->longitude_i >> 16);
+							gps->longitude_i_l = (int)(gps->longitude_i - gps->longitude_i_h << 16);
 						}
 						ret = 1;
 					}
