@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "Eagle_TRT.h"
+#include "gps.h"
 #include "string.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -97,7 +98,10 @@ TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
 TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 TIM_HandleTypeDef a_TimerInstance10 = {.Instance = TIM10};
 
-gps_struct gps_main;
+gps_struct gps;
+char msg_gps[3];
+char buffer_gps[50];
+int msg_arrived = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -314,11 +318,19 @@ int main(void)
 
     second_millis = HAL_GetTick();
 
-    if (gps_init(&huart1, &gps_main) == 0)
+    if (gps_init(&huart1, &gps) == 0)
     {
         //--error--//
     }
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+    if(HAL_UART_Receive_IT(&huart1, (uint8_t *)msg_gps, 1) != HAL_OK){ //request of rx buffer interrupt
+        char txt[100];
+        sprintf(txt,"HAL_UART_Receive_IT FAILED\r\n");
+        HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
+    }
 
+    HAL_UART_Transmit(&huart2, (uint8_t*)"start the while\n\r", strlen("start the while\n\r"), 10);
     while (1)
     {
 
@@ -327,7 +339,7 @@ int main(void)
         /* USER CODE BEGIN 3 */
 
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
-        
+        gps_read(&huart1, &gps);
         /*
         for(int i = 0; i < enc.data_size; i++){
             sprintf(txt, "%d ", enc.Data[i]);
@@ -346,8 +358,8 @@ int main(void)
                 // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
                 // GPS
                 //sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
-                sprintf(txt,"%d\r\n", gps_main.latitude_i);
-                HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+                //sprintf(txt,"%ld\r\n", gps.latitude_i);
+                //HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
                 int sent = send_CAN_data(HAL_GetTick());
                 previous_millis = HAL_GetTick();
@@ -476,12 +488,7 @@ static void MX_ADC1_Init(void)
   */
     hadc1.Instance = ADC1;
     hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
-    hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-    hadc1.Init.ScanConvMode = ENABLE;
-    hadc1.Init.ContinuousConvMode = ENABLE;
-    hadc1.Init.DiscontinuousConvMode = DISABLE;
-    hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+    hadc1.Init.Resolution = ADC_RESOLUTION_12B;int msg_arrived = 0;
     hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
     hadc1.Init.NbrOfConversion = 1;
     hadc1.Init.DMAContinuousRequests = ENABLE;
@@ -910,7 +917,7 @@ static void MX_USART1_UART_Init(void)
 
     /* USER CODE END USART1_Init 1 */
     huart1.Instance = USART1;
-    huart1.Init.BaudRate = 115200;
+    huart1.Init.BaudRate = 9600;
     huart1.Init.WordLength = UART_WORDLENGTH_8B;
     huart1.Init.StopBits = UART_STOPBITS_1;
     huart1.Init.Parity = UART_PARITY_NONE;
@@ -942,7 +949,7 @@ static void MX_USART2_UART_Init(void)
 
     /* USER CODE END USART2_Init 1 */
     huart2.Instance = USART2;
-    huart2.Init.BaudRate = 2250000;
+    huart2.Init.BaudRate = 2000000;
     huart2.Init.WordLength = UART_WORDLENGTH_8B;
     huart2.Init.StopBits = UART_STOPBITS_1;
     huart2.Init.Parity = UART_PARITY_NONE;
@@ -1036,7 +1043,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart1)
     {
-        gps_read_it(huart, &gps_main);
+        buffer_gps[msg_arrived] = msg_gps[0];
+        msg_arrived++;
+        if(msg_arrived == 50){
+            msg_arrived = 0;
+        }
+        //HAL_UART_Transmit(&huart2, (uint8_t*)&buffer_gps[0], 1, 10);
+        HAL_UART_Receive_IT(huart, (uint8_t *)msg_gps, 1); //request of rx buffer interrupt
     }
 }
 
@@ -1044,7 +1057,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart2)
     {
-        print_it(&huart2);
+        //print_it(&huart2);
     }
 }
 
@@ -1325,13 +1338,13 @@ int send_CAN_data(uint32_t millis)
     if (millis % 100 == 0)
     {
         can.dataTx[0] = 0x010;
-        can.dataTx[1] = gps_main.latitude_i_h / 256;
-        can.dataTx[2] = gps_main.latitude_i_h % 256;
-        can.dataTx[3] = gps_main.latitude_i_l / 256;
-        can.dataTx[4] = gps_main.latitude_i_l % 256;
-        can.dataTx[5] = (int)gps_main.latitude_o;
-        can.dataTx[6] = gps_main.speed_i / 256;
-        can.dataTx[7] = gps_main.speed_i % 256;
+        can.dataTx[1] = gps.latitude_i_h / 256;
+        can.dataTx[2] = gps.latitude_i_h % 256;
+        can.dataTx[3] = gps.latitude_i_l / 256;
+        can.dataTx[4] = gps.latitude_i_l % 256;
+        can.dataTx[5] = (int)gps.latitude_o;
+        can.dataTx[6] = gps.speed_i / 256;
+        can.dataTx[7] = gps.speed_i % 256;
         can.id = 0xD0;
         can.size = 8;
         CAN_Send(&can);
@@ -1345,13 +1358,13 @@ int send_CAN_data(uint32_t millis)
     if (millis % 100 == 0)
     {
         can.dataTx[0] = 0x011;
-        can.dataTx[1] = gps_main.longitude_i_h / 256;
-        can.dataTx[2] = gps_main.longitude_i_h % 256;
-        can.dataTx[3] = gps_main.longitude_i_l / 256;
-        can.dataTx[4] = gps_main.longitude_i_l % 256;
-        can.dataTx[5] = (int)gps_main.longitude_o;
-        can.dataTx[6] = gps_main.altitude_i / 256;
-        can.dataTx[7] = gps_main.altitude_i % 256;
+        can.dataTx[1] = gps.longitude_i_h / 256;
+        can.dataTx[2] = gps.longitude_i_h % 256;
+        can.dataTx[3] = gps.longitude_i_l / 256;
+        can.dataTx[4] = gps.longitude_i_l % 256;
+        can.dataTx[5] = (int)gps.longitude_o;
+        can.dataTx[6] = gps.altitude_i / 256;
+        can.dataTx[7] = gps.altitude_i % 256;
         can.id = 0xD0;
         can.size = 8;
         CAN_Send(&can);
@@ -1359,8 +1372,53 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 7;
     }
 
+    //--------------------SEND GPS--------------------//
+    if (millis % 100 == 0)
+    {
+        can.dataTx[0] = 0x012;
+        can.dataTx[1] = gps.hour[0];
+        can.dataTx[2] = gps.hour[1];
+        can.dataTx[3] = gps.min[0];
+        can.dataTx[4] = gps.min[1];
+        can.dataTx[5] = gps.sec[0];
+        can.dataTx[6] = gps.sec[1];
+        can.dataTx[7] = 0;
+        can.id = 0xD0;
+        can.size = 8;
+        CAN_Send(&can);
+        
+        sent_flag = 8;
+    }
+    //--------------------SEND GPS--------------------//
+    if (millis % 100 == 0)
+    {
+        can.dataTx[0] = 0x013;
+        can.dataTx[1] = (uint8_t)gps.true_track_mode / 256;
+        can.dataTx[2] = (uint8_t)gps.true_track_mode % 256;
+        can.dataTx[3] = 0;
+        can.dataTx[4] = 0;
+        can.dataTx[5] = 0;
+        can.dataTx[6] = 0;
+        can.dataTx[7] = 0;
+        can.id = 0xD0;
+        can.size = 8;
+        sent_flag = 9;
+    }
+
 
     return sent_flag;
+}
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+  int errore = HAL_UART_GetError(huart);
+  char txt[100];
+  //sprintf(txt,"CALLBACK ERRORE %d\r\n",errore);
+  //HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
+}
+void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart){
+  int errore = HAL_UART_GetError(huart);
+  char txt[100];
+  sprintf(txt,"CALLBACK ABORT RECIVE %d\r\n",errore);
+  HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
 }
 
 /* USER CODE END 4 */

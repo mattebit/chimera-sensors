@@ -10,33 +10,8 @@
 #include "string.h"
 #include "math.h"
 
-//----------------GPS----------------//
 #ifdef HAL_UART_MODULE_ENABLED
 #include "stm32f4xx_hal_uart.h"
-typedef struct
-{
-	char speed[7];			  //string of speed
-	int speed_i;			  //speed converted into an int
-	char latitude[10];		  //latitude string ddmm.mmmm
-	long int latitude_calib;  //latitude_calibration (initial latitude)
-	char latitude_o[2];		  //latitude orientation_string N=north or S=south
-	long int latitude_i;	  //latitude converted into an long int
-	int latitude_i_h;		  //high latitude (upper than comma)
-	int latitude_i_l;		  //low latitude (lower than comma)
-	char longitude[11];		  //longitude string dddmm.mmmm
-	long int longitude_calib; //longitude_calibration (initial longitude)
-	char longitude_o[2];	  //longitude orientation_string E=east or W=west
-	long int longitude_i;	 //longitude converted into an long int
-	int longitude_i_h;		  //high longitude (upper than comma)
-	int longitude_i_l;		  //low longitude (lower than comma)
-	char altitude[8];		  //altitude string
-	int altitude_i;			  //altitude converted into a string
-	char time[11];			  //time string
-	char fix_status;
-	char string[100];
-} gps_struct;
-int gps_read_it(UART_HandleTypeDef *huart, gps_struct *gps);
-int gps_init(UART_HandleTypeDef *huart, gps_struct *gps);
 ///---queue---///
 typedef struct
 {
