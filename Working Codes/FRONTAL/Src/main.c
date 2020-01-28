@@ -253,12 +253,6 @@ int main(void)
     enc.wheel_rotation = 0;
     enc.Km = 0;
 
-    enc.max_delta_angle = 5;
-    enc.frequency = 0;
-    enc.frequency_timer = &htim7;
-    enc.frequency_timer_Hz = 72000000;
-    HAL_GPIO_WritePin(enc.ClockPinName, enc.ClockPinNumber, GPIO_PIN_SET);
-
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
     //HAL_TIM_Base_Start(&htim4);
@@ -283,8 +277,11 @@ int main(void)
     __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
-    // INIT Encoder
-    enc_calculate_optimal_frequency(&enc);
+    enc.max_delta_angle = 90;
+    enc.frequency_timer = &htim7;
+    enc.frequency_timer_Hz = 72000000;
+    enc.frequency = enc.frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+    HAL_GPIO_WritePin(enc.ClockPinName, enc.ClockPinNumber, GPIO_PIN_SET);
 
     accel.scale = 4;
     gyro.scale = 500;
@@ -324,13 +321,14 @@ int main(void)
     }
     HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
-    if(HAL_UART_Receive_IT(&huart1, (uint8_t *)msg_gps, 1) != HAL_OK){ //request of rx buffer interrupt
+    if (HAL_UART_Receive_IT(&huart1, (uint8_t *)msg_gps, 1) != HAL_OK)
+    { //request of rx buffer interrupt
         char txt[100];
-        sprintf(txt,"HAL_UART_Receive_IT FAILED\r\n");
-        HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
+        sprintf(txt, "HAL_UART_Receive_IT FAILED\r\n");
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
     }
 
-    HAL_UART_Transmit(&huart2, (uint8_t*)"start the while\n\r", strlen("start the while\n\r"), 10);
+    HAL_UART_Transmit(&huart2, (uint8_t *)"start while\n\r", strlen("start while\n\r"), 10);
     while (1)
     {
 
@@ -348,7 +346,6 @@ int main(void)
         sprintf(txt, "\r\n");
         HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
 
-
         // If CAN is free from important messages, send data
         if (command_flag == 0)
         {
@@ -361,7 +358,7 @@ int main(void)
                 //sprintf(txt,"%ld\r\n", gps.latitude_i);
                 //HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
-                int sent = send_CAN_data(HAL_GetTick());
+                send_CAN_data(HAL_GetTick());
                 previous_millis = HAL_GetTick();
                 /*
                 second_millis = HAL_GetTick();
@@ -488,7 +485,12 @@ static void MX_ADC1_Init(void)
   */
     hadc1.Instance = ADC1;
     hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
-    hadc1.Init.Resolution = ADC_RESOLUTION_12B;int msg_arrived = 0;
+    hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+    hadc1.Init.ScanConvMode = ENABLE;
+    hadc1.Init.ContinuousConvMode = ENABLE;
+    hadc1.Init.DiscontinuousConvMode = DISABLE;
+    hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
     hadc1.Init.NbrOfConversion = 1;
     hadc1.Init.DMAContinuousRequests = ENABLE;
@@ -822,9 +824,9 @@ static void MX_TIM7_Init(void)
 
     /* USER CODE END TIM7_Init 1 */
     htim7.Instance = TIM7;
-    htim7.Init.Prescaler = 36;
+    htim7.Init.Prescaler = 900;
     htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim7.Init.Period = 6000;
+    htim7.Init.Period = 1000;
     htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
     {
@@ -859,7 +861,7 @@ static void MX_TIM10_Init(void)
     htim10.Instance = TIM10;
     htim10.Init.Prescaler = 72;
     htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim10.Init.Period = 1000;
+    htim10.Init.Period = 500;
     htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -917,7 +919,7 @@ static void MX_USART1_UART_Init(void)
 
     /* USER CODE END USART1_Init 1 */
     huart1.Instance = USART1;
-    huart1.Init.BaudRate = 9600;
+    huart1.Init.BaudRate = 115200;
     huart1.Init.WordLength = UART_WORDLENGTH_8B;
     huart1.Init.StopBits = UART_STOPBITS_1;
     huart1.Init.Parity = UART_PARITY_NONE;
@@ -949,7 +951,7 @@ static void MX_USART2_UART_Init(void)
 
     /* USER CODE END USART2_Init 1 */
     huart2.Instance = USART2;
-    huart2.Init.BaudRate = 2000000;
+    huart2.Init.BaudRate = 2250000;
     huart2.Init.WordLength = UART_WORDLENGTH_8B;
     huart2.Init.StopBits = UART_STOPBITS_1;
     huart2.Init.Parity = UART_PARITY_NONE;
@@ -1045,7 +1047,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     {
         buffer_gps[msg_arrived] = msg_gps[0];
         msg_arrived++;
-        if(msg_arrived == 50){
+        if (msg_arrived == 50)
+        {
             msg_arrived = 0;
         }
         //HAL_UART_Transmit(&huart2, (uint8_t*)&buffer_gps[0], 1, 10);
@@ -1083,17 +1086,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
             idsave = 0;
         }
     }
-/*
-    if (idsave == 0x181){
-        if (can.dataRx[0] = 0xA8){
-            inverter_rpm = can.dataRx[2] * 256 + can.dataRx[1];
-            //x : 32000 = 100 : 7000
-            inverter_rpm = inverter_rpm * 7000/32767;
-            if (inverter_rpm > 7000){
-                inverter_rpm -= 14000;
-            }
-        }
-    }*/
 
     if (idsave == 0xBB)
     {
@@ -1173,7 +1165,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         {
             // ACCEL
             LSMD9S0_accel_read(&accel);
-
         }
         else if (flag == 2 * multiplier)
         {
@@ -1213,6 +1204,12 @@ int send_CAN_data(uint32_t millis)
     {
         uint16_t speed_kmh = enc.average_speed;
         uint16_t speed_ms = enc.average_speed / 3.6 * 100;
+
+        if (enc.speed_sign == 1)
+            enc.average_speed *= -1;
+
+        sprintf(txt, "%d,%d,%d,%d\r\n", (int)(enc.angle0 * 100), (int)(enc.angle1 * 100), (int)(enc.average_speed * 100), (int)(enc.delta_angle * 100));
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 20);
 
         can.dataTx[0] = 0x06;
         can.dataTx[1] = speed_kmh / 256;
@@ -1368,7 +1365,7 @@ int send_CAN_data(uint32_t millis)
         can.id = 0xD0;
         can.size = 8;
         CAN_Send(&can);
-        
+
         sent_flag = 7;
     }
 
@@ -1386,7 +1383,7 @@ int send_CAN_data(uint32_t millis)
         can.id = 0xD0;
         can.size = 8;
         CAN_Send(&can);
-        
+
         sent_flag = 8;
     }
     //--------------------SEND GPS--------------------//
@@ -1405,20 +1402,15 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 9;
     }
 
-
     return sent_flag;
 }
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
-  int errore = HAL_UART_GetError(huart);
-  char txt[100];
-  //sprintf(txt,"CALLBACK ERRORE %d\r\n",errore);
-  //HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    int errore = HAL_UART_GetError(huart);
 }
-void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart){
-  int errore = HAL_UART_GetError(huart);
-  char txt[100];
-  sprintf(txt,"CALLBACK ABORT RECIVE %d\r\n",errore);
-  HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
+void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart)
+{
+    int errore = HAL_UART_GetError(huart);
 }
 
 /* USER CODE END 4 */

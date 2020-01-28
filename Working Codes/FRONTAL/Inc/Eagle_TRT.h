@@ -57,8 +57,6 @@ typedef struct
 	float max_delta_angle;
 	float frequency;
 	int frequency_timer_Hz;
-	int frequency_timer_prescaler;
-	int frequency_timer_period;
 
 	double angle0; // First angle calculated
 	double angle1; // Second angle calculated
@@ -68,8 +66,6 @@ typedef struct
 	double speed_array[100]; // Array to store lasts speed
 	double average_speed;	// Filtered speed
 	int converted_data;		 // Angle data
-
-	float flake_freq;
 
 	TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
@@ -194,8 +190,8 @@ int CAN_Receive(can_stc *);
 #define PMTK_SET_BAUD_57600 "$PMTK251,57600*2C\r\n"
 #define PMTK_SET_BAUD_9600 "$PMTK251,9600*17"
 #define PMTK_SET_BAUD_115200 "$PMTK251,115200*1F\r\n"
-#define PMKT_SER_BAUD_DEFAULT "$PMTK251,0*28" //It works only if: a.full cold start command issue \
-											  //				     b.enter standby mode
+#define PMKT_SER_BAUD_DEFAULT "$PMTK251,0*28"
+// It works only if: a.full cold start command issue b.enter standby mode
 /*
 	Supported NMEA Sentences
 	0 NMEA_SEN_GLL, // GPGLL interval - Geographic Position - Latitude longitude

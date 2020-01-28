@@ -114,10 +114,10 @@ void send_config(imu_stc *imu, GPIO_TypeDef *pinx, uint16_t pinn, uint8_t *addr,
 	htim2.Instance->CNT = 0;					   //set counter to 0
 	while (htim2.Instance->CNT <= 20)
 	{
-	}										 //delay (must be >5ns)
+	}										  //delay (must be >5ns)
 	HAL_SPI_Transmit(imu->hspi, addr, 1, 10); ///Writing the address
 	HAL_SPI_Transmit(imu->hspi, val, 1, 10);  ///Writing 0b00001111 to enable PowerMode and x,y,z axis
-	htim2.Instance->CNT = 0;				 //set counter to 0
+	htim2.Instance->CNT = 0;				  //set counter to 0
 	while (htim2.Instance->CNT <= 20)
 	{
 	}											 //delay (must be >5ns)
@@ -193,7 +193,7 @@ void LSMD9S0_accel_gyro_init(imu_stc *accel, imu_stc *gyro)
 	}
 
 	HAL_Delay(1);
-/*
+	/*
 	HAL_UART_Transmit(&huart2, (uint8_t *)"<IMU> Initialization -> Done\r\n", strlen("<IMU> Initialization -> Done\r\n"), 10);*/
 }
 
@@ -276,7 +276,7 @@ int LSMD9S0_check(imu_stc *imu)
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
 
 	char txt[100];
-/*
+	/*
 	sprintf(txt, "Gyro, Accel check: %d\t%d\r\n", WHO_AM_I_G_VAL, WHO_AM_I_XM_VAL);
 	HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);*/
 
@@ -749,11 +749,13 @@ void encoder_tim_interrupt(enc_stc *enc)
 	}
 
 	// Cycle between steps
-	if (enc->interrupt_flag >=2){
+	if (enc->interrupt_flag >= 2)
+	{
 		enc->interrupt_flag = 0;
 	}
-	else{
-		enc->interrupt_flag ++;
+	else
+	{
+		enc->interrupt_flag++;
 	}
 	//enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
 }
@@ -779,8 +781,8 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Calculate correct delta angle if near to 0-360
-	if ((enc->angle0 < enc->max_delta_angle * 2 && enc->angle1 > 360 - enc->max_delta_angle * 2) ||
-		(enc->angle1 < enc->max_delta_angle * 2 && enc->angle0 > 360 - enc->max_delta_angle * 2))
+	if ((enc->angle0 < enc->max_delta_angle && enc->angle1 > 360 - enc->max_delta_angle) ||
+		(enc->angle1 < enc->max_delta_angle && enc->angle0 > 360 - enc->max_delta_angle))
 	{
 		if (enc->delta_angle < 0)
 		{
@@ -788,12 +790,16 @@ void get_speed_encoder(enc_stc *enc)
 		}
 		else
 		{
-			enc->delta_angle = 360 - enc->delta_angle;
+			if (enc->delta_angle > 0)
+			{
+				enc->delta_angle = 360 - enc->delta_angle;
+			}
 		}
 	}
 
 	// Calculating rad/s, then m/s, then Km/h
-	speed = (enc->delta_angle/360) * 3.1415 * (enc->wheel_diameter/2);
+	//speed = enc->delta_angle * (3.1415 / 180) * (enc->wheel_diameter / 2);
+	speed = (enc->delta_angle / 360) * (enc->wheel_diameter * 3.1415);
 	speed *= enc->frequency;
 	speed *= 3.6;
 	speed = round((speed * 1000)) / 1000;
@@ -804,12 +810,8 @@ void get_speed_encoder(enc_stc *enc)
 	// If the speed is too low, don't count rotations
 	if (enc->average_speed < -0.5 || enc->average_speed > 0.5)
 	{
-		if ((enc->angle0_prec <= 361 && enc->angle0_prec > 360 - off) && (enc->angle0 >= -1 && enc->angle0 < off))
-		{
-			enc->wheel_rotation++;
-			enc->Km += (3.14 * enc->wheel_diameter);
-		}
-		if ((enc->angle0_prec >= -1 && enc->angle0_prec < off) && (enc->angle0 <= 361 && enc->angle0 > 360 - off))
+		if ((enc->angle0_prec <= 361 && enc->angle0_prec > 360 - off) && (enc->angle0 >= -1 && enc->angle0 < off) ||
+			(enc->angle0_prec >= -1 && enc->angle0_prec < off) && (enc->angle0 <= 361 && enc->angle0 > 360 - off))
 		{
 			enc->wheel_rotation++;
 			enc->Km += (3.14 * enc->wheel_diameter);
@@ -817,13 +819,13 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Remove noise mediating previous values with actual
-	shift_array(enc->speed_array, 10, speed);
-	enc->average_speed = dynamic_average(enc->speed_array, 10);
+	shift_array(enc->speed_array, 4, speed);
+	enc->average_speed = dynamic_average(enc->speed_array, 4);
 
 	// Calculating the angle sample frequency
-	enc_calculate_optimal_frequency(enc);
+	//enc_calculate_optimal_frequency(enc);
 }
-
+/*
 // Calculate anche sample frequency
 // The delta angle changes depending on the current speed
 // Constrain the delta angle between a defined range (max_delta_angle)
@@ -858,19 +860,15 @@ void enc_calculate_optimal_frequency(enc_stc *enc)
 int ReinitTIM7(float frequency, enc_stc *enc)
 {
 
-	/* USER CODE BEGIN TIM7_Init 0 */
 	int error_flag = 0;
 
-	/* USER CODE END TIM7_Init 0 */
 
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-	/* USER CODE BEGIN TIM7_Init 1 */
 
 	enc->frequency_timer_prescaler = sqrt(enc->frequency_timer_Hz / frequency);
 	enc->frequency_timer_period = enc->frequency_timer_prescaler;
 
-	/* USER CODE END TIM7_Init 1 */
 	enc->frequency_timer->Instance = TIM7;
 	enc->frequency_timer->Init.Prescaler = enc->frequency_timer_prescaler;
 	enc->frequency_timer->Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -887,10 +885,8 @@ int ReinitTIM7(float frequency, enc_stc *enc)
 	{
 		error_flag = 2;
 	}
-	/* USER CODE BEGIN TIM7_Init 2 */
 	return error_flag;
-	/* USER CODE END TIM7_Init 2 */
-}
+}*/
 
 pot_stc pot_1;
 pot_stc pot_2;
