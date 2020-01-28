@@ -1208,8 +1208,8 @@ int send_CAN_data(uint32_t millis)
         if (enc.speed_sign == 1)
             enc.average_speed *= -1;
 
-        sprintf(txt, "%d,%d,%d,%d\r\n", (int)(enc.angle0 * 100), (int)(enc.angle1 * 100), (int)(enc.average_speed * 100), (int)(enc.delta_angle * 100));
-        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 20);
+        // sprintf(txt, "%d,%d,%d,%d\r\n", (int)(enc.angle0 * 100), (int)(enc.angle1 * 100), (int)(enc.average_speed * 100), (int)(enc.delta_angle * 100));
+        // HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 20);
 
         can.dataTx[0] = 0x06;
         can.dataTx[1] = speed_kmh / 256;
