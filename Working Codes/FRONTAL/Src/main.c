@@ -1369,6 +1369,8 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 7;
     }
 
+    millis += 2;
+
     //--------------------SEND GPS--------------------//
     if (millis % 100 == 0)
     {
@@ -1386,6 +1388,9 @@ int send_CAN_data(uint32_t millis)
 
         sent_flag = 8;
     }
+
+    millis += 2;
+
     //--------------------SEND GPS--------------------//
     if (millis % 100 == 0)
     {
