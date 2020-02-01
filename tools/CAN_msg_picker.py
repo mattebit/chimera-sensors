@@ -30,10 +30,14 @@ def parse_message(msg):
 
 def pick_message(msg):
     if msg[0] == "208":
-        if msg[1] == "18":
-            for byte in msg[2:]:
-                print(str(chr(int(byte))),end=" ")
-            print("")
+        if msg[1] == "16":
+            speed = int(msg[7])*256 + int(msg[8])
+            speed /= 100
+            print("speed {}".format(speed))
+        # if msg[1] == "18":
+        #     for byte in msg[2:]:
+        #         print(str(chr(int(byte))),end=" ")
+        #     print("")
 
 if __name__ == "__main__":
     if find_Stm() != 0:

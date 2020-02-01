@@ -799,7 +799,7 @@ void get_speed_encoder(enc_stc *enc)
 
 	// Calculating rad/s, then m/s, then Km/h
 	//speed = enc->delta_angle * (3.1415 / 180) * (enc->wheel_diameter / 2);
-	speed = (enc->delta_angle / 360) * (enc->wheel_diameter * 3.1415);
+	speed = (enc->delta_angle / 360) * ((enc->wheel_diameter / 2) * 3.1415);
 	speed *= enc->frequency;
 	speed *= 3.6;
 	speed = round((speed * 1000)) / 1000;
