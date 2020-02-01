@@ -5,8 +5,16 @@ from termcolor2 import c
 import serial.tools.list_ports as lst
 import time
 import curses
+import math
 
 ser = serial.Serial()
+
+logFile = open('/home/luca/Desktop/logFile_2.txt', 'w')
+
+speed = 0
+longitude = 0
+latitude = 0
+enc_speed = 0
 
 def find_Stm():
     info = lst.comports()
@@ -29,15 +37,39 @@ def parse_message(msg):
     return msg
 
 def pick_message(msg):
+    global speed, longitude, latitude, enc_speed
     if msg[0] == "208":
         if msg[1] == "16":
-            speed = int(msg[7])*256 + int(msg[8])
+
+            buff = []
+            for byte in msg:
+                buff.append(int(byte))
+            msg=buff
+
+            longitude = msg[2] *256 + msg[3]
+            longitude *= math.pow(2,16)
+            longitude += msg[4] * 256 + msg[5]
+            speed = msg[7]*256 + msg[8]
             speed /= 100
-            print("speed {}".format(speed))
-        # if msg[1] == "18":
-        #     for byte in msg[2:]:
-        #         print(str(chr(int(byte))),end=" ")
-        #     print("")
+
+        if msg[1] == "17":
+            buff = []
+            for byte in msg:
+                buff.append(int(byte))
+            msg=buff
+            latitude = msg[2] *256 + msg[3]
+            latitude *= math.pow(2,16)
+            latitude += msg[4] * 256 + msg[5]
+
+        if msg[1] == '6':
+            buff = []
+            for byte in msg:
+                buff.append(int(byte))
+            msg=buff
+            enc_speed = msg[2]*256 + msg[3]
+        print("enc_speed: {} speed: {}, longitude: {}, latitude: {}\r\n".format(enc_speed, speed, longitude, latitude))
+        logFile.write("enc_speed: {} speed: {}, longitude: {}, latitude: {}\r\n".format(enc_speed, speed, longitude, latitude))
+        
 
 if __name__ == "__main__":
     if find_Stm() != 0:
@@ -48,9 +80,13 @@ if __name__ == "__main__":
             exit(0)
 
     while True:
-        msg = ser.readline()
-        msg = parse_message(msg)
-
-        pick_message(msg)
+        try:
+            msg = ser.readline()
+            msg = parse_message(msg)
+            #print(msg)
+            pick_message(msg)
+        except KeyboardInterrupt:
+            logFile.close()
+            exit(0)
 
 ser.close()

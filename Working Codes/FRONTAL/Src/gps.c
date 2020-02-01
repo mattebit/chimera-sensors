@@ -210,13 +210,15 @@ int gps_read(UART_HandleTypeDef *huart, gps_struct *gps)
                             else
                             {
                                 char txt[100];
-                                gps->latitude_i = (long int)(atof(gps->latitude) * 100);
+                                gps->latitude_i = (long int)(atof(gps->latitude) * 1000);
+                                gps->longitude_i = (long int)(atof(gps->longitude) * 1000);
+                                
                                 /*sprintf(txt,"latitude %ld %c\r\n", gps->latitude_i, gps->latitude_o[0]);
                                 HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
                                 gps->longitude_i = (long int)(atof(gps->longitude) * 100);
                                 sprintf(txt,"longitude %ld %c\r\n",gps->longitude_i, gps->longitude_o[0]);
-                                HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);
-                                sprintf(txt,"time %c%c:%c%c:%c%c\r\n", gps->hour[0], gps->hour[1], gps->min[0], gps->min[1], gps->sec[0], gps->sec[1]);
+                                HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);/*
+                                /*sprintf(txt,"time %c%c:%c%c:%c%c\r\n", gps->hour[0], gps->hour[1], gps->min[0], gps->min[1], gps->sec[0], gps->sec[1]);
                                 HAL_UART_Transmit(&huart2,(uint8_t*)txt,strlen(txt),10);*/
                                 gps->altitude_i = (int)(atof(gps->altitude) * 10);
                                 gps->latitude_i_h = (int)(gps->latitude_i >> 16);
