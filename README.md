@@ -1,16 +1,13 @@
-# Sensors of Fenice 
-Repository del team Sensori con raccolti i codici delle STM
+# Sensors of Chimera
+All the work of Sensor team can be found heare.
 
 ## 1 Directories
 
 ### Working Codes
 Use this directory to share all the projects that are working and are ready to be used in the vehicle.
 
-### Test Codes
-Use this directory to share projects  
-
-### Library
-Library folder
+### Tools
+All the support tools to debug sensors, CAN bus and all the stuff to be debugged.
 
 ## 2 Git Giude
 
