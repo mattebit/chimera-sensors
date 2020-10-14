@@ -66,20 +66,21 @@ if __name__ == "__main__":
     
     analisys_duration = 1
 
-    for i in range(0, 200):
+    print("Start analizing CAN messages")
+    while True:
         message_list = []
-        print("Start analizing CAN messages")
         start_time = time.time()
         while time.time() - start_time < analisys_duration:
             msg = str(ser.readline(), 'ascii')
             msg = parse_message(msg)
             message_list = message_counter(message_list, msg)
 
+        print("\n" * 100)
         print("Enlapsed " + str(analisys_duration) + " seconds\n\n")
 
         total, list_percent, list_freq = analize_data(analisys_duration, message_list)
 
-        total_lines = 50
+        total_lines = 80
         span = 5
         print("=" * total_lines)
         print("-" * int((total_lines-14)/2) + "RETRIEVED DATA" + "-" * int((total_lines-14)/2))
@@ -124,6 +125,7 @@ if __name__ == "__main__":
         print("id Percentual in total messages")
 
         print("\tID\tPERCENT (%) \t\tFREQUENCY (Hz)(n°msg/s)")
+        list_percent = sorted_by_second = sorted(list_percent, key=lambda tup: tup[0])
         for i in range(len(list_percent)):
             print ("\t" + str(list_percent[i][0]) + "\t" + str(round(list_percent[i][1], 4)) + "\t\t\t" + str(list_freq[i]))
 

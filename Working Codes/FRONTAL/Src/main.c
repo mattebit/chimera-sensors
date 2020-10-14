@@ -145,7 +145,7 @@ int encoder_counter;
 int previous_millis;
 int second_millis;
 
-int count_message;
+int count_message = 0;
 
 /* USER CODE END 0 */
 
@@ -297,12 +297,15 @@ int main(void)
 
     HAL_Delay(1);
 
+    // Enabling auto retransmit of speed calculated from inverters
     can.dataTx[0] = 0x3D;
     can.dataTx[1] = 0xA8;
     can.dataTx[2] = 0x64;
     can.id = 0x201;
     can.size = 3;
     CAN_Send(&can);
+
+    HAL_Delay(10);
 
     can.dataTx[0] = 0x3D;
     can.dataTx[1] = 0xA8;
@@ -311,6 +314,25 @@ int main(void)
     can.size = 3;
     CAN_Send(&can);
 
+    HAL_Delay(10);
+    /*
+    // Enabling auto retransmit of torque calculated from inverters
+    can.dataTx[0] = 0x3D;
+    can.dataTx[1] = 0xA0;
+    can.dataTx[2] = 0x64;
+    can.id = 0x201;
+    can.size = 3;
+    CAN_Send(&can);
+
+    HAL_Delay(10);
+
+    can.dataTx[0] = 0x3D;
+    can.dataTx[1] = 0xA0;
+    can.dataTx[2] = 0x64;
+    can.id = 0x202;
+    can.size = 3;
+    CAN_Send(&can);
+    */
     HAL_Delay(1);
 
     second_millis = HAL_GetTick();
@@ -374,7 +396,7 @@ int main(void)
         }
         else
         {
-            HAL_Delay(1);
+            //HAL_Delay(1);
             command_flag = 0;
         }
     }
@@ -859,9 +881,9 @@ static void MX_TIM10_Init(void)
 
     /* USER CODE END TIM10_Init 1 */
     htim10.Instance = TIM10;
-    htim10.Init.Prescaler = 72;
+    htim10.Init.Prescaler = 720;
     htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim10.Init.Period = 500;
+    htim10.Init.Period = 300;
     htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -1074,7 +1096,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     {
         if (can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B)
         {
-            command_flag = 1;
+            //command_flag = 1;
             idsave = 0;
         }
     }
@@ -1082,7 +1104,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     {
         if (can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8)
         {
-            command_flag = 1;
+            //command_flag = 1;
             idsave = 0;
         }
     }
@@ -1122,7 +1144,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
             can.dataTx[3] = 0;
             can.dataTx[4] = 0;
             can.dataTx[5] = 0;
-            ;
             can.dataTx[6] = 0;
             can.dataTx[7] = 0;
             can.id = 0xBC;
@@ -1197,10 +1218,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 int send_CAN_data(uint32_t millis)
 {
 
+    int send_time = 100;
     int sent_flag = 0;
+    int increment_value = 4;
 
     //-------------------SEND Encoder-------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         uint16_t speed_kmh = enc.average_speed;
         uint16_t speed_ms = enc.average_speed / 3.6 * 100;
@@ -1223,16 +1246,18 @@ int send_CAN_data(uint32_t millis)
         can.size = 8;
         CAN_Send(&can);
 
+        count_message = 0;
+
         sent_flag = 1;
 
         // sprintf(txt, "%d\t%d\r\n", (int)(speed_Send), (int)(enc.Km));
         // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //-------------SEND KM & WHEEL ROTAIONS-------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
 
         uint16_t Km = (enc.Km);
@@ -1253,10 +1278,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 2;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND Accel--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
 
         //removing negative values
@@ -1279,10 +1304,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 3;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //---------------------SEND Gyro---------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         uint16_t val_g_x = (gyro.x + gyro.scale) * 10;
         uint16_t val_g_y = (gyro.y + gyro.scale) * 10;
@@ -1306,10 +1331,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 4;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND Steer--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         if (calibration_flag == 0)
         {
@@ -1329,10 +1354,10 @@ int send_CAN_data(uint32_t millis)
         }
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND GPS--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         can.dataTx[0] = 0x010;
         can.dataTx[1] = gps.latitude_i_h / 256;
@@ -1349,10 +1374,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 6;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND GPS--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         can.dataTx[0] = 0x011;
         can.dataTx[1] = gps.longitude_i_h / 256;
@@ -1369,10 +1394,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 7;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND GPS--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         can.dataTx[0] = 0x012;
         can.dataTx[1] = gps.hour[0];
@@ -1389,10 +1414,10 @@ int send_CAN_data(uint32_t millis)
         sent_flag = 8;
     }
 
-    millis += 2;
+    millis += increment_value;
 
     //--------------------SEND GPS--------------------//
-    if (millis % 100 == 0)
+    if (millis % send_time == 0)
     {
         can.dataTx[0] = 0x013;
         can.dataTx[1] = (uint8_t)gps.true_track_mode / 256;
