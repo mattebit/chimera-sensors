@@ -303,12 +303,17 @@ int main(void)
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-
+	uint32_t previous_millis = 0;
 	while (1)
 	{
-		//checkTimeStamp(&data);
-		data.errors = 0;
-		data.warningsB1 = 0;
+		if (previous_millis != HAL_GetTick())
+		{
+			if (HAL_GetTick() % SHORT_DELTA == 0)
+			{
+				checkTimeStamp(&data);
+			}
+			previous_millis = HAL_GetTick();
+		}
 		STATO = run_state(STATO, &data);
 
 		if (HAL_GetTick() % 10 > 0 && data.writeInCan == false)
@@ -599,19 +604,12 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 	 * be introduced during the processing of the FIFO in the states.
 	 * After all the CounterUp is incremented to point out a new msg is arrived.
 	 * Than the operation mod is done so that prevents to make counter overflow */
+
+	bool insert_in_fifo = true;
 	int idsave;
 	uint8_t RxData[MSG_LENGHT];
 
 	idsave = CAN_Receive(RxData, MSG_LENGHT);
-
-	data.fifoData[data.dataCounterUp].idsave = idsave;
-	for (int i = 0; i < MSG_LENGHT; i++)
-	{
-		data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
-	}
-
-	data.dataCounterUp += 1;
-	data.dataCounterUp = data.dataCounterUp % NUM_DATA;
 
 	switch (idsave)
 	{
@@ -641,10 +639,12 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 	case ID_FRONT:
 		data.frontalPresence = true;
 		data.frontalTimeStamp = HAL_GetTick();
+		insert_in_fifo = false;
 		break;
 	case ID_CENTER:
 		data.centralPresence = true;
 		data.centralTimeStamp = HAL_GetTick();
+		insert_in_fifo = false;
 		break;
 	case ID_REQ_INV_SX:
 		data.invSxPresence = true;
@@ -667,9 +667,21 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 		break;
 	}
 
-	if (data.dataCounterUp == data.dataCounterDown)
+	if (insert_in_fifo)
 	{
-		shutdownErrors(&data, 0x23);
+		data.fifoData[data.dataCounterUp].idsave = idsave;
+		for (int i = 0; i < MSG_LENGHT; i++)
+		{
+			data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
+		}
+
+		data.dataCounterUp += 1;
+		data.dataCounterUp = data.dataCounterUp % NUM_DATA;
+
+		if (data.dataCounterUp == data.dataCounterDown)
+		{
+			shutdownErrors(&data, 0x23);
+		}
 	}
 }
 
@@ -685,19 +697,12 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 	 * be introduced during the processing of the FIFO in the states.
 	 * After all the CounterUp is incremented to point out a new msg is arrived.
 	 * Than the operation mod is done so that prevents to make counter overflow */
+
+	bool insert_in_fifo = true;
 	int idsave;
 	uint8_t RxData[MSG_LENGHT];
 
 	idsave = CAN_Receive(RxData, MSG_LENGHT);
-
-	data.fifoData[data.dataCounterUp].idsave = idsave;
-	for (int i = 0; i < MSG_LENGHT; i++)
-	{
-		data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
-	}
-
-	data.dataCounterUp += 1;
-	data.dataCounterUp = data.dataCounterUp % NUM_DATA;
 
 	switch (idsave)
 	{
@@ -721,10 +726,12 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 	case ID_FRONT:
 		data.frontalPresence = true;
 		data.frontalTimeStamp = HAL_GetTick();
+		insert_in_fifo = false;
 		break;
 	case ID_CENTER:
 		data.centralPresence = true;
 		data.centralTimeStamp = HAL_GetTick();
+		insert_in_fifo = false;
 		break;
 	case ID_REQ_INV_SX:
 		data.invSxPresence = true;
@@ -747,9 +754,22 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 		break;
 	}
 
-	if (data.dataCounterUp == data.dataCounterDown)
+	if (insert_in_fifo)
 	{
-		shutdownErrors(&data, 0x23);
+
+		data.fifoData[data.dataCounterUp].idsave = idsave;
+		for (int i = 0; i < MSG_LENGHT; i++)
+		{
+			data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
+		}
+
+		data.dataCounterUp += 1;
+		data.dataCounterUp = data.dataCounterUp % NUM_DATA;
+
+		if (data.dataCounterUp == data.dataCounterDown)
+		{
+			shutdownErrors(&data, 0x23);
+		}
 	}
 }
 
@@ -1692,14 +1712,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Steering Wheel Timer */
 	if (data->steeringPresence == true)
 	{
-		if (data->actualTime > data->steeringTimeStamp)
-		{
-			if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
-			{
-				data->steeringPresence = false;
-			}
-		}
-		else if (TIMER_PERIOD - (data->steeringTimeStamp - data->actualTime) > LONG_DELTA)
+		if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
 		{
 			data->steeringPresence = false;
 		}
@@ -1708,16 +1721,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Pedals Timer */
 	if (data->pedalsPresence == true)
 	{
-		if (data->actualTime > data->pedalsTimeStamp)
-		{
-			if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
-			{
-				data->pedalsPresence = false;
-				data->errors += 8;
-				data->warningsB1 += 192;
-			}
-		}
-		else if (TIMER_PERIOD - (data->pedalsTimeStamp - data->actualTime) > SHORT_DELTA)
+		if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
 		{
 			data->pedalsPresence = false;
 			data->errors += 8;
@@ -1733,16 +1737,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Frontal Timer */
 	if (data->frontalPresence == true)
 	{
-		if (data->actualTime > data->frontalTimeStamp)
-		{
-			if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
-			{
-				data->frontalPresence = false;
-				data->errors += 32;
-				data->warningsB1 += 60;
-			}
-		}
-		else if (TIMER_PERIOD - (data->frontalTimeStamp - data->actualTime) > SHORT_DELTA)
+		if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
 		{
 			data->frontalPresence = false;
 			data->errors += 32;
@@ -1758,16 +1753,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Central Timer */
 	if (data->centralPresence == true)
 	{
-		if (data->actualTime > data->centralTimeStamp)
-		{
-			if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
-			{
-				data->centralPresence = false;
-				data->errors += 16;
-				data->warningsB1 += 3;
-			}
-		}
-		else if (TIMER_PERIOD - (data->centralTimeStamp - data->actualTime) > SHORT_DELTA)
+		if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
 		{
 			data->centralPresence = false;
 			data->errors += 16;
@@ -1783,15 +1769,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* BmsLv Timer */
 	if (data->bmsLvPresence == true)
 	{
-		if (data->actualTime > data->bmsLvTimeStamp)
-		{
-			if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
-			{
-				data->bmsLvPresence = false;
-				data->errors += 2;
-			}
-		}
-		else if (TIMER_PERIOD - (data->bmsLvTimeStamp - data->actualTime) > LONG_DELTA)
+		if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
 		{
 			data->bmsLvPresence = false;
 			data->errors += 2;
@@ -1805,15 +1783,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* BmsHv Timer */
 	if (data->bmsHvPresence == true)
 	{
-		if (data->actualTime > data->bmsHvTimeStamp)
-		{
-			if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
-			{
-				data->bmsHvPresence = false;
-				data->errors += 1;
-			}
-		}
-		else if (TIMER_PERIOD - (data->bmsHvTimeStamp - data->actualTime) > LONG_DELTA)
+		if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
 		{
 			data->bmsHvPresence = false;
 			data->errors += 1;
@@ -1828,15 +1798,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Inverter Dx Timer */
 	if (data->invDxPresence == true)
 	{
-		if (data->actualTime > data->invDxTimeStamp)
-		{
-			if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
-			{
-				data->invDxPresence = false;
-				data->errors += 128;
-			}
-		}
-		else if (TIMER_PERIOD - (data->invDxTimeStamp - data->actualTime) > SHORT_DELTA)
+		if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
 		{
 			data->invDxPresence = false;
 			data->errors += 128;
@@ -1850,15 +1812,7 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Inverter Sx Timer */
 	if (data->invSxPresence == true)
 	{
-		if (data->actualTime > data->invSxTimeStamp)
-		{
-			if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
-			{
-				data->invSxPresence = false;
-				data->errors += 64;
-			}
-		}
-		else if (TIMER_PERIOD - (data->invSxTimeStamp - data->actualTime) > SHORT_DELTA)
+		if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
 		{
 			data->invSxPresence = false;
 			data->errors += 64;

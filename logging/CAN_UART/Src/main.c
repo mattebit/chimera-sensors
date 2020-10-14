@@ -202,8 +202,13 @@ int main(void)
     if (flag_rx == 1)
     {
       flag_rx = 0;
+      /*
       HAL_UART_Transmit(&huart2, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
       HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 5);
+
+      HAL_Delay(1);
+
+      */
 
       HAL_UART_Transmit(&huart3, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
       HAL_UART_Transmit(&huart3, (uint8_t *)"\r\n", 2, 5);

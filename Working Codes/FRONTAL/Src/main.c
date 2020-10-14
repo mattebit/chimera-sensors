@@ -1218,7 +1218,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 int send_CAN_data(uint32_t millis)
 {
 
-    int send_time = 100;
+    int send_time = 20;
     int sent_flag = 0;
     int increment_value = 4;
 
