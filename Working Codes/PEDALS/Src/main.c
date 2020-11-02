@@ -125,28 +125,33 @@ static void MX_NVIC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	pot_1.val = ADC_buffer[0];
-	pot_2.val = ADC_buffer[1];
-	pot_3.val = ADC_buffer[2];
-	stampa ++;
+  pot_1.val = ADC_buffer[0];
+  pot_2.val = ADC_buffer[1];
+  pot_3.val = ADC_buffer[2];
+  stampa++;
 }
-void print_Max_Min(){
-	if(fake_min0 <= pot_1.val){
-		fake_min0 = pot_1.val;
-	}
-	if(fake_max0 >= pot_1.val){
-		fake_max0 = pot_1.val;
-	}
-	if(fake_min1 >= pot_2.val){
-		fake_min1 = pot_2.val;
-	}
-	if(fake_max1 <= pot_2.val){
-		fake_max1 = pot_2.val;
-	}
-	sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val);
-	HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+void print_Max_Min()
+{
+  if (fake_min0 <= pot_1.val)
+  {
+    fake_min0 = pot_1.val;
+  }
+  if (fake_max0 >= pot_1.val)
+  {
+    fake_max0 = pot_1.val;
+  }
+  if (fake_min1 >= pot_2.val)
+  {
+    fake_min1 = pot_2.val;
+  }
+  if (fake_max1 <= pot_2.val)
+  {
+    fake_max1 = pot_2.val;
+  }
+  sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val);
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
 }
 
 /* USER CODE END 0 */
@@ -158,26 +163,25 @@ void print_Max_Min(){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	pot_1.min = 4001;
-	pot_1.max = 3872;	//released
-	pot_1.range = abs(pot_1.max - pot_1.min);
-	pot_2.min = 2614;
-	pot_2.max = 2730; //released
-	pot_2.range = abs(pot_2.max - pot_2.min);
-	check = 0;
-	fake_i = 0;
+  pot_1.min = 4001;
+  pot_1.max = 3872; //released
+  pot_1.range = abs(pot_1.max - pot_1.min);
+  pot_2.min = 2614;
+  pot_2.max = 2730; //released
+  pot_2.range = abs(pot_2.max - pot_2.min);
+  check = 0;
+  fake_i = 0;
 
-	val[1] = 0;
+  val[1] = 0;
 
-	Error = 0;
+  Error = 0;
 
-	CheckControl[0] = 0;
-	CheckControl[1] = 0;
-	CheckControl[2] = 0;
-	CheckControl[3] = 0;
+  CheckControl[0] = 0;
+  CheckControl[1] = 0;
+  CheckControl[2] = 0;
+  CheckControl[3] = 0;
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -217,7 +221,7 @@ int main(void)
   sFilter.FilterMaskIdLow = 0;
   sFilter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
   sFilter.FilterBank = 0;
-  sFilter.FilterScale  = CAN_FILTERSCALE_16BIT;
+  sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
   sFilter.FilterActivation = ENABLE;
   HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
@@ -247,7 +251,7 @@ int main(void)
   steer_wheel_prescaler /= 20;
   steer_wheel_prescaler += 2;
 
-  HAL_UART_Transmit(&huart2, (uint8_t*)"vivo\r\n", strlen("vivo\r\n"), 10);
+  HAL_UART_Transmit(&huart2, (uint8_t *)"vivo\r\n", strlen("vivo\r\n"), 10);
 
   /* USER CODE END 2 */
 
@@ -259,36 +263,41 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint8_t CanSendMSG[8];
-	  uint8_t RxData[8];
-	  //SCS = 0;
-	  SCS_Send = 0;
-	  SCS_Send_real = 0;
+    uint8_t CanSendMSG[8];
+    uint8_t RxData[8];
+    //SCS = 0;
+    SCS_Send = 0;
+    SCS_Send_real = 0;
 
-	  ///CALCULATING APPS% GAIN///
-	  HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
+    ///CALCULATING APPS% GAIN///
+    HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
 
-	  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET){
-		  pc6 = 100;
-	  }
-	  else{
-		  pc6 = 0;
-	  }
+    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET)
+    {
+      pc6 = 100;
+    }
+    else
+    {
+      pc6 = 0;
+    }
 
-	  // If CAN is free from important messages, send data
-	  if(command_flag == 0){
-		if (previous_millis != HAL_GetTick()){
-			send_CAN_data(HAL_GetTick());
-			previous_millis = HAL_GetTick();
-		}
-	  }
-	  else{
-		HAL_Delay(1);
-		command_flag = 0;
-	  }
+    // If CAN is free from important messages, send data
+    if (command_flag == 0)
+    {
+      if (previous_millis != HAL_GetTick())
+      {
+        send_CAN_data(HAL_GetTick());
+        previous_millis = HAL_GetTick();
+      }
+    }
+    else
+    {
+      HAL_Delay(1);
+      command_flag = 0;
+    }
 
-	  //print_Max_Min();
-/*
+    //print_Max_Min();
+    /*
 	  if(command_flag == 1){
 		  HAL_TIM_Base_Stop_IT(&htim2);
 		  HAL_Delay(500);
@@ -298,20 +307,20 @@ int main(void)
 		  command_flag = 0;
 	  }*/
 
+    ///LED STRIP BRAKE LIGHT CODE///
+    if (pc6 == GPIO_PIN_SET)
+    {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
+    }
+    else if (pc6 == GPIO_PIN_RESET)
+    {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
+    }
 
+    calc_pot_value(&pot_1);
+    calc_pot_value(&pot_2);
 
-	  ///LED STRIP BRAKE LIGHT CODE///
-	  if (pc6 == GPIO_PIN_SET){
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
-	  }
-	  else if (pc6 == GPIO_PIN_RESET){
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
-	  }
-
-	  calc_pot_value(&pot_1);
-	  calc_pot_value(&pot_2);
-
-	  /*if(pot_1.val < 300 || pot_2.val < 300){
+    /*if(pot_1.val < 300 || pot_2.val < 300){
 		  pot_1.val = 0;
 		  pot_2.val = 0;
 		  //pot_1.val_100 = 0;
@@ -325,28 +334,28 @@ int main(void)
 		  SCS_Send = 0;
 	  }*/
 
-	  //print_Max_Min();
+    //print_Max_Min();
 
-	  if(implausibility_check(&pot_1, &pot_2) == 1){
-		  //pot_1.val_100 = 0;
-		  //pot_2.val_100 = 0;
-		  SCS_Send = 1;
-	  }
+    if (implausibility_check(&pot_1, &pot_2) == 1)
+    {
+      //pot_1.val_100 = 0;
+      //pot_2.val_100 = 0;
+      SCS_Send = 1;
+    }
 
-	  /*if (SCS != 0 || SCS1 != 0){
+    /*if (SCS != 0 || SCS1 != 0){
 		  pot_1.val_100 = 0;
 		  pot_2.val_100 = 0;
 		  val2_100 = GPIO_PIN_RESET;
 		  SCS_Send = 1;
 	  }*/
 
-	  /*sprintf(txt, "val0: %d , val1: %d , val0_100: %d, val1_100: %d, SCS: %d, SCS1: %d, SCS_send: %d \r\n",
+    /*sprintf(txt, "val0: %d , val1: %d , val0_100: %d, val1_100: %d, SCS: %d, SCS1: %d, SCS_send: %d \r\n",
 			  pot_1.val, pot_2.val, pot_1.val_100, 100 - pot_2.val_100, SCS, SCS1, SCS_Send);
 	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);*/
 
-
-	  //sprintf(txt,"adc1: %d, adc2: %d, adc3: %d\r\n",(int)ADC_buffer[0],(int)ADC_buffer[1],(int)ADC_buffer[2]);
-	  //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+    //sprintf(txt,"adc1: %d, adc2: %d, adc3: %d\r\n",(int)ADC_buffer[0],(int)ADC_buffer[1],(int)ADC_buffer[2]);
+    //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
   }
 
   /* USER CODE END 3 */
@@ -382,8 +391,7 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -490,7 +498,6 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
@@ -527,7 +534,6 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
@@ -572,7 +578,6 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
 }
 
 /**
@@ -617,7 +622,6 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
 }
 
 /**
@@ -662,7 +666,6 @@ static void MX_TIM4_Init(void)
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
-
 }
 
 /**
@@ -700,7 +703,6 @@ static void MX_TIM7_Init(void)
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
-
 }
 
 /**
@@ -733,13 +735,12 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /** 
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -749,7 +750,6 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
 }
 
 /**
@@ -808,16 +808,16 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
 
 /* USER CODE BEGIN 4 */
 
-void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
-	///CALIBRATION CODE///
-		  int idsave = CAN_Receive(&can);
-		  uint8_t CanSendMSG[8];
-/*
+void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
+{
+  ///CALIBRATION CODE///
+  int idsave = CAN_Receive(&can);
+  uint8_t CanSendMSG[8];
+  /*
 		  if(idsave == 0x55 || idsave == 0x201){
 			  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
 				  command_flag = 1;
@@ -831,56 +831,62 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan){
 			  }
 		  }*/
 
-		  if (idsave == 0xBB){
-			//  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
-			  //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 0)){
-				  set_max(&pot_1);
-				  set_min(&pot_2);
-				  //CheckControl[0] = 1;
-				  can.dataTx[0] = 0;
-				  can.dataTx[1] = 0;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
-				  check = 1;
-			  }
-			  if ((can.dataRx[0] == 0) && (can.dataRx[1] == 1)){
-				  set_min(&pot_1);
-				  set_max(&pot_2);
-				  //CheckControl[1] = 1;
-				  can.dataTx[0] = 0;
-				  can.dataTx[1] = 1;
-				  can.dataTx[2] = 0;
-				  can.dataTx[3] = 0;
-				  can.dataTx[4] = 0;
-				  can.dataTx[5] = 0;
-				  can.dataTx[6] = 0;
-				  can.dataTx[7] = 0;
-				  can.id = 0xBC;
-				  can.size = 8;
-				  CAN_Send(&can);
-				  check = 0;
-			  }
-			  //val0rang = abs(valMax0 - valMin0);
-			  //val1rang = abs(valMax1 - valMin1);
-			  pot_1.range = abs(pot_1.max - pot_1.min);
-			  pot_2.range = abs(pot_2.max - pot_2.min);
-		  }
-		  if(idsave==195 && can.dataRx[0]==0){
-			  multiplier = can.dataRx[1] * 256 + can.dataRx[2];
-		  }
+  if (idsave == 0xBB)
+  {
+    //  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
+    //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
+    if ((can.dataRx[0] == 0) && (can.dataRx[1] == 0))
+    {
+      set_max(&pot_1);
+      set_min(&pot_2);
+      //CheckControl[0] = 1;
+      can.dataTx[0] = 0;
+      can.dataTx[1] = 0;
+      can.dataTx[2] = 0;
+      can.dataTx[3] = 0;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = 0;
+      can.dataTx[7] = 0;
+      can.id = 0xBC;
+      can.size = 8;
+      CAN_Send(&can);
+      check = 1;
+    }
+    if ((can.dataRx[0] == 0) && (can.dataRx[1] == 1))
+    {
+      set_min(&pot_1);
+      set_max(&pot_2);
+      //CheckControl[1] = 1;
+      can.dataTx[0] = 0;
+      can.dataTx[1] = 1;
+      can.dataTx[2] = 0;
+      can.dataTx[3] = 0;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = 0;
+      can.dataTx[7] = 0;
+      can.id = 0xBC;
+      can.size = 8;
+      CAN_Send(&can);
+      check = 0;
+    }
+    //val0rang = abs(valMax0 - valMin0);
+    //val1rang = abs(valMax1 - valMin1);
+    pot_1.range = abs(pot_1.max - pot_1.min);
+    pot_2.range = abs(pot_2.max - pot_2.min);
+  }
+  if (idsave == 195 && can.dataRx[0] == 0)
+  {
+    multiplier = can.dataRx[1] * 256 + can.dataRx[2];
+  }
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
 
-	if(htim == &htim2){/*
+  if (htim == &htim2)
+  { /*
 		switch(timer_flag){
 		case 0:
 			can.dataTx[0] = 0x02;
@@ -935,101 +941,113 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			timer_flag = 0;
 			break;
 		}*/
-		if(timer_flag == 1* multiplier){
-				can.dataTx[0] = 0x02;
-				can.dataTx[1] = pc6;
-				can.dataTx[2] = 0;
-				can.dataTx[3] = steer_wheel_prescaler;
-				can.dataTx[4] = 0;
-				can.dataTx[5] = 0;
-				can.dataTx[6] = SCS_Send;
-				can.dataTx[7] = 0;
-				can.id = 0xB0;
-				can.size = 8;
-				CAN_Send(&can);
-				//SCS = 0;
-				//SCS_Send = 0;
-		}
-		if(timer_flag == 2* multiplier){
-		}
-		if(timer_flag == 3* multiplier){
-		}
-		if(timer_flag == 4* multiplier){
-			if (check != 1){
-			  can.dataTx[0] = 0x01;
-			  can.dataTx[1] = pot_2.val_100;
-			  can.dataTx[2] = pot_1.val_100;
-			  can.dataTx[3] = steer_wheel_prescaler;
-			  can.dataTx[4] = 0;
-			  can.dataTx[5] = 0;
-			  can.dataTx[6] = SCS_Send;
-			  can.dataTx[7] = 0;
-			  can.id = 0xB0;
-			  can.size = 8;
-			  CAN_Send(&can);
-			  //SCS = 0;
-			  //SCS_Send = 0;
-			}
-		}
-		if(timer_flag == 5* multiplier){
-		}
-		if(timer_flag == 6* multiplier){
-		}
-		if(timer_flag == 7* multiplier){
-		}
-		if(timer_flag == 8* multiplier){
-		}
+    if (timer_flag == 1 * multiplier)
+    {
+      can.dataTx[0] = 0x02;
+      can.dataTx[1] = pc6;
+      can.dataTx[2] = 0;
+      can.dataTx[3] = steer_wheel_prescaler;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = SCS_Send;
+      can.dataTx[7] = 0;
+      can.id = 0xB0;
+      can.size = 8;
+      CAN_Send(&can);
+      //SCS = 0;
+      //SCS_Send = 0;
+    }
+    if (timer_flag == 2 * multiplier)
+    {
+    }
+    if (timer_flag == 3 * multiplier)
+    {
+    }
+    if (timer_flag == 4 * multiplier)
+    {
+      if (check != 1)
+      {
+        can.dataTx[0] = 0x01;
+        can.dataTx[1] = pot_2.val_100;
+        can.dataTx[2] = pot_1.val_100;
+        can.dataTx[3] = steer_wheel_prescaler;
+        can.dataTx[4] = 0;
+        can.dataTx[5] = 0;
+        can.dataTx[6] = SCS_Send;
+        can.dataTx[7] = 0;
+        can.id = 0xB0;
+        can.size = 8;
+        CAN_Send(&can);
+        //SCS = 0;
+        //SCS_Send = 0;
+      }
+    }
+    if (timer_flag == 5 * multiplier)
+    {
+    }
+    if (timer_flag == 6 * multiplier)
+    {
+    }
+    if (timer_flag == 7 * multiplier)
+    {
+    }
+    if (timer_flag == 8 * multiplier)
+    {
+    }
 
-		if(timer_flag > 8*multiplier){
-			timer_flag = 0;
-		}
-		else{
-			timer_flag ++;
-		}
-
-	}
+    if (timer_flag > 8 * multiplier)
+    {
+      timer_flag = 0;
+    }
+    else
+    {
+      timer_flag++;
+    }
+  }
 }
 
-int send_CAN_data(uint32_t millis){
+int send_CAN_data(uint32_t millis)
+{
 
-    int sent_flag = 0;
+  int sent_flag = 0;
 
-    if(millis % 25 == 0){
+  if (millis % 25 == 0)
+  {
 
-    	can.dataTx[0] = 0x02;
-		can.dataTx[1] = pc6;
-		can.dataTx[2] = 0;
-		can.dataTx[3] = steer_wheel_prescaler;
-		can.dataTx[4] = 0;
-		can.dataTx[5] = 0;
-		can.dataTx[6] = SCS_Send;
-		can.dataTx[7] = 0;
-		can.id = 0xB0;
-		can.size = 8;
-		CAN_Send(&can);
+    can.dataTx[0] = 0x02;
+    can.dataTx[1] = pc6;
+    can.dataTx[2] = 0;
+    can.dataTx[3] = steer_wheel_prescaler;
+    can.dataTx[4] = 0;
+    can.dataTx[5] = 0;
+    can.dataTx[6] = SCS_Send;
+    can.dataTx[7] = 0;
+    can.id = 0xB0;
+    can.size = 8;
+    CAN_Send(&can);
+  }
+  millis += 1;
 
+  if (millis % 25 == 0)
+  {
+
+    if (check != 1)
+    {
+      can.dataTx[0] = 0x01;
+      can.dataTx[1] = pot_2.val_100;
+      can.dataTx[2] = pot_1.val_100;
+      can.dataTx[3] = steer_wheel_prescaler;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = SCS_Send;
+      can.dataTx[7] = 0;
+      can.id = 0xB0;
+      can.size = 8;
+      CAN_Send(&can);
+      //SCS = 0;
+      //SCS_Send = 0;
     }
-    millis += 1;
-
-    if(millis % 25 == 0){
-
-		if (check != 1){
-		  can.dataTx[0] = 0x01;
-		  can.dataTx[1] = pot_2.val_100;
-		  can.dataTx[2] = pot_1.val_100;
-		  can.dataTx[3] = steer_wheel_prescaler;
-		  can.dataTx[4] = 0;
-		  can.dataTx[5] = 0;
-		  can.dataTx[6] = SCS_Send;
-		  can.dataTx[7] = 0;
-		  can.id = 0xB0;
-		  can.size = 8;
-		  CAN_Send(&can);
-		  //SCS = 0;
-		  //SCS_Send = 0;
-		}
-
-    }
+  }
 }
 
 /* USER CODE END 4 */
@@ -1042,13 +1060,13 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  while(1)
+  while (1)
   {
   }
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -1057,7 +1075,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

@@ -67,6 +67,8 @@
 #define ID_REQ_INV_DX 386
 #define ID_ECU 85
 #define ID_ASK_STATE 16
+#define GYRO 0x4EC
+#define ACCEL 0x4ED
 
 #define MAX_POWER 8.0
 /* USER CODE END Includes */
@@ -232,6 +234,7 @@ void transmission(state_global_data_t *data);
 uint8_t canSendMSG[MSG_LENGHT];
 state_global_data_t data;
 char mander[50];
+char txt[100];
 
 /* USER CODE END 0 */
 
@@ -312,6 +315,13 @@ int main(void)
 			{
 				checkTimeStamp(&data);
 			}
+
+			if (HAL_GetTick() % 1000 == 0)
+			{
+				sprintf(txt, "%d, %d, %d\r\n", data.dataCounterDown, data.dataCounterUp, (data.dataCounterUp - data.dataCounterDown));
+				HAL_UART_Transmit(&huart2, (uint8_t *)txt, (uint8_t)strlen(txt), 10);
+			}
+
 			previous_millis = HAL_GetTick();
 		}
 		STATO = run_state(STATO, &data);
@@ -646,6 +656,12 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 		data.centralTimeStamp = HAL_GetTick();
 		insert_in_fifo = false;
 		break;
+	case GYRO:
+		insert_in_fifo = false;
+		break;
+	case ACCEL:
+		insert_in_fifo = false;
+		break;
 	case ID_REQ_INV_SX:
 		data.invSxPresence = true;
 		data.invSxTimeStamp = HAL_GetTick();
@@ -680,7 +696,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 
 		if (data.dataCounterUp == data.dataCounterDown)
 		{
-			shutdownErrors(&data, 0x23);
+			//shutdownErrors(&data, 0x23);
 		}
 	}
 }
@@ -733,6 +749,12 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 		data.centralTimeStamp = HAL_GetTick();
 		insert_in_fifo = false;
 		break;
+	case GYRO:
+		insert_in_fifo = false;
+		break;
+	case ACCEL:
+		insert_in_fifo = false;
+		break;
 	case ID_REQ_INV_SX:
 		data.invSxPresence = true;
 		data.invSxTimeStamp = HAL_GetTick();
@@ -768,7 +790,7 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 
 		if (data.dataCounterUp == data.dataCounterDown)
 		{
-			shutdownErrors(&data, 0x23);
+			//shutdownErrors(&data, 0x23);
 		}
 	}
 }

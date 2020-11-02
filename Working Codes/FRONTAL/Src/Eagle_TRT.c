@@ -722,6 +722,46 @@ void encoder_tim_interrupt(enc_stc *enc)
 		// Requesting first angle
 		enc->angle0_prec = enc->angle0;
 		read_SSI(enc);
+		enc->angle0 = enc->converted_data / 2607.594587618;
+	}
+	else if (enc->interrupt_flag == 1)
+	{
+		// Requesting second angle
+		enc->angle1_prec = enc->angle1;
+		read_SSI(enc);
+		enc->angle1 = enc->converted_data / 2607.594587618;
+
+		// Calculate speed from the two angles
+		get_speed_encoder(enc);
+
+		// Get the speed sign to be sent in CAN
+		if (enc->average_speed < 0)
+		{
+			enc->speed_sign = 1;
+		}
+		else
+		{
+			enc->speed_sign = 0;
+		}
+
+		//enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
+	}
+	// Cycle between steps
+	if (enc->interrupt_flag > 1)
+	{
+		enc->interrupt_flag = 0;
+	}
+	else
+	{
+		enc->interrupt_flag++;
+	}
+
+	/*
+	if (enc->interrupt_flag == 0)
+	{
+		// Requesting first angle
+		enc->angle0_prec = enc->angle0;
+		read_SSI(enc);
 		enc->angle0 = enc->converted_data / 45.5055;
 	}
 	else if (enc->interrupt_flag == 1)
@@ -758,6 +798,7 @@ void encoder_tim_interrupt(enc_stc *enc)
 		enc->interrupt_flag++;
 	}
 	//enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
+	*/
 }
 
 // Funtion to calculate the speed
@@ -781,9 +822,21 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Calculate correct delta angle if near to 0-360
-	if ((enc->angle0 < enc->max_delta_angle && enc->angle1 > 360 - enc->max_delta_angle) ||
-		(enc->angle1 < enc->max_delta_angle && enc->angle0 > 360 - enc->max_delta_angle))
+	if ((enc->angle0 < enc->max_delta_angle && enc->angle1 > 6.283185307 - enc->max_delta_angle) ||
+		(enc->angle1 < enc->max_delta_angle && enc->angle0 > 6.283185307 - enc->max_delta_angle))
 	{
+		if (enc->delta_angle < 0)
+		{
+			enc->delta_angle = 6.283185307 + enc->delta_angle;
+		}
+		else
+		{
+			if (enc->delta_angle > 0)
+			{
+				enc->delta_angle = 6.283185307 - enc->delta_angle;
+			}
+		}
+		/*
 		if (enc->delta_angle < 0)
 		{
 			enc->delta_angle = 360 + enc->delta_angle;
@@ -795,19 +848,25 @@ void get_speed_encoder(enc_stc *enc)
 				enc->delta_angle = 360 - enc->delta_angle;
 			}
 		}
+		*/
 	}
 
 	// Calculating rad/s, then m/s, then Km/h
 	//speed = enc->delta_angle * (3.1415 / 180) * (enc->wheel_diameter / 2);
+	/*
 	speed = (enc->delta_angle / 360) * ((enc->wheel_diameter / 2) * 3.1415);
 	speed *= enc->frequency;
 	speed *= 3.6;
 	speed = round((speed * 1000)) / 1000;
+	*/
 
-	int off = 100;
+	speed = enc->delta_angle * enc->frequency;
+
+	float off = 0.5;
 
 	// Start detecting eventual new wheel roation
 	// If the speed is too low, don't count rotations
+	/*
 	if (enc->average_speed < -0.5 || enc->average_speed > 0.5)
 	{
 		if ((enc->angle0_prec <= 361 && enc->angle0_prec > 360 - off) && (enc->angle0 >= -1 && enc->angle0 < off) ||
@@ -817,76 +876,25 @@ void get_speed_encoder(enc_stc *enc)
 			enc->Km += (3.14 * enc->wheel_diameter);
 		}
 	}
+	*/
+
+	if (enc->average_speed < -1 || enc->average_speed > 1)
+	{
+		if ((enc->angle0_prec > 6.283185307 - off) && (enc->angle0 < off) ||
+			(enc->angle0_prec < off) && (enc->angle0 > 6.283185307 - off))
+		{
+			enc->wheel_rotation++;
+			enc->Km += (6.283185307 * (enc->wheel_diameter / 2));
+		}
+	}
 
 	// Remove noise mediating previous values with actual
-	shift_array(enc->speed_array, 4, speed);
-	enc->average_speed = dynamic_average(enc->speed_array, 4);
+	shift_array(enc->speed_array, 5, speed);
+	enc->average_speed = dynamic_average(enc->speed_array, 5);
 
 	// Calculating the angle sample frequency
 	//enc_calculate_optimal_frequency(enc);
 }
-/*
-// Calculate anche sample frequency
-// The delta angle changes depending on the current speed
-// Constrain the delta angle between a defined range (max_delta_angle)
-void enc_calculate_optimal_frequency(enc_stc *enc)
-{
-	double abs_delta_angle = (enc->delta_angle >= 0) ? enc->delta_angle : enc->delta_angle * -1;
-
-	if (abs_delta_angle > enc->max_delta_angle * 1.2 || abs_delta_angle < enc->max_delta_angle * 0.5)
-	{
-		double angular_speed = enc->average_speed / ((enc->wheel_diameter / 2)*3.6);
-		double frequency = angular_speed / (enc->max_delta_angle * 3.14 / 180);
-
-		enc->flake_freq = frequency;
-
-		frequency = frequency < 0 ? frequency * (-1) : frequency;
-		frequency = frequency < 50 ? 50 : frequency;
-
-		// Returns 0 if reinitialization is done correctly
-		HAL_TIM_Base_Stop(enc->frequency_timer);
-		HAL_TIM_Base_Stop_IT(enc->frequency_timer);
-		if (ReinitTIM7(frequency, enc) == 0)
-		{
-			// Set encoder actual frequency
-			enc->frequency = enc->frequency_timer_Hz / (enc->frequency_timer->Init.Prescaler * enc->frequency_timer->Init.Period);
-		}
-		HAL_TIM_Base_Start(enc->frequency_timer);
-		HAL_TIM_Base_Start_IT(enc->frequency_timer);
-	}
-}
-
-// Reinitializing timer to generate interrupts to the given frequency
-int ReinitTIM7(float frequency, enc_stc *enc)
-{
-
-	int error_flag = 0;
-
-
-	TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-
-	enc->frequency_timer_prescaler = sqrt(enc->frequency_timer_Hz / frequency);
-	enc->frequency_timer_period = enc->frequency_timer_prescaler;
-
-	enc->frequency_timer->Instance = TIM7;
-	enc->frequency_timer->Init.Prescaler = enc->frequency_timer_prescaler;
-	enc->frequency_timer->Init.CounterMode = TIM_COUNTERMODE_UP;
-	enc->frequency_timer->Init.Period = enc->frequency_timer_period;
-	enc->frequency_timer->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-
-	if (HAL_TIM_Base_Init(enc->frequency_timer) != HAL_OK)
-	{
-		error_flag = 1;
-	}
-	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(enc->frequency_timer, &sMasterConfig) != HAL_OK)
-	{
-		error_flag = 2;
-	}
-	return error_flag;
-}*/
 
 pot_stc pot_1;
 pot_stc pot_2;
