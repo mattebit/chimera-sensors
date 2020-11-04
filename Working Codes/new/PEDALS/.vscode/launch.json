@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "showDevDebugOutput": true,
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/FRONTAL.elf",
+      "name": "Debug STM32",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "openocd",
+      "preLaunchTask": "Build STM",
+      "device": "stlink",
+      "configFiles": [
+        "interface/stlink-v2-1.cfg",
+        "target/stm32f4x.cfg"
+      ]
+    },
+    {
+      "showDevDebugOutput": true,
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/FRONTAL.elf",
+      "name": "Debug STM32",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "C:\Users\Marco Faccini\AppData\Roaming\xPacks\0.10.0-15\bin\openocd.exe",
+      "preLaunchTask": "Build STM",
+      "device": "stlink",
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ]
+    }
+  ]
+}
