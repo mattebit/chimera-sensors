@@ -65,15 +65,17 @@ UART_HandleTypeDef huart2;
 extern pot_stc pot_1;
 extern pot_stc pot_2;
 extern pot_stc pot_3;
+extern pot_stc pot_4;
 extern can_stc can;
 
 int val0_100, val1_100, val2_100, Error, SCS, SCS1, SCS_Send, SCS_Send_real, Time1, Time2, fake_i, check, flag;
-int fake_min0 = 0, fake_max0 = 6000, fake_min1 = 60000, fake_max1 = 0;
+int fake_min0 = 60000, fake_max0 = 0;
+int fake_min1 = 60000, fake_max1 = 0;
 uint32_t fake1[5];
 uint32_t fake2[5];
 
 uint32_t valMax0, valMin0, valMax1, valMin1, valMax2, valMin2, val0rang, val1rang, val2rang;
-uint32_t ADC_buffer[3], val[3];
+uint32_t ADC_buffer[4], val[4];
 
 static TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 static TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
@@ -130,15 +132,15 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
   pot_1.val = ADC_buffer[0];
   pot_2.val = ADC_buffer[1];
   pot_3.val = ADC_buffer[2];
-  stampa++;
+  pot_4.val = ADC_buffer[3];
 }
 void print_Max_Min()
 {
-  if (fake_min0 <= pot_1.val)
+  if (fake_min0 >= pot_1.val)
   {
     fake_min0 = pot_1.val;
   }
-  if (fake_max0 >= pot_1.val)
+  if (fake_max0 <= pot_1.val)
   {
     fake_max0 = pot_1.val;
   }
@@ -150,7 +152,7 @@ void print_Max_Min()
   {
     fake_max1 = pot_2.val;
   }
-  sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val);
+  sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0 = %d val1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
 }
 
@@ -163,14 +165,6 @@ void print_Max_Min()
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  pot_1.min = 4001;
-  pot_1.max = 3872; //released
-  pot_1.range = abs(pot_1.max - pot_1.min);
-  pot_2.min = 2614;
-  pot_2.max = 2730; //released
-  pot_2.range = abs(pot_2.max - pot_2.min);
-  check = 0;
-  fake_i = 0;
 
   val[1] = 0;
 
@@ -232,11 +226,10 @@ int main(void)
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
-  HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim3);
   //HAL_TIM_Base_Start(&htim4);
   HAL_TIM_Base_Start(&htim7);
-  HAL_TIM_Base_Start_IT(&htim2);
+  //HAL_TIM_Base_Start_IT(&htim2);
   //HAL_TIM_Base_Start_IT(&htim4);
 
   __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
@@ -252,6 +245,24 @@ int main(void)
   steer_wheel_prescaler += 2;
 
   HAL_UART_Transmit(&huart2, (uint8_t *)"vivo\r\n", strlen("vivo\r\n"), 10);
+
+  //HAL_TIM_Base_Start(&htim2);
+  pot_1.max = 2670;
+  pot_1.min = 2400; //released
+  pot_1.range = abs(pot_1.max - pot_1.min);
+  pot_2.max = 802;
+  pot_2.min = 575; //released
+  pot_2.range = abs(pot_2.max - pot_2.min);
+
+  pot_3.min = 0;
+  pot_3.max = 4096;
+  pot_3.range = abs(pot_3.max - pot_3.min);
+  pot_4.min = 0;
+  pot_4.max = 4096;
+  pot_4.range = abs(pot_4.max - pot_4.min);
+
+  check = 0;
+  fake_i = 0;
 
   /* USER CODE END 2 */
 
@@ -270,7 +281,6 @@ int main(void)
     SCS_Send_real = 0;
 
     ///CALCULATING APPS% GAIN///
-    HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
 
     if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET)
     {
@@ -282,30 +292,13 @@ int main(void)
     }
 
     // If CAN is free from important messages, send data
-    if (command_flag == 0)
+    if (previous_millis != HAL_GetTick())
     {
-      if (previous_millis != HAL_GetTick())
-      {
-        send_CAN_data(HAL_GetTick());
-        previous_millis = HAL_GetTick();
-      }
-    }
-    else
-    {
-      HAL_Delay(1);
-      command_flag = 0;
-    }
+      HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
 
-    //print_Max_Min();
-    /*
-	  if(command_flag == 1){
-		  HAL_TIM_Base_Stop_IT(&htim2);
-		  HAL_Delay(500);
-		  HAL_TIM_Base_Start_IT(&htim2);
-		  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
-
-		  command_flag = 0;
-	  }*/
+      send_CAN_data(HAL_GetTick());
+      previous_millis = HAL_GetTick();
+    }
 
     ///LED STRIP BRAKE LIGHT CODE///
     if (pc6 == GPIO_PIN_SET)
@@ -319,20 +312,8 @@ int main(void)
 
     calc_pot_value(&pot_1);
     calc_pot_value(&pot_2);
-
-    /*if(pot_1.val < 300 || pot_2.val < 300){
-		  pot_1.val = 0;
-		  pot_2.val = 0;
-		  //pot_1.val_100 = 0;
-		  //pot_2.val_100 = 0;
-		  SCS1 = 1;
-		  SCS_Send = 1;
-		  SCS = 1;
-	  }else{
-		  SCS = 0;
-		  SCS1 = 0;
-		  SCS_Send = 0;
-	  }*/
+    calc_pot_value(&pot_3);
+    calc_pot_value(&pot_4);
 
     //print_Max_Min();
 
@@ -349,13 +330,6 @@ int main(void)
 		  val2_100 = GPIO_PIN_RESET;
 		  SCS_Send = 1;
 	  }*/
-
-    /*sprintf(txt, "val0: %d , val1: %d , val0_100: %d, val1_100: %d, SCS: %d, SCS1: %d, SCS_send: %d \r\n",
-			  pot_1.val, pot_2.val, pot_1.val_100, 100 - pot_2.val_100, SCS, SCS1, SCS_Send);
-	  HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);*/
-
-    //sprintf(txt,"adc1: %d, adc2: %d, adc3: %d\r\n",(int)ADC_buffer[0],(int)ADC_buffer[1],(int)ADC_buffer[2]);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
   }
 
   /* USER CODE END 3 */
@@ -370,11 +344,11 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
@@ -389,7 +363,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -452,7 +426,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -463,14 +437,14 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.NbrOfConversion = 4;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
@@ -479,7 +453,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 2;
@@ -487,10 +461,18 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = 3;
+  sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -737,7 +719,7 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE END USART2_Init 2 */
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -817,19 +799,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
   ///CALIBRATION CODE///
   int idsave = CAN_Receive(&can);
   uint8_t CanSendMSG[8];
-  /*
-		  if(idsave == 0x55 || idsave == 0x201){
-			  if(can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B){
-				  command_flag = 1;
-				  idsave = 0;
-			  }
-		  }
-		  if(idsave == 0xA0 || idsave == 0xAA || idsave == 0x181){
-			  if(can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8){
-				  command_flag = 1;
-				  idsave = 0;
-			  }
-		  }*/
 
   if (idsave == 0xBB)
   {
@@ -886,61 +855,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
   if (htim == &htim2)
-  { /*
-		switch(timer_flag){
-		case 0:
-			can.dataTx[0] = 0x02;
-			can.dataTx[1] = pc6;
-			can.dataTx[2] = 0;
-			can.dataTx[3] = steer_wheel_prescaler;
-			can.dataTx[4] = 0;
-			can.dataTx[5] = 0;
-			can.dataTx[6] = SCS_Send;
-			can.dataTx[7] = 0;
-			can.id = 0xB0;
-			can.size = 8;
-			CAN_Send(&can);
-			timer_flag ++;
-			//SCS = 0;
-			//SCS_Send = 0;
-			break;
-		case 1:
-			timer_flag ++;
-			break;
-		case 2:
-			timer_flag ++;
-			break;
-		case 3:
-			if (check != 1){
-			  can.dataTx[0] = 0x01;
-			  can.dataTx[1] = pot_2.val_100;
-			  can.dataTx[2] = pot_1.val_100;
-			  can.dataTx[3] = steer_wheel_prescaler;
-			  can.dataTx[4] = 0;
-			  can.dataTx[5] = 0;
-			  can.dataTx[6] = SCS_Send;
-			  can.dataTx[7] = 0;
-			  can.id = 0xB0;
-			  can.size = 8;
-			  CAN_Send(&can);
-			  timer_flag ++;
-			  //SCS = 0;
-			  //SCS_Send = 0;
-			}
-			break;
-		case 4:
-			timer_flag ++;
-			break;
-		case 5:
-			timer_flag ++;
-			break;
-		case 6:
-			timer_flag ++;
-			break;
-		case 7:
-			timer_flag = 0;
-			break;
-		}*/
+  {
     if (timer_flag == 1 * multiplier)
     {
       can.dataTx[0] = 0x02;
@@ -1014,14 +929,17 @@ int send_CAN_data(uint32_t millis)
   if (millis % 25 == 0)
   {
 
+    uint16_t front = pot_3.val_100 * 500;
+    uint16_t back = pot_4.val_100 * 500;
+
     can.dataTx[0] = 0x02;
     can.dataTx[1] = pc6;
-    can.dataTx[2] = 0;
+    can.dataTx[2] = front >> 8;
     can.dataTx[3] = steer_wheel_prescaler;
-    can.dataTx[4] = 0;
-    can.dataTx[5] = 0;
+    can.dataTx[4] = front;
+    can.dataTx[5] = back >> 8;
     can.dataTx[6] = SCS_Send;
-    can.dataTx[7] = 0;
+    can.dataTx[7] = back;
     can.id = 0xB0;
     can.size = 8;
     CAN_Send(&can);
@@ -1044,8 +962,6 @@ int send_CAN_data(uint32_t millis)
       can.id = 0xB0;
       can.size = 8;
       CAN_Send(&can);
-      //SCS = 0;
-      //SCS_Send = 0;
     }
   }
 }
