@@ -158,8 +158,10 @@ int main(void)
   sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
   sFilter.FilterActivation = ENABLE;
   HAL_CAN_ConfigFilter(&hcan1, &sFilter);
+
   HAL_UART_Transmit(&huart2, (uint8_t *)"can init done_1\r\n", 17, 5);
   HAL_UART_Transmit(&huart3, (uint8_t *)"start_1\r\n", 9, 5);
+
   HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
   HAL_Delay(500);
   HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
@@ -173,11 +175,10 @@ int main(void)
   HAL_UART_Transmit(&huart3, (uint8_t *)"start\r\n", 7, 5);
 
   HAL_TIM_Base_Start(&htim6);
-  HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start_IT(&htim6);
-  HAL_TIM_Base_Start_IT(&htim7);
 
   HAL_UART_Receive_IT(&huart2, huart_rx, 35);
+  //HAL_UART_Receive_IT(&huart3, huart_rx, 35);
 
   char txt[200];
 
@@ -196,20 +197,10 @@ int main(void)
     //HAL_Delay(10);
     //HAL_UART_Transmit(&huart2, (uint8_t*)"ciao\r\n", 7, 5);
 
-    //sprintf(txt, "192 5 10 10 10 10 10 10 10\r\n");
-    //HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 5);
-
     if (flag_rx == 1)
     {
+
       flag_rx = 0;
-      /*
-      HAL_UART_Transmit(&huart2, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
-      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 5);
-
-      HAL_Delay(1);
-
-      */
-
       HAL_UART_Transmit(&huart3, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
       HAL_UART_Transmit(&huart3, (uint8_t *)"\r\n", 2, 5);
 
@@ -253,11 +244,11 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
@@ -272,13 +263,13 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
@@ -317,6 +308,9 @@ static void MX_NVIC_Init(void)
   /* USART2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
+  /* USART3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USART3_IRQn);
 }
 
 /**
@@ -336,7 +330,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -354,7 +348,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
@@ -525,13 +519,13 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 2250000;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_8;
   if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
@@ -573,7 +567,7 @@ static void MX_USART3_UART_Init(void)
   /* USER CODE END USART3_Init 2 */
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -648,47 +642,9 @@ int CAN_Send(char *msg_can)
   TxHeader.DLC = 8;
   TxHeader.TransmitGlobalTime = DISABLE;
 
-  uint8_t data_to_send[8];
-  int j = 0;
-  for (int i = 0; i < 50 || msg_can[i + 2] == '\0'; i++)
-  {
-    if (msg_can[i + 2] == '\t' || msg_can[i + 2] == ' ')
-    { // founded separation
-      if (msg_can[i + 4] == '\t' || msg_can[i + 4] == ' ')
-      { //one space number
-        data_to_send[j] = msg_can[i + 3] - (int)('0');
-        i = i + 1;
-      }
-      else if (msg_can[i + 5] == '\t' || msg_can[i + 5] == ' ')
-      { //two space number
-        char num[3];
-        num[0] = msg_can[i + 3];
-        num[1] = msg_can[i + 4];
-        num[2] = '0';
-        data_to_send[j] = atoi(num);
-        i = i + 2;
-      }
-      else if (msg_can[i + 6] == '\t' || msg_can[i + 6] == ' ')
-      { //three space number
-        char num[4];
-        num[0] = msg_can[i + 3];
-        num[1] = msg_can[i + 4];
-        num[2] = msg_can[i + 5];
-        num[3] = '0';
-        data_to_send[j] = atoi(num);
-        i = i + 3;
-      }
-    }
-  }
-
-  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0) == 0)
-  {
-    HAL_CAN_AddTxMessage(&hcan1, &TxHeader, data_to_send, &mailbox);
-    flag = 1;
-  }
-
-  return flag;
+  return 1;
 }
+
 int CAN_Receive(uint8_t *DataRx, int size)
 {
 
@@ -703,7 +659,6 @@ int CAN_Receive(uint8_t *DataRx, int size)
 }
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 {
-  //HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
   uint8_t RxData[8];
   int id;
   id = CAN_Receive(RxData, 8);
@@ -730,10 +685,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     msg_index = 0;
   }
 }
-/*
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	print_it(huart);
-}*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
@@ -743,59 +694,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     msg_can_to_send[i] = huart_rx[i];
   }
   msg_can_to_send[35] = '\0';
-  HAL_UART_Transmit(&huart3, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
-  HAL_UART_Transmit(&huart3, (uint8_t *)"\r\n", 2, 5);
+
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
+  HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 5);
+
+  //HAL_UART_Receive_IT(&huart3, huart_rx, 35);
   HAL_UART_Receive_IT(&huart2, huart_rx, 35);
-
-  /*if(huart_rx[0]=='-'){
-		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
-		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
-		flag_rx=1;
-		msg_can_to_send[cont_huart_rx] = '\0';
-		cont_huart_rx = 0;
-		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
-		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
-	}else{
-		HAL_UART_Transmit(&huart3, (uint8_t*)huart_rx, strlen(huart_rx), 5);
-		//msg_can_to_send[cont_huart_rx] = (char)huart_rx[0];
-		//cont_huart_rx++;
-		HAL_UART_Receive_IT(&huart2,huart_rx, 10);
-	}*/
-
-  /*if(huart_rx[0] == ' ' || huart_rx[0] == '\t'){
-		if(cont_length_num == 2){
-			msg_can_to_send[cont_huart_rx] = msg_can_to_send[cont_huat_rx-1];
-			msg_can_to_send[cont_huart_rx-1]='0';
-			cont_huart_rx+=1;
-		}else if(cont_length_num == 3){
-			msg_can_to_send[cont_huart_rx] = msg_can_to_send[cont_huart_rx-2];
-			msg_can_to_send[cont_huart_rx-1]='0';
-			msg_can_to_send[cont_huart_rx-2]='0';
-			cont_huart_rx+=2;
-		}
-		cont_length_num = 0;
-	}else{
-		//if(cont_huart_rx == 26)
-		msg_can_to_send[cont_huart_rx] = (char)huart_rx[0];
-		cont_huart_rx++;
-		cont_length_num++;
-	}
-	if(cont_huart_rx >= 27){
-		HAL_UART_Transmit(&huart3, (uint8_t*)msg_can_to_send, strlen(msg_can_to_send), 5);
-		HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, 5);
-		cont_length_num = 0;
-		cont_huart_rx = 0;
-		flag_rx = 1;
-	}*/
 }
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if (htim == &htim7)
-  {
-    interrupt_flag = 1;
-  }
-}
-
 /* USER CODE END 4 */
 
 /**

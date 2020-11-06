@@ -1732,13 +1732,16 @@ void checkTimeStamp(state_global_data_t *data)
 	data->actualTime = HAL_GetTick();
 
 	/* Steering Wheel Timer */
+	if (data->steeringPresence == false)
+		data->steeringPresence = true;
+	/*
 	if (data->steeringPresence == true)
 	{
 		if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
 		{
 			data->steeringPresence = false;
 		}
-	}
+	}*/
 
 	/* Pedals Timer */
 	if (data->pedalsPresence == true)
