@@ -294,7 +294,15 @@ int main(void)
     // If CAN is free from important messages, send data
     if (previous_millis != HAL_GetTick())
     {
-      HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
+      if (HAL_GetTick() % 2 == 0)
+      {
+        HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
+
+        calc_pot_value(&pot_1);
+        calc_pot_value(&pot_2);
+        calc_pot_value(&pot_3);
+        calc_pot_value(&pot_4);
+      }
 
       send_CAN_data(HAL_GetTick());
       previous_millis = HAL_GetTick();
@@ -310,19 +318,15 @@ int main(void)
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
     }
 
-    calc_pot_value(&pot_1);
-    calc_pot_value(&pot_2);
-    calc_pot_value(&pot_3);
-    calc_pot_value(&pot_4);
-
     //print_Max_Min();
-
+    /*
     if (implausibility_check(&pot_1, &pot_2) == 1)
     {
       //pot_1.val_100 = 0;
       //pot_2.val_100 = 0;
       SCS_Send = 1;
     }
+    */
 
     /*if (SCS != 0 || SCS1 != 0){
 		  pot_1.val_100 = 0;

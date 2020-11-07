@@ -243,8 +243,8 @@ int main(void)
     steer_enc_prescaler += 40;
     enc.steer_enc_prescaler = steer_enc_prescaler;
 
-    pot_2.max = 4060;
-    pot_2.min = 2350;
+    pot_2.max = 4055;
+    pot_2.min = 2516;
     pot_2.range = abs(pot_2.max - pot_2.min);
 
     enc.ClockPinName = GPIOC;
@@ -389,6 +389,7 @@ int main(void)
 
                 if (HAL_GetTick() % 1000 == 0)
                 {
+                    /*
 
                     for (int i = 0; i < enc.data_size; i++)
                     {
@@ -396,6 +397,9 @@ int main(void)
                         HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
                     }
                     sprintf(txt, "\r\n");
+                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+                    */
+                    sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
                     HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
                     /*
@@ -1155,7 +1159,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
             can.dataTx[7] = 0;
             can.id = 0xBC;
             can.size = 8;
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 2; i++)
             {
                 CAN_Send(&can);
             }
@@ -1175,7 +1179,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
             can.dataTx[7] = 0;
             can.id = 0xBC;
             can.size = 8;
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 2; i++)
             {
                 CAN_Send(&can);
             }
@@ -1219,7 +1223,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         {
             // STEER
             if (USE_STEER)
-                calc_pot_value(&pot_2);
+                calc_pot_value(&pot_2, 200);
         }
         else if (flag == 3 * multiplier)
         {
@@ -1252,7 +1256,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 int send_CAN_data(uint32_t millis)
 {
 
-    int send_time = 50;
+    int send_time = 20;
     int sent_flag = 0;
     int increment_value = 1;
 
@@ -1438,9 +1442,11 @@ int send_CAN_data(uint32_t millis)
         {
             if (calibration_flag == 0)
             {
+                uint16_t angle = pot_2.val_100 * 100;
+
                 can.dataTx[0] = 2;
-                can.dataTx[1] = pot_2.val_100;
-                can.dataTx[2] = 0;
+                can.dataTx[1] = (uint8_t)(angle >> 8);
+                can.dataTx[2] = (uint8_t)(angle);
                 can.dataTx[3] = 0;
                 can.dataTx[4] = 0;
                 can.dataTx[5] = 0;

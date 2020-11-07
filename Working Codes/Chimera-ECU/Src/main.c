@@ -290,8 +290,8 @@ int main(void)
 	//HAL_CAN_Init(&hcan1);
 	HAL_CAN_Start(&hcan1);
 
-	//HAL_TIM_Base_Start(&htim6);
-	//HAL_TIM_Base_Start(&htim7);
+	HAL_TIM_Base_Start(&htim6);
+	HAL_TIM_Base_Start(&htim7);
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim7);
 	HAL_TIM_Base_Start(&htim10);
@@ -984,10 +984,39 @@ state_t do_state_setup(state_global_data_t *data)
 				break;
 			/* Going to run mode driver request */
 			case 0x05:
+				canSendMSG[0] = 0xFF;
+				CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+				if (data->inverterSx == true)
+				{
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = 0x01;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+				}
+				if (data->inverterDx == true)
+				{
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = 0x02;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+				}
+				if (data->breakingPedal == true)
+				{
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = 0x03;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+				}
+				if (data->requestOfShutdown == false)
+				{
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = 0x04;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+				}
 				/* If inverter are turned on and break is pressed i can go to run */
 				if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
 				{
 					data->go = true;
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = 0xFF;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 					/* Map */
 					if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
 					{
@@ -997,6 +1026,8 @@ state_t do_state_setup(state_global_data_t *data)
 					{
 						data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
 					}
+					__HAL_TIM_SetCounter(&htim7, 0);
+					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 				}
 				break;
 			/* Turning on Inverter sx driver request */
@@ -1096,7 +1127,7 @@ state_t do_state_setup(state_global_data_t *data)
 				{
 					canSendMSG[0] = 0x0C;
 					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = false;
+					//data->inverterSx = false;
 				}
 				break;
 			default:
@@ -1121,7 +1152,7 @@ state_t do_state_setup(state_global_data_t *data)
 				{
 					canSendMSG[0] = 0x0D;
 					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = false;
+					//data->inverterDx = false;
 				}
 				break;
 			default:

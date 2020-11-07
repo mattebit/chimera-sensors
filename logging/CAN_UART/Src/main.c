@@ -201,8 +201,10 @@ int main(void)
     {
 
       flag_rx = 0;
-      HAL_UART_Transmit(&huart3, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
-      HAL_UART_Transmit(&huart3, (uint8_t *)"\r\n", 2, 5);
+      /*
+      HAL_UART_Transmit(&huart2, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
+      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 5);
+      */
 
       uint32_t mailbox;
       uint8_t messaggio_can[8];
@@ -229,6 +231,8 @@ int main(void)
         HAL_CAN_AddTxMessage(&hcan1, &TxHeader, messaggio_can, &mailbox);
       }
       //HAL_UART_Receive_IT(&huart2,huart_rx, 36);
+      HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+      HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
     }
   }
   /* USER CODE END 3 */
@@ -291,13 +295,13 @@ void SystemClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* CAN1_RX0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 10, 10);
   HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
   /* CAN1_RX1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 10, 10);
   HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
   /* CAN1_SCE_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 10, 10);
   HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
   /* TIM6_DAC_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
@@ -688,6 +692,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
+  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX0_IRQn);
+  HAL_CAN_DeactivateNotification(&hcan1, CAN1_RX1_IRQn);
+
   flag_rx = 1;
   for (int i = 0; i < 35; i++)
   {
@@ -695,8 +702,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
   msg_can_to_send[35] = '\0';
 
+  /*
   HAL_UART_Transmit(&huart2, (uint8_t *)msg_can_to_send, strlen(msg_can_to_send), 5);
   HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 5);
+  */
 
   //HAL_UART_Receive_IT(&huart3, huart_rx, 35);
   HAL_UART_Receive_IT(&huart2, huart_rx, 35);

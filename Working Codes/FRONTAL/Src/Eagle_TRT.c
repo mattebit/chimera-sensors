@@ -899,18 +899,10 @@ void get_speed_encoder(enc_stc *enc)
 pot_stc pot_1;
 pot_stc pot_2;
 pot_stc pot_3;
-void calc_pot_value(pot_stc *pot)
+void calc_pot_value(pot_stc *pot, float maxVal)
 {
 
-	pot->val_100 = round(100 - (abs(pot->val - pot->min) * 100 / (pot->range))); //val0_100 -->STEER --> 0 = SX | 100 = DX
-	if (pot->val <= pot->min)
-	{
-		pot->val_100 = 100;
-	}
-	if (pot->val >= pot->max)
-	{
-		pot->val_100 = 0;
-	}
+	pot->val_100 = ((abs(pot->val - pot->min) * maxVal / (pot->range))); //val0_100 -->STEER --> 0 = SX | 100 = DX
 }
 
 //Function to check if the two ADC values are approximately the same

@@ -42,7 +42,7 @@ typedef struct
 	int data_size;		// Bits sent from the sensor. exclude the error flag
 	int error_flag;		// Return value if the encoder has errors
 	int interrupt_flag; // Flag to switch from angles to speed calculations
-	int clock_period;   // Period of the clock generated
+	int clock_period;	// Period of the clock generated
 	int Data[14];
 	int steer_enc_prescaler;
 	int dx_wheel; // 1 if the encoder stc is for the right wheel
@@ -64,7 +64,7 @@ typedef struct
 	double angle1_prec;
 	double delta_angle;
 	double speed_array[100]; // Array to store lasts speed
-	double average_speed;	// Filtered speed
+	double average_speed;	 // Filtered speed
 	int converted_data;		 // Angle data
 
 	TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock
@@ -86,16 +86,16 @@ int ReinitTIM7(float, enc_stc *);
 typedef struct
 {
 
-	int val_100;
-	int max;
-	int min;
+	float val_100;
+	float max;
+	float min;
 	int range;
 	int val;
 
 	TIM_HandleTypeDef *TimerInstance;
 } pot_stc;
 int implausibility_check(pot_stc *, pot_stc *);
-void calc_pot_value(pot_stc *);
+void calc_pot_value(pot_stc *, float);
 void set_max(pot_stc *);
 void set_min(pot_stc *);
 
@@ -173,7 +173,7 @@ int CAN_Receive(can_stc *);
 
 //GPS CONSTANTS
 #define PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ "$PMTK220,10000*2F\r\n" // Once every 10 seconds, 100 millihertz.
-#define PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ "$PMTK220,5000*1B\r\n"  // Once every 5 seconds, 200 millihertz.
+#define PMTK_SET_NMEA_UPDATE_200_MILLIHERTZ "$PMTK220,5000*1B\r\n"	// Once every 5 seconds, 200 millihertz.
 #define PMTK_SET_NMEA_UPDATE_1HZ "$PMTK220,1000*1F\r\n"
 #define PMTK_SET_NMEA_UPDATE_2HZ "$PMTK220,500*2B\r\n"
 #define PMTK_SET_NMEA_UPDATE_5HZ "$PMTK220,200*2C\r\n"
@@ -182,7 +182,7 @@ int CAN_Receive(can_stc *);
 #define PMTK_CMD_STANDBY_MODE "$PMTK161,0*28\r\n" //enter in sleep mode
 
 #define PMTK_API_SET_FIX_CTL_100_MILLIHERTZ "$PMTK300,10000,0,0,0,0*2C" // Once every 10 seconds, 100 millihertz.
-#define PMTK_API_SET_FIX_CTL_200_MILLIHERTZ "$PMTK300,5000,0,0,0,0*18"  // Once every 5 seconds, 200 millihertz.
+#define PMTK_API_SET_FIX_CTL_200_MILLIHERTZ "$PMTK300,5000,0,0,0,0*18"	// Once every 5 seconds, 200 millihertz.
 #define PMTK_API_SET_FIX_CTL_1HZ "$PMTK300,1000,0,0,0,0*1C"
 #define PMTK_API_SET_FIX_CTL_5HZ "$PMTK300,200,0,0,0,0*2F"
 // Can't fix position faster than 5 times a second!
