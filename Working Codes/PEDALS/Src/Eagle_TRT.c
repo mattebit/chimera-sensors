@@ -915,13 +915,13 @@ int calc_pot_value(pot_stc *pot)
 
 	shift_array((pot->average), 10, pot->val);
 	pot->val = dynamic_average(pot->average, 10);
-	pot->val_100 = (int)(abs(pot->val - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
+	pot->val_100 = (abs(pot->val - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
 
 	if (pot->val_100 >= 100)
 	{
 		pot->val_100 = 100;
 	}
-	if (pot->val_100 <= 5)
+	if (pot->val_100 <= 0)
 	{
 		pot->val_100 = 0;
 	}
@@ -947,13 +947,11 @@ int implausibility_check(pot_stc *pot_1, pot_stc *pot_2)
 			//pot_1-> val_100 = 0;
 			//pot_2-> val = 0;
 			//pot_2 -> val_100 = 0;
-			//HAL_UART_Transmit(&huart2, (uint8_t*)"tex_diocane\r\n", 13, 10);
 		}
 	}
 	else
 	{
 		__HAL_TIM_SET_COUNTER(pot_1->TimerInstance, 0);
-		//HAL_UART_Transmit(&huart2, (uint8_t*)"grazie gesu\r\n", 13, 10);
 		SCS1 = 0;
 	}
 
@@ -966,7 +964,6 @@ int implausibility_check(pot_stc *pot_1, pot_stc *pot_2)
 //max2 = pointer to the maximum value of the APPS2
 void set_max(pot_stc *pot)
 {
-
 	pot->max = pot->val;
 }
 

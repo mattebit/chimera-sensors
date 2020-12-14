@@ -43,7 +43,7 @@ typedef struct
 	int error_flag;		// Return value if the encoder has errors
 	int interrupt_flag; // Flag to switch from angles to speed calculations
 	int clock_period;	// Period of the clock generated
-	int Data[14];
+	int Data[15];
 	int steer_enc_prescaler;
 	int dx_wheel; // 1 if the encoder stc is for the right wheel
 

@@ -648,6 +648,7 @@ int read_SSI(enc_stc *enc)
 	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
 	{
 	}
+	/*
 	HAL_GPIO_WritePin(enc->ClockPinName, enc->ClockPinNumber, GPIO_PIN_SET);
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
@@ -657,7 +658,7 @@ int read_SSI(enc_stc *enc)
 	__HAL_TIM_SET_COUNTER(enc->TimerInstance, 0);
 	while (__HAL_TIM_GET_COUNTER(enc->TimerInstance) <= enc->clock_period)
 	{
-	}
+	}*/
 
 	// Starting the clock to retrieve 14 bits from the sensor
 	for (int i = 0; i < enc->data_size; i++)
@@ -755,50 +756,6 @@ void encoder_tim_interrupt(enc_stc *enc)
 	{
 		enc->interrupt_flag++;
 	}
-
-	/*
-	if (enc->interrupt_flag == 0)
-	{
-		// Requesting first angle
-		enc->angle0_prec = enc->angle0;
-		read_SSI(enc);
-		enc->angle0 = enc->converted_data / 45.5055;
-	}
-	else if (enc->interrupt_flag == 1)
-	{
-		// Requesting second angle
-		enc->angle1_prec = enc->angle1;
-		read_SSI(enc);
-		enc->angle1 = enc->converted_data / 45.5055;
-	}
-	else if (enc->interrupt_flag == 2)
-	{
-		// Calculate speed from the two angles
-		get_speed_encoder(enc);
-
-		// Get the speed sign to be sent in CAN
-		if (enc->average_speed < 0)
-		{
-			enc->average_speed *= -1;
-			enc->speed_sign = 1;
-		}
-		else
-		{
-			enc->speed_sign = 0;
-		}
-	}
-
-	// Cycle between steps
-	if (enc->interrupt_flag >= 2)
-	{
-		enc->interrupt_flag = 0;
-	}
-	else
-	{
-		enc->interrupt_flag++;
-	}
-	//enc->interrupt_flag = enc->interrupt_flag >= 2 ? 0 : enc->interrupt_flag + 1;
-	*/
 }
 
 // Funtion to calculate the speed
@@ -836,47 +793,11 @@ void get_speed_encoder(enc_stc *enc)
 				enc->delta_angle = 6.283185307 - enc->delta_angle;
 			}
 		}
-		/*
-		if (enc->delta_angle < 0)
-		{
-			enc->delta_angle = 360 + enc->delta_angle;
-		}
-		else
-		{
-			if (enc->delta_angle > 0)
-			{
-				enc->delta_angle = 360 - enc->delta_angle;
-			}
-		}
-		*/
 	}
-
-	// Calculating rad/s, then m/s, then Km/h
-	//speed = enc->delta_angle * (3.1415 / 180) * (enc->wheel_diameter / 2);
-	/*
-	speed = (enc->delta_angle / 360) * ((enc->wheel_diameter / 2) * 3.1415);
-	speed *= enc->frequency;
-	speed *= 3.6;
-	speed = round((speed * 1000)) / 1000;
-	*/
 
 	speed = enc->delta_angle * enc->frequency;
 
 	float off = 0.5;
-
-	// Start detecting eventual new wheel roation
-	// If the speed is too low, don't count rotations
-	/*
-	if (enc->average_speed < -0.5 || enc->average_speed > 0.5)
-	{
-		if ((enc->angle0_prec <= 361 && enc->angle0_prec > 360 - off) && (enc->angle0 >= -1 && enc->angle0 < off) ||
-			(enc->angle0_prec >= -1 && enc->angle0_prec < off) && (enc->angle0 <= 361 && enc->angle0 > 360 - off))
-		{
-			enc->wheel_rotation++;
-			enc->Km += (3.14 * enc->wheel_diameter);
-		}
-	}
-	*/
 
 	if (enc->average_speed < -1 || enc->average_speed > 1)
 	{
@@ -889,8 +810,10 @@ void get_speed_encoder(enc_stc *enc)
 	}
 
 	// Remove noise mediating previous values with actual
-	shift_array(enc->speed_array, 5, speed);
-	enc->average_speed = dynamic_average(enc->speed_array, 5);
+	// shift_array(enc->speed_array, 5, speed);
+	// enc->average_speed = dynamic_average(enc->speed_array, 5);
+
+	enc->average_speed = speed;
 
 	// Calculating the angle sample frequency
 	//enc_calculate_optimal_frequency(enc);

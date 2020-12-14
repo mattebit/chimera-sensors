@@ -77,6 +77,9 @@ uint32_t fake2[5];
 uint32_t valMax0, valMin0, valMax1, valMin1, valMax2, valMin2, val0rang, val1rang, val2rang;
 uint32_t ADC_buffer[4], val[4];
 
+uint8_t requested_conv = 0;
+uint8_t conv_compleated = 0;
+
 static TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
 static TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
 static TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
@@ -133,6 +136,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
   pot_2.val = ADC_buffer[1];
   pot_3.val = ADC_buffer[2];
   pot_4.val = ADC_buffer[3];
+
+  conv_compleated = 1;
+  requested_conv = 0;
 }
 void print_Max_Min()
 {
@@ -244,8 +250,6 @@ int main(void)
   steer_wheel_prescaler /= 20;
   steer_wheel_prescaler += 2;
 
-  HAL_UART_Transmit(&huart2, (uint8_t *)"vivo\r\n", strlen("vivo\r\n"), 10);
-
   //HAL_TIM_Base_Start(&htim2);
   pot_1.max = 2670;
   pot_1.min = 2400; //released
@@ -254,10 +258,15 @@ int main(void)
   pot_2.min = 575; //released
   pot_2.range = abs(pot_2.max - pot_2.min);
 
-  pot_3.min = 0;
+  // Brake pressure sensor value ranges:
+  // Aviorace SP100
+  //  409.6 -> 0 bar
+  //  3686.4 -> 100 bar
+  //  3276.8 -> 0_____100 bar
+  pot_3.min = 410;
   pot_3.max = 4096;
   pot_3.range = abs(pot_3.max - pot_3.min);
-  pot_4.min = 0;
+  pot_4.min = 410;
   pot_4.max = 4096;
   pot_4.range = abs(pot_4.max - pot_4.min);
 
@@ -281,7 +290,6 @@ int main(void)
     SCS_Send_real = 0;
 
     ///CALCULATING APPS% GAIN///
-
     if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET)
     {
       pc6 = 100;
@@ -294,14 +302,21 @@ int main(void)
     // If CAN is free from important messages, send data
     if (previous_millis != HAL_GetTick())
     {
-      if (HAL_GetTick() % 2 == 0)
+      if (requested_conv == 0)
       {
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
+        requested_conv == 1;
+      }
+
+      if (HAL_GetTick() % 2 == 0 && conv_compleated == 1)
+      {
 
         calc_pot_value(&pot_1);
         calc_pot_value(&pot_2);
         calc_pot_value(&pot_3);
         calc_pot_value(&pot_4);
+
+        conv_compleated = 0;
       }
 
       send_CAN_data(HAL_GetTick());
@@ -309,31 +324,14 @@ int main(void)
     }
 
     ///LED STRIP BRAKE LIGHT CODE///
-    if (pc6 == GPIO_PIN_SET)
+    if (pc6 == 100)
     {
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
     }
-    else if (pc6 == GPIO_PIN_RESET)
+    else if (pc6 == 0)
     {
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
     }
-
-    //print_Max_Min();
-    /*
-    if (implausibility_check(&pot_1, &pot_2) == 1)
-    {
-      //pot_1.val_100 = 0;
-      //pot_2.val_100 = 0;
-      SCS_Send = 1;
-    }
-    */
-
-    /*if (SCS != 0 || SCS1 != 0){
-		  pot_1.val_100 = 0;
-		  pot_2.val_100 = 0;
-		  val2_100 = GPIO_PIN_RESET;
-		  SCS_Send = 1;
-	  }*/
   }
 
   /* USER CODE END 3 */
@@ -806,8 +804,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 
   if (idsave == 0xBB)
   {
-    //  sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
-    //		  HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
     if ((can.dataRx[0] == 0) && (can.dataRx[1] == 0))
     {
       set_max(&pot_1);
@@ -862,6 +858,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
     if (timer_flag == 1 * multiplier)
     {
+
       can.dataTx[0] = 0x02;
       can.dataTx[1] = pc6;
       can.dataTx[2] = 0;

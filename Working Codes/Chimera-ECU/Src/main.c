@@ -210,6 +210,8 @@ state_t do_state_idle(state_global_data_t *data);
 state_t do_state_setup(state_global_data_t *data);
 state_t do_state_run(state_global_data_t *data);
 
+state_t STATO = STATE_INIT;
+
 //--Transition functions declarations--
 void to_idle(state_global_data_t *data);
 void from_idle_to_setup(state_global_data_t *data);
@@ -220,6 +222,7 @@ void to_run(state_global_data_t *data);
 void initData(state_global_data_t *data);
 void canSendMSGInit(uint8_t *CanSendMSG);
 void checkTimeStamp(state_global_data_t *data);
+void sendStatus(state_global_data_t *data);
 void sendErrors(state_global_data_t *data);
 void shutdown(state_global_data_t *data);
 void shutdownErrors(state_global_data_t *data, int err);
@@ -255,7 +258,6 @@ int main(void)
 	HAL_Init();
 
 	/* USER CODE BEGIN Init */
-	state_t STATO = STATE_INIT;
 	/* USER CODE END Init */
 
 	/* Configure the system clock */
@@ -309,6 +311,9 @@ int main(void)
 	uint32_t previous_millis = 0;
 	while (1)
 	{
+
+		STATO = run_state(STATO, &data);
+
 		if (previous_millis != HAL_GetTick())
 		{
 			if (HAL_GetTick() % SHORT_DELTA == 0)
@@ -318,13 +323,10 @@ int main(void)
 
 			if (HAL_GetTick() % 1000 == 0)
 			{
-				sprintf(txt, "%d, %d, %d\r\n", data.dataCounterDown, data.dataCounterUp, (data.dataCounterUp - data.dataCounterDown));
-				HAL_UART_Transmit(&huart2, (uint8_t *)txt, (uint8_t)strlen(txt), 10);
+				sendStatus(&data);
 			}
-
 			previous_millis = HAL_GetTick();
 		}
-		STATO = run_state(STATO, &data);
 
 		if (HAL_GetTick() % 10 > 0 && data.writeInCan == false)
 		{
@@ -857,6 +859,14 @@ state_t do_state_idle(state_global_data_t *data)
 			/* Check who is online */
 			case 0x02:
 				sendErrors(data);
+				if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+				{
+					data->powerRequested = -20;
+				}
+				else
+				{
+					data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+				}
 				break;
 			/* Turning on car driver request */
 			case 0x03:
@@ -984,39 +994,10 @@ state_t do_state_setup(state_global_data_t *data)
 				break;
 			/* Going to run mode driver request */
 			case 0x05:
-				canSendMSG[0] = 0xFF;
-				CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				if (data->inverterSx == true)
-				{
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = 0x01;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				if (data->inverterDx == true)
-				{
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = 0x02;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				if (data->breakingPedal == true)
-				{
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = 0x03;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				if (data->requestOfShutdown == false)
-				{
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = 0x04;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
 				/* If inverter are turned on and break is pressed i can go to run */
 				if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
 				{
 					data->go = true;
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = 0xFF;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 					/* Map */
 					if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
 					{
@@ -1028,6 +1009,22 @@ state_t do_state_setup(state_global_data_t *data)
 					}
 					__HAL_TIM_SetCounter(&htim7, 0);
 					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+				}
+				else
+				{
+					uint8_t tosend = 0;
+					if (data->inverterSx)
+						tosend += 8;
+					if (data->inverterDx)
+						tosend += 16;
+					if (data->breakingPedal)
+						tosend += 32;
+					if (data->requestOfShutdown)
+						tosend += 64;
+
+					canSendMSG[0] = 0xFF;
+					canSendMSG[1] = tosend;
+					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 				}
 				break;
 			/* Turning on Inverter sx driver request */
@@ -1886,15 +1883,49 @@ void checkTimeStamp(state_global_data_t *data)
 	}*/
 }
 
+void sendStatus(state_global_data_t *data)
+{
+	canSendMSGInit(canSendMSG);
+
+	uint8_t map = data->powerRequested;
+	uint8_t state = 0;
+
+	if (STATO == STATE_IDLE)
+		state = 0;
+	if (STATO == STATE_SETUP)
+		state = 1;
+	if (STATO == STATE_RUN)
+		state = 2;
+
+	canSendMSG[0] = 0x01;
+	canSendMSG[1] = data->errors;
+	canSendMSG[2] = data->warningsB1;
+	canSendMSG[3] = map;
+	canSendMSG[4] = state;
+	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+}
+
 void sendErrors(state_global_data_t *data)
 {
 	/* This function is used to send errors and warnings to the steering wheel.
 	 * Errors and Warnings are calculated every cycle but sent just on request. */
 	canSendMSGInit(canSendMSG);
 
+	uint8_t map = data->powerRequested;
+	uint8_t state = 0;
+
+	if (STATO == STATE_IDLE)
+		state = 0;
+	if (STATO == STATE_SETUP)
+		state = 1;
+	if (STATO == STATE_RUN)
+		state = 2;
+
 	canSendMSG[0] = 0x01;
 	canSendMSG[1] = data->errors;
 	canSendMSG[2] = data->warningsB1;
+	canSendMSG[3] = map;
+	canSendMSG[4] = state;
 	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 }
 
@@ -1988,11 +2019,15 @@ void transmission(state_global_data_t *data)
 	int negativeCurrentToInverter;
 
 	/* TODO: check rules */
-	if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
+	//if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
+	if ((data->requestOfShutdown == true))
 	{
 		data->curRequested = 0;
 
 		canSendMSG[0] = 0x90;
+		canSendMSG[1] = 0x00;
+		canSendMSG[2] = 0x00;
+
 		CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
 		CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 	}

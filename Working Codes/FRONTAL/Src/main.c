@@ -257,8 +257,8 @@ int main(void)
     enc.TimerInstance = &a_TimerInstance3;
     enc.average_speed = 0;
     enc.wheel_diameter = 0.395;
-    enc.data_size = 14;
-    enc.clock_period = 1;
+    enc.data_size = 15;
+    enc.clock_period = 2;
     enc.wheel_rotation = 0;
     enc.Km = 0;
 
@@ -286,7 +286,7 @@ int main(void)
     __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
-    enc.max_delta_angle = 0.4;
+    enc.max_delta_angle = 3;
     enc.frequency_timer = &htim7;
     enc.frequency_timer_Hz = 36000000;
     enc.frequency = enc.frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
@@ -706,7 +706,7 @@ static void MX_TIM3_Init(void)
 
     /* USER CODE END TIM3_Init 1 */
     htim3.Instance = TIM3;
-    htim3.Init.Prescaler = 18;
+    htim3.Init.Prescaler = 9;
     htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim3.Init.Period = 65500;
     htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -879,7 +879,7 @@ static void MX_TIM7_Init(void)
     htim7.Instance = TIM7;
     htim7.Init.Prescaler = 720;
     htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim7.Init.Period = 500;
+    htim7.Init.Period = 100;
     htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
     {
@@ -1341,7 +1341,7 @@ int send_CAN_data(uint32_t millis)
             can.dataTx[2] = Km;
             can.dataTx[3] = (uint8_t)rotations >> 8;
             can.dataTx[4] = (uint8_t)rotations;
-            can.dataTx[5] = 0;
+            can.dataTx[5] = (uint8_t)enc.error_flag;
             can.dataTx[6] = 0;
             can.dataTx[7] = enc.steer_enc_prescaler;
             can.id = 0xD0;
