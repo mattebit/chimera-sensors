@@ -40,8 +40,9 @@ extern "C" {
 #include "stm32f4xx_it.h"
 #include "stm32f4xx_hal_gpio.h"
 
+#include "ADC.h"
+#include "CAN.h"
 #include "Encoder.h"
-#include "Eagle_TRT.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

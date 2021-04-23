@@ -231,7 +231,7 @@ int main(void)
     // ------------ POTENTIOMETER ------------ //
     pot_2.max = 4055;
     pot_2.min = 2516;
-    pot_2.range = abs(pot_2.max - pot_2.min);
+    pot_2.range = fabs(pot_2.max - pot_2.min);
 
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
@@ -327,14 +327,14 @@ int main(void)
             if (DEBUG && HAL_GetTick() % DEBUG_DELAY == 0)
             {
                 // ALL DATA
-                sprintf(txt, "Left: %s; %s; %s;\nRight: &s; %s; %s;\n",
+                sprintf(txt, "Left: %d; %d; %d;\nRight: %d; %d; %d;\n",
                     (int)(enc_data_left.average_speed),
                     (int)(enc_data_left.Km),
                     (int)(enc_data_left.wheel_rotation),
                     (int)(enc_data_right.average_speed),
                     (int)(enc_data_right.Km),
                     (int)(enc_data_right.wheel_rotation));
-                HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+                HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
 
                 sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
