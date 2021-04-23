@@ -1,15 +1,30 @@
 #ifndef ENCODER_H
 #define ENCODER_H
 
+#include <math.h>
 #include <stdio.h>
-#include "inttypes.h"
+#include <inttypes.h>
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_gpio.h"
-#include "stdio.h"
-#include "stdint.h"
-#include "stdlib.h"
-#include "string.h"
-#include "math.h"
+
+//----------------ENCODER----------------//
+/*
+ *To use encoder functions you have to initialize two timers, one for the clock and one to generate an interrupt
+ *To get the rotational speed of the encoder, you can setup the interrupt timer and call 'encoder_tim_interrupt()';
+ *you have to declare a variable and pass it as argument to the encoder_tim_interrupt() function.
+ *The porpouse of that variable is to switch from the three phases needed to calculate the rotational speed.
+ *The first and the second phases are to request two angles from the encoder, then third is to calculate the speed.
+ *For the configuration of the first timer go to the description of the read_encoder() function.
+ *For the configuration of the second timer you have to configure it to generate an interrupt.
+ *That interrupt must be long enough to calculate a speed but not too long because you have to get the two angles in the same wheel rotation.
+ *
+ *working settings:
+ *interrupt timer -> prescaler 36, counter period 1000
+ *timer2 -> prescaler = 18, counter period = 65500
+ *pin PC8 = data in
+ *pin PC9 = clock pin
+ *angles_array[15]
+*/
 
 #include "stm32f4xx_hal_tim.h"
 
@@ -26,7 +41,7 @@ struct Encoder_Settings{
 	float clock_period;	// Period of the clock generated
 	int frequency_timer_Hz;
 
-	TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock
+	TIM_HandleTypeDef *clock_timer; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
 
 	GPIO_TypeDef *ClockPinName;

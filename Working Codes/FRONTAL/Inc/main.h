@@ -32,9 +32,16 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "math.h"
+#include "stdio.h"
+#include "string.h"
+#include "stdlib.h"
 #include "inttypes.h"
-#include "stm32f4xx_hal.h"
+#include "stm32f4xx_it.h"
 #include "stm32f4xx_hal_gpio.h"
+
+#include "Encoder.h"
+#include "Eagle_TRT.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -56,7 +63,24 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-  int send_CAN_data(uint32_t millis);
+int send_CAN_data(uint32_t millis);
+
+/**
+ * Initializes encoder settings structs
+ * @param struct to right encoder
+ * @param struct to left  encoder
+*/
+void init_encoder_settings(struct Encoder_Settings*, struct Encoder_Settings*);
+
+/**
+ * Initializes encoder data structs
+ * @param struct to right encoder settings
+ * @param struct to right encoder data
+ * @param struct to left  encoder settings
+ * @param struct to left  encoder data
+*/
+void init_encoder_data(struct Encoder_Settings*, struct Encoder_Data*, struct Encoder_Settings*, struct Encoder_Data*);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

@@ -23,17 +23,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "Eagle_TRT.h"
-#include "gps.h"
-#include "string.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include <inttypes.h>
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_it.h"
-#include <math.h>
-
-#include "Encoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,17 +63,19 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-#define USE_GPS 0
-#define USE_IMU 1
-#define USE_ENCODER 1
 #define USE_STEER 1
+#define USE_ENCODER 1
 
 // ms beween two messages of same device
 #define CAN_SEND_FREQUENCY 20
 
+// Diameter in meters
+#define WHEEL_DIAMETER 0.395
+
+#define DEBUG 1
+#define DEBUG_DELAY 50
+
 extern can_stc can;
-extern imu_stc accel;
-extern imu_stc gyro;
 extern pot_stc pot_1;
 extern pot_stc pot_2;
 extern pot_stc pot_3;
@@ -116,10 +107,6 @@ TIM_HandleTypeDef a_TimerInstance6 = {.Instance = TIM6};
 TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
 TIM_HandleTypeDef a_TimerInstance10 = {.Instance = TIM10};
 
-gps_struct gps;
-char msg_gps[3];
-char buffer_gps[50];
-int msg_arrived = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -153,9 +140,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
     pot_1.val = ADC_buffer[0];
     pot_2.val = ADC_buffer[1];
     pot_3.val = ADC_buffer[2];
-    /*int txt_1[100];
-    sprintf(txt_1, "sterzo: %d %d %d\r\n", pot_1.val, pot_2.val, pot_3.val);
-    HAL_UART_Transmit(&huart2, (uint8_t*)txt_1, strlen(txt_1), 10);*/
 }
 
 int steer_enc_prescaler;
@@ -232,45 +216,22 @@ int main(void)
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+
+    // ------------      CAN      ------------ //
     can.hcan = &hcan1;
-    // can initialization //
 
     // imu initialization //
-    accel.GPIOx_InUse = GPIOC;
-    accel.GPIO_Pin_InUse = GPIO_PIN_9;
-    accel.hspi = &hspi1;
-
-    gyro.GPIOx_InUse = GPIOA;
-    gyro.GPIO_Pin_InUse = GPIO_PIN_8;
-    gyro.hspi = &hspi1;
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
 
-    steer_enc_prescaler = htim3.Init.Period;
-    steer_enc_prescaler /= 3;
-    steer_enc_prescaler /= 20;
-    steer_enc_prescaler += 40;
-    enc_setting_right.steer_enc_prescaler = steer_enc_prescaler;
+    // ------------    ENCODER    ------------ //
+    init_encoder_settings(&enc_setting_right, &enc_setting_left);
+    init_encoder_data(&enc_setting_right, &enc_data_right, &enc_setting_left, &enc_data_left);
 
+    // ------------ POTENTIOMETER ------------ //
     pot_2.max = 4055;
     pot_2.min = 2516;
     pot_2.range = abs(pot_2.max - pot_2.min);
-
-    enc_setting_right.ClockPinName = GPIOC;
-    enc_setting_right.ClockPinNumber = GPIO_PIN_6;
-    enc_setting_right.DataPinName = GPIOC;
-    enc_setting_right.DataPinNumber = GPIO_PIN_8;
-
-    enc_setting_right.dx_wheel = 1;
-    enc_setting_right.interrupt_flag = 0;
-    enc_setting_right.TimerInstance = &a_TimerInstance3;
-    enc_setting_right.wheel_diameter = 0.395;
-    enc_setting_right.clock_period = 2;
-    enc_setting_right.data_size = 15;
-
-    enc_data_right.average_speed = 0;
-    enc_data_right.wheel_rotation = 0;
-    enc_data_right.Km = 0;
 
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
@@ -295,22 +256,6 @@ int main(void)
     //__HAL_TIM_SET_COUNTER(&a_TimerInstance6, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
-
-    enc_setting_right.max_delta_angle = 3;
-    enc_setting_right.frequency_timer = &htim7;
-    enc_setting_right.frequency_timer_Hz = 36000000;
-    enc_setting_right.frequency = enc_setting_right.frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
-    HAL_GPIO_WritePin(enc_setting_right.ClockPinName, enc_setting_right.ClockPinNumber, GPIO_PIN_SET);
-
-    accel.scale = 4;
-    gyro.scale = 500;
-
-    //HAL_Delay(1000);
-    LSMD9S0_accel_gyro_init(&accel, &gyro);
-    LSMD9S0_check(&accel);
-
-    LSM9DS0_calibration(&accel);
-    LSM9DS0_calibration(&gyro);
 
     encoder_counter = 0;
 
@@ -365,7 +310,6 @@ int main(void)
         /* USER CODE BEGIN 3 */
 
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
-        //gps_read(&huart1, &gps);
 
         // If CAN is free from important messages, send data
         if (command_flag == 0)
@@ -376,18 +320,23 @@ int main(void)
 
         if (previous_millis != HAL_GetTick())
         {
-            // ALL DATA
-            // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
-            // GPS
-            //sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
-            //sprintf(txt,"%ld\r\n", gps.latitude_i);
-            //HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
 
             send_CAN_data(HAL_GetTick());
             previous_millis = HAL_GetTick();
 
-            if (HAL_GetTick() % 1000 == 0)
+            if (DEBUG && HAL_GetTick() % DEBUG_DELAY == 0)
             {
+                // ALL DATA
+                sprintf(txt, "Left: %s; %s; %s;\nRight: &s; %s; %s;\n",
+                    (int)(enc_data_left.average_speed),
+                    (int)(enc_data_left.Km),
+                    (int)(enc_data_left.wheel_rotation),
+                    (int)(enc_data_right.average_speed),
+                    (int)(enc_data_right.Km),
+                    (int)(enc_data_right.wheel_rotation));
+                HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+
+
                 sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
                 HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
 
@@ -1064,17 +1013,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart == &huart1)
-    {
-        buffer_gps[msg_arrived] = msg_gps[0];
-        msg_arrived++;
-        if (msg_arrived == 50)
-        {
-            msg_arrived = 0;
-        }
-        //HAL_UART_Transmit(&huart2, (uint8_t*)&buffer_gps[0], 1, 10);
-        HAL_UART_Receive_IT(huart, (uint8_t *)msg_gps, 1); //request of rx buffer interrupt
-    }
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -1180,35 +1118,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     if (htim == &htim10)
     {
-        //READING SENSORS
-        if (flag == 1 * multiplier)
-        {
-            // ACCEL
-            if (USE_IMU)
-                LSMD9S0_accel_read(&accel);
-        }
-        else if (flag == 2 * multiplier)
-        {
-            // STEER
-            if (USE_STEER)
-                calc_pot_value(&pot_2, 200);
-        }
-        else if (flag == 3 * multiplier)
-        {
-            // GYRO
-            if (USE_IMU)
-                LSMD9S0_gyro_read(&gyro);
-            //imu_elaborate_data(&gyro);
-        }
-
-        if (flag >= (3 * multiplier))
-        {
-            flag = 0;
-        }
-        else
-        {
-            flag++;
-        }
+        // STEER
+        if (USE_STEER)
+            calc_pot_value(&pot_2, 200);
     }
 
     if (htim == &htim7)
@@ -1223,8 +1135,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 int send_CAN_data(uint32_t millis)
 {
-
-    int send_time = 20;
     int sent_flag = 0;
     int increment_value = 1;
 
@@ -1327,60 +1237,7 @@ int send_CAN_data(uint32_t millis)
             can.size = 8;
             CAN_Send(&can);
 
-            sent_flag = 10;
-        }
-
-        millis += increment_value;
-    }
-
-    if (USE_IMU)
-    {
-        //--------------------SEND Accel--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-
-            //removing negative values
-            uint16_t val_a_x = (accel.x + accel.scale) * 100;
-            uint16_t val_a_y = (accel.y + accel.scale) * 100;
-            uint16_t val_a_z = (accel.z + accel.scale) * 100;
-
-            can.dataTx[0] = 0x00;
-            can.dataTx[1] = val_a_x / 256;
-            can.dataTx[2] = val_a_x % 256;
-            can.dataTx[3] = val_a_y / 256;
-            can.dataTx[4] = val_a_y % 256;
-            can.dataTx[5] = val_a_z / 256;
-            can.dataTx[6] = val_a_z % 256;
-            can.dataTx[7] = (uint8_t)accel.scale;
-            can.id = 0xC0;
-            can.size = 8;
-            CAN_Send(&can);
-
             sent_flag = 3;
-        }
-
-        millis += increment_value;
-
-        //---------------------SEND Gyro---------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            uint16_t val_g_x = (gyro.x + gyro.scale) * 10;
-            uint16_t val_g_y = (gyro.y + gyro.scale) * 10;
-            uint16_t val_g_z = (gyro.z + gyro.scale) * 10;
-
-            can.dataTx[0] = 0x01;
-            can.dataTx[1] = val_g_x / 256;
-            can.dataTx[2] = val_g_x % 256;
-            can.dataTx[3] = val_g_y / 256;
-            can.dataTx[4] = val_g_y % 256;
-            can.dataTx[5] = val_g_z / 256;
-            can.dataTx[6] = val_g_z % 256;
-            can.dataTx[7] = (uint8_t)(gyro.scale / 10);
-            can.id = 0xC0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 4;
         }
 
         millis += increment_value;
@@ -1407,105 +1264,84 @@ int send_CAN_data(uint32_t millis)
                 can.size = 8;
                 CAN_Send(&can);
 
-                sent_flag = 5;
+                sent_flag = 4;
             }
         }
 
         millis += increment_value;
     }
 
-    if (USE_GPS)
-    {
-        //--------------------SEND GPS--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            can.dataTx[0] = 0x010;
-            can.dataTx[1] = gps.latitude_i_h / 256;
-            can.dataTx[2] = gps.latitude_i_h % 256;
-            can.dataTx[3] = gps.latitude_i_l / 256;
-            can.dataTx[4] = gps.latitude_i_l % 256;
-            can.dataTx[5] = (int)gps.latitude_o;
-            can.dataTx[6] = gps.speed_i / 256;
-            can.dataTx[7] = gps.speed_i % 256;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 6;
-        }
-
-        millis += increment_value;
-
-        //--------------------SEND GPS--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            can.dataTx[0] = 0x011;
-            can.dataTx[1] = gps.longitude_i_h / 256;
-            can.dataTx[2] = gps.longitude_i_h % 256;
-            can.dataTx[3] = gps.longitude_i_l / 256;
-            can.dataTx[4] = gps.longitude_i_l % 256;
-            can.dataTx[5] = (int)gps.longitude_o;
-            can.dataTx[6] = gps.altitude_i / 256;
-            can.dataTx[7] = gps.altitude_i % 256;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 7;
-        }
-
-        millis += increment_value;
-
-        //--------------------SEND GPS--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            can.dataTx[0] = 0x012;
-            can.dataTx[1] = gps.hour[0];
-            can.dataTx[2] = gps.hour[1];
-            can.dataTx[3] = gps.min[0];
-            can.dataTx[4] = gps.min[1];
-            can.dataTx[5] = gps.sec[0];
-            can.dataTx[6] = gps.sec[1];
-            can.dataTx[7] = 0;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 8;
-        }
-
-        millis += increment_value;
-
-        //--------------------SEND GPS--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            can.dataTx[0] = 0x013;
-            can.dataTx[1] = (uint8_t)gps.true_track_mode / 256;
-            can.dataTx[2] = (uint8_t)gps.true_track_mode % 256;
-            can.dataTx[3] = 0;
-            can.dataTx[4] = 0;
-            can.dataTx[5] = 0;
-            can.dataTx[6] = 0;
-            can.dataTx[7] = 0;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 9;
-        }
-    }
-
     return sent_flag;
 }
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-    int errore = HAL_UART_GetError(huart);
-}
-void HAL_UART_AbortReceiveCpltCallback(UART_HandleTypeDef *huart)
-{
-    int errore = HAL_UART_GetError(huart);
+
+
+
+void init_encoder_settings(struct Encoder_Settings* right, struct Encoder_Settings* left){
+
+    // RIGHT
+    right->steer_enc_prescaler = CAN_SEND_FREQUENCY/2;
+
+    right->DataPinName = GPIOC;
+    right->ClockPinName = GPIOC;
+    right->DataPinNumber = GPIO_PIN_8;
+    right->ClockPinNumber = GPIO_PIN_6;
+
+    right->dx_wheel = 1;
+    right->interrupt_flag = 0;
+    right->clock_timer = &a_TimerInstance3;
+    right->wheel_diameter = WHEEL_DIAMETER;
+    right->clock_period = 2;
+    right->data_size = 15;
+
+    right->max_delta_angle = 3;
+    right->frequency_timer = &htim7;
+    right->frequency_timer_Hz = 36000000;
+    right->frequency = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+    // LEFT
+    left->steer_enc_prescaler = CAN_SEND_FREQUENCY/2;
+
+    left->ClockPinName = GPIOC;
+    left->ClockPinNumber = GPIO_PIN_6;
+    left->DataPinName = GPIOC;
+    left->DataPinNumber = GPIO_PIN_8;
+
+    left->dx_wheel = 1;
+    left->interrupt_flag = 0;
+    left->clock_timer = &a_TimerInstance3;
+    left->wheel_diameter = WHEEL_DIAMETER;
+    left->clock_period = 2;
+    left->data_size = 15;
+
+    left->max_delta_angle = 3;
+    left->frequency_timer = &htim7;
+    left->frequency_timer_Hz = 36000000;
+    left->frequency = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+    // CLOCK PINS TO HIGH
+    HAL_GPIO_WritePin(right->ClockPinName, right->ClockPinNumber, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(left->ClockPinName,  left->ClockPinNumber,  GPIO_PIN_SET);
 }
 
+void init_encoder_data( struct Encoder_Settings* right, struct Encoder_Data* right_d,
+                        struct Encoder_Settings* left,  struct Encoder_Data* left_d){
+
+    // RIGHT
+    right_d->Km = 0;
+    right_d->average_speed = 0;
+    right_d->wheel_rotation = 0;
+
+    right_d->Data = malloc (sizeof (int) * right->data_size);
+    memset (right_d->Data, 0, sizeof (int) * right->data_size);
+
+    // LEFT
+    left_d->Km = 0;
+    left_d->average_speed = 0;
+    left_d->wheel_rotation = 0;
+
+    left_d->Data = malloc (sizeof (int) * left->data_size);
+    memset (left_d->Data, 0, sizeof (int) * left->data_size);
+}
 /* USER CODE END 4 */
 
 /**
@@ -1518,9 +1354,6 @@ void Error_Handler(void)
     /* User can add his own implementation to report the HAL error return state */
     while (1)
     {
-        HAL_UART_Transmit(&huart2, (uint8_t *)"Error on file: ", strlen("Error on file: "), 10);
-        //HAL_UART_Transmit(&huart2, (uint8_t *)file, strlen(file), 10);
-        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 10);
     }
     /* USER CODE END Error_Handler_Debug */
 }

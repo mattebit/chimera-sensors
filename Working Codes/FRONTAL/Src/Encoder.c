@@ -17,7 +17,7 @@
 
 // Interrupt function of tim 2
 // Call this function in the timer callback function of the stm
-// htim = timer TimerInstance of the timer that you are using for the clock of the encoder
+// htim = timer clock_timer of the timer that you are using for the clock of the encoder
 // Interrupt_flag = initilize a int variable in the main file
 // Angles_array = array to store the last angles
 // Speed = pointer to the speed value
@@ -56,7 +56,7 @@ void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Dat
 // This function is called from the interrupt callback of the timer that you are using for the encoder
 // The tim used for this function must be initialized at most at 2 microsecond per tick
 // Lower the number of microseconds per tick better it is
-// TimerInstance = struct of the tim used for the encoder
+// clock_timer = struct of the tim used for the encoder
 void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 {
 
@@ -64,8 +64,8 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 
   // From HIGH set to LOW
 	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
-	__HAL_TIM_SET_COUNTER(settings->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(settings->TimerInstance) <= settings->clock_period){}
+	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
 
 	// Starting the clock to retrieve data_size bits from the sensor
 	for (int i = 0; i < settings->data_size; i++)
@@ -73,27 +73,27 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 		// CLOCK HIGH
     // Waiting only half of period to read incoming data
 		HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_SET);
-		__HAL_TIM_SET_COUNTER(settings->TimerInstance, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->TimerInstance) <= settings->clock_period/2){}
+		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
 
 		//Reading the Pin at the half of the clock period
 		// Set the bit as the pin state (0 or 1)
 		bin_data[i] = HAL_GPIO_ReadPin(settings->DataPinName, settings->DataPinNumber);
 		data->Data[i] = bin_data[i];
 
-		__HAL_TIM_SET_COUNTER(settings->TimerInstance, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->TimerInstance) <= settings->clock_period/2){}
+		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
 
 		// CLOCK LOW
 		HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
-		__HAL_TIM_SET_COUNTER(settings->TimerInstance, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->TimerInstance) <= settings->clock_period){}
+		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
 	}
 
 	// Requesting an other bit for the eventual error sent from the sensor
 	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_SET);
-	__HAL_TIM_SET_COUNTER(settings->TimerInstance, 0);
-	while (__HAL_TIM_GET_COUNTER(settings->TimerInstance) <= settings->clock_period){}
+	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
 
 	data->error_flag = HAL_GPIO_ReadPin(settings->DataPinName, settings->DataPinNumber);
 
