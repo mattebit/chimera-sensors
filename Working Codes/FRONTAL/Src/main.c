@@ -32,6 +32,8 @@
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_it.h"
 #include <math.h>
+
+#include "Encoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,13 +79,20 @@ UART_HandleTypeDef huart2;
 #define USE_ENCODER 1
 #define USE_STEER 1
 
+// ms beween two messages of same device
+#define CAN_SEND_FREQUENCY 20
+
 extern can_stc can;
 extern imu_stc accel;
 extern imu_stc gyro;
-extern enc_stc enc;
 extern pot_stc pot_1;
 extern pot_stc pot_2;
 extern pot_stc pot_3;
+
+struct Encoder_Data enc_data_right;
+struct Encoder_Settings enc_setting_right;
+struct Encoder_Data enc_data_left;
+struct Encoder_Settings enc_setting_left;
 
 CAN_FilterTypeDef sFilter;
 uint32_t valMax0, valMin0, val0rang;
@@ -241,26 +250,27 @@ int main(void)
     steer_enc_prescaler /= 3;
     steer_enc_prescaler /= 20;
     steer_enc_prescaler += 40;
-    enc.steer_enc_prescaler = steer_enc_prescaler;
+    enc_setting_right.steer_enc_prescaler = steer_enc_prescaler;
 
     pot_2.max = 4055;
     pot_2.min = 2516;
     pot_2.range = abs(pot_2.max - pot_2.min);
 
-    enc.ClockPinName = GPIOC;
-    enc.ClockPinNumber = GPIO_PIN_6;
-    enc.DataPinName = GPIOC;
-    enc.DataPinNumber = GPIO_PIN_8;
+    enc_setting_right.ClockPinName = GPIOC;
+    enc_setting_right.ClockPinNumber = GPIO_PIN_6;
+    enc_setting_right.DataPinName = GPIOC;
+    enc_setting_right.DataPinNumber = GPIO_PIN_8;
 
-    enc.dx_wheel = 1;
-    enc.interrupt_flag = 0;
-    enc.TimerInstance = &a_TimerInstance3;
-    enc.average_speed = 0;
-    enc.wheel_diameter = 0.395;
-    enc.data_size = 15;
-    enc.clock_period = 2;
-    enc.wheel_rotation = 0;
-    enc.Km = 0;
+    enc_setting_right.dx_wheel = 1;
+    enc_setting_right.interrupt_flag = 0;
+    enc_setting_right.TimerInstance = &a_TimerInstance3;
+    enc_setting_right.wheel_diameter = 0.395;
+    enc_setting_right.clock_period = 2;
+    enc_setting_right.data_size = 15;
+
+    enc_data_right.average_speed = 0;
+    enc_data_right.wheel_rotation = 0;
+    enc_data_right.Km = 0;
 
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
@@ -286,11 +296,11 @@ int main(void)
     __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
     __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
-    enc.max_delta_angle = 3;
-    enc.frequency_timer = &htim7;
-    enc.frequency_timer_Hz = 36000000;
-    enc.frequency = enc.frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
-    HAL_GPIO_WritePin(enc.ClockPinName, enc.ClockPinNumber, GPIO_PIN_SET);
+    enc_setting_right.max_delta_angle = 3;
+    enc_setting_right.frequency_timer = &htim7;
+    enc_setting_right.frequency_timer_Hz = 36000000;
+    enc_setting_right.frequency = enc_setting_right.frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+    HAL_GPIO_WritePin(enc_setting_right.ClockPinName, enc_setting_right.ClockPinNumber, GPIO_PIN_SET);
 
     accel.scale = 4;
     gyro.scale = 500;
@@ -346,21 +356,6 @@ int main(void)
 
     second_millis = HAL_GetTick();
 
-    /*
-    if (gps_init(&huart1, &gps) == 0)
-    {
-        //--error--//
-    }
-
-    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-    if (HAL_UART_Receive_IT(&huart1, (uint8_t *)msg_gps, 1) != HAL_OK)
-    { //request of rx buffer interrupt
-        char txt[100];
-        sprintf(txt, "HAL_UART_Receive_IT FAILED\r\n");
-        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
-    }*/
-
     HAL_UART_Transmit(&huart2, (uint8_t *)"start while\n\r", strlen("start while\n\r"), 10);
     while (1)
     {
@@ -375,57 +370,30 @@ int main(void)
         // If CAN is free from important messages, send data
         if (command_flag == 0)
         {
-            if (previous_millis != HAL_GetTick())
-            {
-                // ALL DATA
-                // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
-                // GPS
-                //sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
-                //sprintf(txt,"%ld\r\n", gps.latitude_i);
-                //HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-
-                send_CAN_data(HAL_GetTick());
-                previous_millis = HAL_GetTick();
-
-                if (HAL_GetTick() % 1000 == 0)
-                {
-                    /*
-
-                    for (int i = 0; i < enc.data_size; i++)
-                    {
-                        sprintf(txt, "%d ", enc.Data[i]);
-                        HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-                    }
-                    sprintf(txt, "\r\n");
-                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-                    */
-                    sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
-                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-
-                    /*
-                    sprintf(txt, "cfhdjj\r\n");
-                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-                    */
-
-                    encoder_sample_freq = encoder_sample_freq_counter;
-                    encoder_sample_freq_counter = 0;
-                }
-                /*
-                second_millis = HAL_GetTick();
-                if (sent != 0){
-                    count_message ++;
-                }
-                if(second_millis % 1000 == 0){
-                    sprintf(txt, "messages Per second %d\r\n", count_message);
-                    HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-                    count_message = 0;
-                }*/
-            }
+            command_flag = 1;
+            continue;
         }
-        else
+
+        if (previous_millis != HAL_GetTick())
         {
-            //HAL_Delay(1);
-            command_flag = 0;
+            // ALL DATA
+            // sprintf(txt, "speed: %d distance: %d ax: %d, ay: %d, az: %d gx: %d gy: %d gz: %d steer: %d\r\n", (int)(enc.average_speed*100), (int)enc.Km, (int)accel.x, (int)accel.y, (int)accel.z, (int)gyro.x, (int)gyro.y, (int)gyro.z, (int)pot_2.val_100);
+            // GPS
+            //sprintf(txt, "latitude: %d lat orientation: %c longitude: %d lon orientation: %c altitude: %d speed: %d\r\n", gps_main.latitude_i, gps_main.latitude_o, gps_main.longitude_i, gps_main.longitude_o, gps_main.altitude_i, gps_main.speed_i);
+            //sprintf(txt,"%ld\r\n", gps.latitude_i);
+            //HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
+
+            send_CAN_data(HAL_GetTick());
+            previous_millis = HAL_GetTick();
+
+            if (HAL_GetTick() % 1000 == 0)
+            {
+                sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
+                HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
+
+                encoder_sample_freq = encoder_sample_freq_counter;
+                encoder_sample_freq_counter = 0;
+            }
         }
     }
     /* USER CODE END 3 */
@@ -1248,7 +1216,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         if (USE_ENCODER)
         {
             encoder_sample_freq_counter++;
-            encoder_tim_interrupt(&enc);
+            encoder_tim_interrupt(&enc_setting_right, &enc_data_right);
         }
     }
 }
@@ -1263,49 +1231,38 @@ int send_CAN_data(uint32_t millis)
     if (USE_ENCODER)
     {
         //-------------------SEND Encoder-------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
-            if (enc.speed_sign == 1)
-                enc.average_speed *= -1;
+            if (enc_data_right.speed_sign == 1)
+                enc_data_right.average_speed *= -1;
 
-            uint16_t speed_kmh = enc.average_speed * ((enc.wheel_diameter / 2) * 3.6);
-            uint16_t speed_rads = enc.average_speed * 100;
-
-            // sprintf(txt, "%d,%d,%d,%d\r\n", (int)(enc.angle0 * 100), (int)(enc.angle1 * 100), (int)(enc.average_speed * 100), (int)(enc.delta_angle * 100));
-            // HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 20);
+            uint16_t speed_kmh = enc_data_right.average_speed * ((enc_setting_right.wheel_diameter / 2) * 3.6);
+            uint16_t speed_rads = enc_data_right.average_speed * 100;
 
             can.dataTx[0] = 0x06;
             can.dataTx[1] = speed_kmh / 256;
             can.dataTx[2] = speed_kmh % 256;
-            can.dataTx[3] = enc.speed_sign;
+            can.dataTx[3] = enc_data_right.speed_sign;
             can.dataTx[4] = speed_rads / 256;
             can.dataTx[5] = speed_rads % 256;
-            can.dataTx[6] = enc.error_flag;
-            can.dataTx[7] = enc.steer_enc_prescaler;
+            can.dataTx[6] = enc_data_right.error_flag;
+            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
             can.id = 0xD0;
             can.size = 8;
             CAN_Send(&can);
 
-            count_message = 0;
-
             sent_flag = 1;
-
-            // sprintf(txt, "%d\t%d\r\n", (int)(speed_Send), (int)(enc.Km));
-            // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
         }
 
         millis += increment_value;
 
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
-            if (enc.speed_sign == 1)
-                enc.average_speed *= -1;
+            if (enc_data_right.speed_sign == 1)
+                enc_data_right.average_speed *= -1;
 
-            uint32_t left_rads = enc.average_speed * 10000;
+            uint32_t left_rads = enc_data_right.average_speed * 10000;
             uint32_t right_rads = 0;
-
-            // sprintf(txt, "%d,%d,%d,%d\r\n", (int)(enc.angle0 * 100), (int)(enc.angle1 * 100), (int)(enc.average_speed * 100), (int)(enc.delta_angle * 100));
-            // HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 20);
 
             can.dataTx[0] = 0x07;
             can.dataTx[1] = (uint8_t)(left_rads >> 16);
@@ -1314,7 +1271,7 @@ int send_CAN_data(uint32_t millis)
             can.dataTx[4] = (uint8_t)(right_rads >> 16);
             can.dataTx[5] = (uint8_t)(right_rads >> 8);
             can.dataTx[6] = (uint8_t)(right_rads);
-            can.dataTx[7] = enc.speed_sign;
+            can.dataTx[7] = enc_data_right.speed_sign;
             can.id = 0xD0;
             can.size = 8;
             CAN_Send(&can);
@@ -1322,28 +1279,25 @@ int send_CAN_data(uint32_t millis)
             count_message = 0;
 
             sent_flag = 1;
-
-            // sprintf(txt, "%d\t%d\r\n", (int)(speed_Send), (int)(enc.Km));
-            // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
         }
 
         millis += increment_value;
 
         //-------------SEND KM & WHEEL ROTAIONS-------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
 
-            uint16_t Km = (enc.Km);
-            uint16_t rotations = enc.wheel_rotation;
+            uint16_t Km = (enc_data_right.Km);
+            uint16_t rotations = enc_data_right.wheel_rotation;
 
             can.dataTx[0] = 0x08;
             can.dataTx[1] = Km >> 8;
             can.dataTx[2] = Km;
             can.dataTx[3] = (uint8_t)rotations >> 8;
             can.dataTx[4] = (uint8_t)rotations;
-            can.dataTx[5] = (uint8_t)enc.error_flag;
+            can.dataTx[5] = (uint8_t)enc_data_right.error_flag;
             can.dataTx[6] = 0;
-            can.dataTx[7] = enc.steer_enc_prescaler;
+            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
             can.id = 0xD0;
             can.size = 8;
             CAN_Send(&can);
@@ -1354,12 +1308,12 @@ int send_CAN_data(uint32_t millis)
         millis += increment_value;
 
         //--------------------ENCODER DEBUG DATA--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
 
-            uint16_t a0 = enc.angle0 * 100;
-            uint16_t a1 = enc.angle1 * 100;
-            uint16_t da = enc.delta_angle * 100;
+            uint16_t a0 = enc_data_right.angle0 * 100;
+            uint16_t a1 = enc_data_right.angle1 * 100;
+            uint16_t da = enc_data_right.delta_angle * 100;
 
             can.dataTx[0] = 0x015;
             can.dataTx[1] = a0 / 256;
@@ -1368,7 +1322,7 @@ int send_CAN_data(uint32_t millis)
             can.dataTx[4] = a1 % 256;
             can.dataTx[5] = da / 256;
             can.dataTx[6] = da % 256;
-            can.dataTx[7] = enc.steer_enc_prescaler;
+            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
             can.id = 0xD0;
             can.size = 8;
             CAN_Send(&can);
@@ -1382,7 +1336,7 @@ int send_CAN_data(uint32_t millis)
     if (USE_IMU)
     {
         //--------------------SEND Accel--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
 
             //removing negative values
@@ -1408,7 +1362,7 @@ int send_CAN_data(uint32_t millis)
         millis += increment_value;
 
         //---------------------SEND Gyro---------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             uint16_t val_g_x = (gyro.x + gyro.scale) * 10;
             uint16_t val_g_y = (gyro.y + gyro.scale) * 10;
@@ -1426,9 +1380,6 @@ int send_CAN_data(uint32_t millis)
             can.size = 8;
             CAN_Send(&can);
 
-            // sprintf(txt, "%d\t%d\r\n", (int)(val_g_x), (int)(val_g_y));
-            // HAL_UART_Transmit(&huart2, txt, strlen(txt), 10);
-
             sent_flag = 4;
         }
 
@@ -1438,7 +1389,7 @@ int send_CAN_data(uint32_t millis)
     if (USE_STEER)
     {
         //--------------------SEND Steer--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             if (calibration_flag == 0)
             {
@@ -1466,7 +1417,7 @@ int send_CAN_data(uint32_t millis)
     if (USE_GPS)
     {
         //--------------------SEND GPS--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             can.dataTx[0] = 0x010;
             can.dataTx[1] = gps.latitude_i_h / 256;
@@ -1486,7 +1437,7 @@ int send_CAN_data(uint32_t millis)
         millis += increment_value;
 
         //--------------------SEND GPS--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             can.dataTx[0] = 0x011;
             can.dataTx[1] = gps.longitude_i_h / 256;
@@ -1506,7 +1457,7 @@ int send_CAN_data(uint32_t millis)
         millis += increment_value;
 
         //--------------------SEND GPS--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             can.dataTx[0] = 0x012;
             can.dataTx[1] = gps.hour[0];
@@ -1526,7 +1477,7 @@ int send_CAN_data(uint32_t millis)
         millis += increment_value;
 
         //--------------------SEND GPS--------------------//
-        if (millis % send_time == 0)
+        if (millis % CAN_SEND_FREQUENCY == 0)
         {
             can.dataTx[0] = 0x013;
             can.dataTx[1] = (uint8_t)gps.true_track_mode / 256;

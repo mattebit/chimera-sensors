@@ -37,6 +37,7 @@ void print_it(UART_HandleTypeDef *huart);
 //----------------ENCODER----------------//
 #ifdef HAL_TIM_MODULE_ENABLED
 #include "stm32f4xx_hal_tim.h"
+/*
 typedef struct
 {
 	int data_size;		// Bits sent from the sensor. exclude the error flag
@@ -82,6 +83,7 @@ void encoder_tim_interrupt(enc_stc *);
 void get_speed_encoder(enc_stc *);
 void enc_calculate_optimal_frequency(enc_stc *);
 int ReinitTIM7(float, enc_stc *);
+*/
 
 typedef struct
 {
