@@ -23,7 +23,7 @@
 // Speed = pointer to the speed value
 void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Data* data)
 {
-  double conversion = (((double)settings->data_size)/(2*M_PI));
+  double conversion = (((double)encoder_Power(2, settings->data_size))/(2*M_PI));
 
 	if (settings->interrupt_flag == 0)
 	{
@@ -63,6 +63,12 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 	int bin_data[settings->data_size];
 
   // From HIGH set to LOW
+	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
+	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_SET);
+	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
+	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
 	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
 	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
 	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
@@ -158,8 +164,7 @@ int encoder_bin_dec(int *bin, int size)
 	int dec = 0;
 
 	for (int i = 0; i < size; i++)
-		if (bin[i] == 1)
-			dec += encoder_Power(2, size - i - 1);
+		dec += bin[i] << (size-i-1);
 
 	return dec;
 }

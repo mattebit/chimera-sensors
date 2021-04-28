@@ -65,7 +65,7 @@ UART_HandleTypeDef huart2;
 #define WHEEL_DIAMETER 0.395
 
 #define DEBUG 1
-#define DEBUG_DELAY 50
+#define DEBUG_DELAY 200
 
 extern can_stc can;
 extern pot_stc pot_1;
@@ -88,8 +88,10 @@ int command_flag = 0;
 int calibration_flag = 0;
 int inverter_rpm = 0;
 
-int encoder_sample_freq = 0;
-int encoder_sample_freq_counter = 0;
+int encoder_sample = 0;
+int encoder_sample_printable = 0;
+int steer_sample = 0;
+int steer_sample_printable = 0;
 
 TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
 TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
@@ -116,19 +118,13 @@ int send_CAN_data(uint32_t);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
-{
-    pot_1.val = ADC_buffer[0];
-    pot_2.val = ADC_buffer[1];
-    pot_3.val = ADC_buffer[2];
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+  pot_1.val = ADC_buffer[0];
+  pot_2.val = ADC_buffer[1];
+  pot_3.val = ADC_buffer[2];
 }
 
-int steer_enc_prescaler;
-int encoder_counter;
 int previous_millis;
-int second_millis;
-
-int count_message = 0;
 
 /* USER CODE END 0 */
 
@@ -136,8 +132,7 @@ int count_message = 0;
   * @brief  The application entry point.
   * @retval int
   */
-int main(void)
-{
+int main(void) {
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
 
@@ -171,142 +166,169 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-    sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
-    sFilter.FilterIdLow = 0;
-    sFilter.FilterIdHigh = 0;
-    sFilter.FilterMaskIdHigh = 0;
-    sFilter.FilterMaskIdLow = 0;
-    sFilter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-    sFilter.FilterBank = 0;
-    sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
-    sFilter.FilterActivation = ENABLE;
-    HAL_CAN_ConfigFilter(&hcan1, &sFilter);
+  sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilter.FilterIdLow = 0;
+  sFilter.FilterIdHigh = 0;
+  sFilter.FilterMaskIdHigh = 0;
+  sFilter.FilterMaskIdLow = 0;
+  sFilter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+  sFilter.FilterBank = 0;
+  sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
+  sFilter.FilterActivation = ENABLE;
+  HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
-    HAL_CAN_Start(&hcan1);
+  HAL_CAN_Start(&hcan1);
 
-    HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
-    HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-    // ------------      CAN      ------------ //
-    can.hcan = &hcan1;
+  // ------------      CAN      ------------ //
+  can.hcan = &hcan1;
 
-    // imu initialization //
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); ///CS_G to 1
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); ///CS_XM to 1
+  // imu initialization //
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);  ///CS_G to 1
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);  ///CS_XM to 1
 
-    // ------------    ENCODER    ------------ //
-    init_encoder_settings(&enc_setting_right, &enc_setting_left);
-    init_encoder_data(&enc_setting_right, &enc_data_right, &enc_setting_left, &enc_data_left);
+  // ------------    ENCODER    ------------ //
+  init_encoder_settings(&enc_setting_right, &enc_setting_left);
+  init_encoder_data(&enc_setting_right, &enc_data_right, &enc_setting_left, &enc_data_left);
 
-    // ------------ POTENTIOMETER ------------ //
-    pot_2.max = 4055;
-    pot_2.min = 2516;
-    pot_2.range = fabs(pot_2.max - pot_2.min);
+  // ------------ POTENTIOMETER ------------ //
+  pot_2.max = 4055;
+  pot_2.min = 2516;
+  pot_2.range = fabs(pot_2.max - pot_2.min);
 
-    HAL_TIM_Base_Start(&htim3);
-    HAL_TIM_Base_Start(&htim7);
-    HAL_TIM_Base_Start(&htim10);
+  // ------------     TIMERS    ------------ //
 
-    HAL_TIM_Base_Start_IT(&htim3);
-    HAL_TIM_Base_Start_IT(&htim7);
-    HAL_TIM_Base_Start_IT(&htim10);
+  HAL_TIM_Base_Start(&htim3);
+  HAL_TIM_Base_Start(&htim7);
+  HAL_TIM_Base_Start(&htim10);
 
-    __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-    __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
-    __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim7);
+  HAL_TIM_Base_Start_IT(&htim10);
 
-    encoder_counter = 0;
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
+  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
 
-    HAL_Delay(1);
+  HAL_Delay(1);
 
-    // Enabling auto retransmit of speed calculated from inverters
-    can.dataTx[0] = 0x3D;
-    can.dataTx[1] = 0xA8;
-    can.dataTx[2] = 0x64;
-    can.id = 0x201;
-    can.size = 3;
-    CAN_Send(&can);
+  // Enabling auto retransmit of speed calculated from inverters
+  can.dataTx[0] = 0x3D;
+  can.dataTx[1] = 0xA8;
+  can.dataTx[2] = 0x64;
+  can.id = 0x201;
+  can.size = 3;
+  CAN_Send(&can);
 
-    HAL_Delay(10);
+  HAL_Delay(1);
 
-    can.dataTx[0] = 0x3D;
-    can.dataTx[1] = 0xA8;
-    can.dataTx[2] = 0x64;
-    can.id = 0x202;
-    can.size = 3;
-    CAN_Send(&can);
+  can.dataTx[0] = 0x3D;
+  can.dataTx[1] = 0xA8;
+  can.dataTx[2] = 0x64;
+  can.id = 0x202;
+  can.size = 3;
+  CAN_Send(&can);
+  /*
+  // Enabling auto retransmit of torque calculated from inverters
+  can.dataTx[0] = 0x3D;
+  can.dataTx[1] = 0xA0;
+  can.dataTx[2] = 0x64;
+  can.id = 0x201;
+  can.size = 3;
+  CAN_Send(&can);
 
-    HAL_Delay(10);
-    /*
-    // Enabling auto retransmit of torque calculated from inverters
-    can.dataTx[0] = 0x3D;
-    can.dataTx[1] = 0xA0;
-    can.dataTx[2] = 0x64;
-    can.id = 0x201;
-    can.size = 3;
-    CAN_Send(&can);
+  HAL_Delay(10);
 
-    HAL_Delay(10);
+  can.dataTx[0] = 0x3D;
+  can.dataTx[1] = 0xA0;
+  can.dataTx[2] = 0x64;
+  can.id = 0x202;
+  can.size = 3;
+  CAN_Send(&can);
+  */
 
-    can.dataTx[0] = 0x3D;
-    can.dataTx[1] = 0xA0;
-    can.dataTx[2] = 0x64;
-    can.id = 0x202;
-    can.size = 3;
-    CAN_Send(&can);
-    */
-    HAL_Delay(1);
-
-    second_millis = HAL_GetTick();
-
-    HAL_UART_Transmit(&huart2, (uint8_t *)"start while\n\r", strlen("start while\n\r"), 10);
-    while (1)
-    {
-
+  HAL_UART_Transmit(&huart2, (uint8_t *)"start while\n\r", strlen("start while\n\r"), 10);
+  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-        HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
+    HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
 
-        // If CAN is free from important messages, send data
-        if (command_flag == 0)
-        {
-            command_flag = 1;
-            continue;
-        }
-
-        if (previous_millis != HAL_GetTick())
-        {
-
-            send_CAN_data(HAL_GetTick());
-            previous_millis = HAL_GetTick();
-
-            if (DEBUG && HAL_GetTick() % DEBUG_DELAY == 0)
-            {
-                // ALL DATA
-                sprintf(txt, "Left: %d; %d; %d;\nRight: %d; %d; %d;\n",
-                    (int)(enc_data_left.average_speed),
-                    (int)(enc_data_left.Km),
-                    (int)(enc_data_left.wheel_rotation),
-                    (int)(enc_data_right.average_speed),
-                    (int)(enc_data_right.Km),
-                    (int)(enc_data_right.wheel_rotation));
-                HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
-
-
-                sprintf(txt, "%d\r\n", (int)(pot_2.val_100 * 100));
-                HAL_UART_Transmit(&huart2, (uint8_t*)txt, strlen(txt), 10);
-
-                encoder_sample_freq = encoder_sample_freq_counter;
-                encoder_sample_freq_counter = 0;
-            }
-        }
+    // If CAN is free from important messages, send data
+    if (command_flag == 0) {
+      command_flag = 1;
+      continue;
     }
+
+    if (previous_millis != HAL_GetTick()) {
+      send_CAN_data(HAL_GetTick());
+      previous_millis = HAL_GetTick();
+
+      if (HAL_GetTick() % 1000 == 0) {
+        encoder_sample_printable = encoder_sample;
+        encoder_sample = 0;
+        steer_sample_printable = 0;
+        steer_sample = 0;
+      }
+
+      if (DEBUG && HAL_GetTick() % DEBUG_DELAY == 0) {
+        // ALL DATA
+        for (int i = 0; i < 100; i++) {
+          HAL_UART_Transmit(&huart2, (uint8_t *)"\n", 1, 10);
+        }
+        HAL_UART_Transmit(&huart2, (uint8_t *)"\r", 1, 10);
+
+        // Encoder Raw Data
+        sprintf(txt, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\traw bin: %d angle(rad*1000): %d\r\n",
+                enc_data_right.Data[0],
+                enc_data_right.Data[1],
+                enc_data_right.Data[2],
+                enc_data_right.Data[3],
+                enc_data_right.Data[4],
+                enc_data_right.Data[5],
+                enc_data_right.Data[6],
+                enc_data_right.Data[7],
+                enc_data_right.Data[8],
+                enc_data_right.Data[9],
+                enc_data_right.Data[10],
+                enc_data_right.Data[11],
+                enc_data_right.Data[12],
+                enc_data_right.Data[13],
+                enc_data_right.Data[14],
+                (int)enc_data_right.converted_data,
+                (int)(enc_data_right.angle0 * 1000));
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+        // Encoder calcuated speeds
+        sprintf(txt, "Left: \r\n\tspeed(rads*1000): %d; %d; %d;\r\nRight:\r\n\tspeed (rads*1000) %d; %d; %d;\r\n",
+                (int)(enc_data_left.average_speed * 1000),
+                (int)(enc_data_left.Km),
+                (int)(enc_data_left.wheel_rotation),
+                (int)(enc_data_right.average_speed * 1000),
+                (int)(enc_data_right.Km),
+                (int)(enc_data_right.wheel_rotation));
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+        // Encoder Frequency
+        sprintf(txt, "encoder frequency (counting callbacks): %d\r\ncalculated: %d\r\n\n\n",
+                (int)(encoder_sample_printable),
+                (int)(enc_setting_right.frequency));
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+        // Steer        
+        sprintf(txt, "raw: %d converted(*1000): %d freq: %d\r\n",
+                (pot_2.val),
+                (int)(pot_2.val_100 * 1000),
+                steer_sample_printable);
+        HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+      }
+    }
+  }
   /* USER CODE END 3 */
 }
 
@@ -314,8 +336,7 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
-void SystemClock_Config(void)
-{
+void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -334,21 +355,18 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     Error_Handler();
   }
   /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
-  {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
     Error_Handler();
   }
 }
@@ -357,8 +375,7 @@ void SystemClock_Config(void)
   * @brief NVIC Configuration.
   * @retval None
   */
-static void MX_NVIC_Init(void)
-{
+static void MX_NVIC_Init(void) {
   /* CAN1_TX_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(CAN1_TX_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
@@ -387,9 +404,7 @@ static void MX_NVIC_Init(void)
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void)
-{
-
+static void MX_ADC1_Init(void) {
   /* USER CODE BEGIN ADC1_Init 0 */
 
   /* USER CODE END ADC1_Init 0 */
@@ -413,8 +428,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
+  if (HAL_ADC_Init(&hadc1) != HAL_OK) {
     Error_Handler();
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
@@ -422,14 +436,12 @@ static void MX_ADC1_Init(void)
   sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
@@ -437,9 +449,7 @@ static void MX_ADC1_Init(void)
   * @param None
   * @retval None
   */
-static void MX_CAN1_Init(void)
-{
-
+static void MX_CAN1_Init(void) {
   /* USER CODE BEGIN CAN1_Init 0 */
 
   /* USER CODE END CAN1_Init 0 */
@@ -459,14 +469,12 @@ static void MX_CAN1_Init(void)
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
+  if (HAL_CAN_Init(&hcan1) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
@@ -474,9 +482,7 @@ static void MX_CAN1_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM3_Init(void)
-{
-
+static void MX_TIM3_Init(void) {
   /* USER CODE BEGIN TIM3_Init 0 */
 
   /* USER CODE END TIM3_Init 0 */
@@ -493,25 +499,21 @@ static void MX_TIM3_Init(void)
   htim3.Init.Period = 65500;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
 }
 
 /**
@@ -519,13 +521,11 @@ static void MX_TIM3_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM7_Init(void)
-{
-
+static void MX_TIM7_Init(void) {
   /* USER CODE BEGIN TIM7_Init 0 */
 
-    // APB1 timer
-    // not sure but I think APB1 is at 72 MHz
+  // APB1 timer
+  // not sure but I think APB1 is at 72 MHz
 
   /* USER CODE END TIM7_Init 0 */
 
@@ -539,20 +539,17 @@ static void MX_TIM7_Init(void)
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 1000;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
-  {
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK) {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
-  {
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
-
 }
 
 /**
@@ -560,9 +557,7 @@ static void MX_TIM7_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM10_Init(void)
-{
-
+static void MX_TIM10_Init(void) {
   /* USER CODE BEGIN TIM10_Init 0 */
 
   /* USER CODE END TIM10_Init 0 */
@@ -576,14 +571,12 @@ static void MX_TIM10_Init(void)
   htim10.Init.Period = 500;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
-  {
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM10_Init 2 */
 
   /* USER CODE END TIM10_Init 2 */
-
 }
 
 /**
@@ -591,9 +584,7 @@ static void MX_TIM10_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void)
-{
-
+static void MX_USART2_UART_Init(void) {
   /* USER CODE BEGIN USART2_Init 0 */
 
   /* USER CODE END USART2_Init 0 */
@@ -602,29 +593,25 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 2250000;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
+  if (HAL_UART_Init(&huart2) != HAL_OK) {
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void)
-{
-
+static void MX_DMA_Init(void) {
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
 
@@ -632,7 +619,6 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
 }
 
 /**
@@ -640,8 +626,7 @@ static void MX_DMA_Init(void)
   * @param None
   * @retval None
   */
-static void MX_GPIO_Init(void)
-{
+static void MX_GPIO_Init(void) {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
@@ -658,6 +643,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;
@@ -688,343 +676,314 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PB8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart == &huart2)
-    {
-        //print_it(&huart2);
-    }
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart == &huart2) {
+    //print_it(&huart2);
+  }
 }
 
-void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
-{
-    /// CALIBRATION CODE///
-    int idsave = CAN_Receive(&can);
-    //201/202
+void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
+  /// CALIBRATION CODE///
+  int idsave = CAN_Receive(&can);
+  //201/202
 
-    if (idsave == 0x55 || idsave == 0x201)
-    {
-        if (can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B)
-        {
-            //command_flag = 1;
-            idsave = 0;
-        }
+  if (idsave == 0x55 || idsave == 0x201) {
+    if (can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B) {
+      //command_flag = 1;
+      idsave = 0;
     }
-    if (idsave == 0xA0 || idsave == 0xAA || idsave == 0x181)
-    {
-        if (can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8)
-        {
-            //command_flag = 1;
-            idsave = 0;
-        }
+  }
+  if (idsave == 0xA0 || idsave == 0xAA || idsave == 0x181) {
+    if (can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8) {
+      //command_flag = 1;
+      idsave = 0;
     }
+  }
 
-    if (idsave == 0xBB)
-    {
-        //sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
-        //HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
-        if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0))
-        {
-            set_min(&pot_2);
-            calibration_flag = 1;
+  if (idsave == 0xBB) {
+    //sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
+    //HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
+    if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)) {
+      set_min(&pot_2);
+      calibration_flag = 1;
 
-            can.dataTx[0] = 2;
-            can.dataTx[1] = 0;
-            can.dataTx[2] = 0;
-            can.dataTx[3] = 0;
-            can.dataTx[4] = 0;
-            can.dataTx[5] = 0;
-            can.dataTx[6] = 0;
-            can.dataTx[7] = 0;
-            can.id = 0xBC;
-            can.size = 8;
-            for (int i = 0; i < 2; i++)
-            {
-                CAN_Send(&can);
-            }
-        }
-        if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1))
-        {
-            set_max(&pot_2);
-            calibration_flag = 0;
-
-            can.dataTx[0] = 2;
-            can.dataTx[1] = 1;
-            can.dataTx[2] = 0;
-            can.dataTx[3] = 0;
-            can.dataTx[4] = 0;
-            can.dataTx[5] = 0;
-            can.dataTx[6] = 0;
-            can.dataTx[7] = 0;
-            can.id = 0xBC;
-            can.size = 8;
-            for (int i = 0; i < 2; i++)
-            {
-                CAN_Send(&can);
-            }
-        }
-        //val0rang = abs(valMax0 - valMin0);
-        pot_2.range = abs(pot_2.max - pot_2.min);
-        int max_tmp = pot_2.max;
-        int min_tmp = pot_2.min;
-        if (max_tmp > min_tmp)
-        {
-            pot_2.max = max_tmp;
-            pot_2.min = min_tmp;
-        }
-        if (max_tmp < min_tmp)
-        {
-            pot_2.max = min_tmp;
-            pot_2.min = max_tmp;
-        }
+      can.dataTx[0] = 2;
+      can.dataTx[1] = 0;
+      can.dataTx[2] = 0;
+      can.dataTx[3] = 0;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = 0;
+      can.dataTx[7] = 0;
+      can.id = 0xBC;
+      can.size = 8;
+      for (int i = 0; i < 2; i++) {
+        CAN_Send(&can);
+      }
     }
+    if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)) {
+      set_max(&pot_2);
+      calibration_flag = 0;
 
-    //TIMER Interrupt setup via CAN Message
-    if (idsave == 195 && can.dataRx[0] == 1)
-    {
-        multiplier = can.dataRx[1] * 256 + can.dataRx[2];
+      can.dataTx[0] = 2;
+      can.dataTx[1] = 1;
+      can.dataTx[2] = 0;
+      can.dataTx[3] = 0;
+      can.dataTx[4] = 0;
+      can.dataTx[5] = 0;
+      can.dataTx[6] = 0;
+      can.dataTx[7] = 0;
+      can.id = 0xBC;
+      can.size = 8;
+      for (int i = 0; i < 2; i++) {
+        CAN_Send(&can);
+      }
     }
+    //val0rang = abs(valMax0 - valMin0);
+    pot_2.range = abs(pot_2.max - pot_2.min);
+    int max_tmp = pot_2.max;
+    int min_tmp = pot_2.min;
+    if (max_tmp > min_tmp) {
+      pot_2.max = max_tmp;
+      pot_2.min = min_tmp;
+    }
+    if (max_tmp < min_tmp) {
+      pot_2.max = min_tmp;
+      pot_2.min = max_tmp;
+    }
+  }
+
+  //TIMER Interrupt setup via CAN Message
+  if (idsave == 195 && can.dataRx[0] == 1) {
+    multiplier = can.dataRx[1] * 256 + can.dataRx[2];
+  }
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-
-    if (htim == &htim10)
-    {
-        // STEER
-        if (USE_STEER)
-            calc_pot_value(&pot_2, 200);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  if (htim == &htim10) {
+    // STEER
+    if (USE_STEER) {
+      steer_sample++;
+      calc_pot_value(&pot_2, 200);
     }
+  }
 
-    if (htim == &htim7)
-    {
-        if (USE_ENCODER)
-        {
-            encoder_sample_freq_counter++;
-            encoder_tim_interrupt(&enc_setting_right, &enc_data_right);
-        }
+  if (htim == &htim7) {
+    if (USE_ENCODER) {
+      encoder_sample++;
+      encoder_tim_interrupt(&enc_setting_right, &enc_data_right);
+      encoder_tim_interrupt(&enc_setting_left, &enc_data_left);
     }
+  }
 }
 
-int send_CAN_data(uint32_t millis)
-{
-    int sent_flag = 0;
-    int increment_value = 1;
+int send_CAN_data(uint32_t millis) {
+  int sent_flag = 0;
+  int increment_value = 1;
 
-    if (USE_ENCODER)
-    {
-        //-------------------SEND Encoder-------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            if (enc_data_right.speed_sign == 1)
-                enc_data_right.average_speed *= -1;
+  if (USE_ENCODER) {
+    //-------------------SEND Encoder-------------------//
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      if (enc_data_right.speed_sign == 1)
+        enc_data_right.average_speed *= -1;
 
-            uint16_t speed_kmh = enc_data_right.average_speed * ((enc_setting_right.wheel_diameter / 2) * 3.6);
-            uint16_t speed_rads = enc_data_right.average_speed * 100;
+      uint16_t speed_kmh = enc_data_right.average_speed * ((enc_setting_right.wheel_diameter / 2) * 3.6);
+      uint16_t speed_rads = enc_data_right.average_speed * 100;
 
-            can.dataTx[0] = 0x06;
-            can.dataTx[1] = speed_kmh / 256;
-            can.dataTx[2] = speed_kmh % 256;
-            can.dataTx[3] = enc_data_right.speed_sign;
-            can.dataTx[4] = speed_rads / 256;
-            can.dataTx[5] = speed_rads % 256;
-            can.dataTx[6] = enc_data_right.error_flag;
-            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
+      can.dataTx[0] = 0x06;
+      can.dataTx[1] = speed_kmh / 256;
+      can.dataTx[2] = speed_kmh % 256;
+      can.dataTx[3] = enc_data_right.speed_sign;
+      can.dataTx[4] = speed_rads / 256;
+      can.dataTx[5] = speed_rads % 256;
+      can.dataTx[6] = enc_data_right.error_flag;
+      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
+      can.id = 0xD0;
+      can.size = 8;
+      CAN_Send(&can);
 
-            sent_flag = 1;
-        }
-
-        millis += increment_value;
-
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            if (enc_data_right.speed_sign == 1)
-                enc_data_right.average_speed *= -1;
-
-            uint32_t left_rads = enc_data_right.average_speed * 10000;
-            uint32_t right_rads = 0;
-
-            can.dataTx[0] = 0x07;
-            can.dataTx[1] = (uint8_t)(left_rads >> 16);
-            can.dataTx[2] = (uint8_t)(left_rads >> 8);
-            can.dataTx[3] = (uint8_t)(left_rads);
-            can.dataTx[4] = (uint8_t)(right_rads >> 16);
-            can.dataTx[5] = (uint8_t)(right_rads >> 8);
-            can.dataTx[6] = (uint8_t)(right_rads);
-            can.dataTx[7] = enc_data_right.speed_sign;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            count_message = 0;
-
-            sent_flag = 1;
-        }
-
-        millis += increment_value;
-
-        //-------------SEND KM & WHEEL ROTAIONS-------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-
-            uint16_t Km = (enc_data_right.Km);
-            uint16_t rotations = enc_data_right.wheel_rotation;
-
-            can.dataTx[0] = 0x08;
-            can.dataTx[1] = Km >> 8;
-            can.dataTx[2] = Km;
-            can.dataTx[3] = (uint8_t)rotations >> 8;
-            can.dataTx[4] = (uint8_t)rotations;
-            can.dataTx[5] = (uint8_t)enc_data_right.error_flag;
-            can.dataTx[6] = 0;
-            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 2;
-        }
-
-        millis += increment_value;
-
-        //--------------------ENCODER DEBUG DATA--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-
-            uint16_t a0 = enc_data_right.angle0 * 100;
-            uint16_t a1 = enc_data_right.angle1 * 100;
-            uint16_t da = enc_data_right.delta_angle * 100;
-
-            can.dataTx[0] = 0x015;
-            can.dataTx[1] = a0 / 256;
-            can.dataTx[2] = a0 % 256;
-            can.dataTx[3] = a1 / 256;
-            can.dataTx[4] = a1 % 256;
-            can.dataTx[5] = da / 256;
-            can.dataTx[6] = da % 256;
-            can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
-            can.id = 0xD0;
-            can.size = 8;
-            CAN_Send(&can);
-
-            sent_flag = 3;
-        }
-
-        millis += increment_value;
+      sent_flag = 1;
     }
 
-    if (USE_STEER)
-    {
-        //--------------------SEND Steer--------------------//
-        if (millis % CAN_SEND_FREQUENCY == 0)
-        {
-            if (calibration_flag == 0)
-            {
-                uint16_t angle = pot_2.val_100 * 100;
+    millis += increment_value;
 
-                can.dataTx[0] = 2;
-                can.dataTx[1] = (uint8_t)(angle >> 8);
-                can.dataTx[2] = (uint8_t)(angle);
-                can.dataTx[3] = 0;
-                can.dataTx[4] = 0;
-                can.dataTx[5] = 0;
-                can.dataTx[6] = 0;
-                can.dataTx[7] = 0;
-                can.id = 0xC0;
-                can.size = 8;
-                CAN_Send(&can);
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      if (enc_data_right.speed_sign == 1)
+        enc_data_right.average_speed *= -1;
 
-                sent_flag = 4;
-            }
-        }
+      uint32_t left_rads = enc_data_right.average_speed * 10000;
+      uint32_t right_rads = 0;
 
-        millis += increment_value;
+      can.dataTx[0] = 0x07;
+      can.dataTx[1] = (uint8_t)(left_rads >> 16);
+      can.dataTx[2] = (uint8_t)(left_rads >> 8);
+      can.dataTx[3] = (uint8_t)(left_rads);
+      can.dataTx[4] = (uint8_t)(right_rads >> 16);
+      can.dataTx[5] = (uint8_t)(right_rads >> 8);
+      can.dataTx[6] = (uint8_t)(right_rads);
+      can.dataTx[7] = enc_data_right.speed_sign;
+      can.id = 0xD0;
+      can.size = 8;
+      CAN_Send(&can);
+
+      sent_flag = 1;
     }
 
-    return sent_flag;
+    millis += increment_value;
+
+    //-------------SEND KM & WHEEL ROTAIONS-------------//
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      uint16_t Km = (enc_data_right.Km);
+      uint16_t rotations = enc_data_right.wheel_rotation;
+
+      can.dataTx[0] = 0x08;
+      can.dataTx[1] = Km >> 8;
+      can.dataTx[2] = Km;
+      can.dataTx[3] = (uint8_t)rotations >> 8;
+      can.dataTx[4] = (uint8_t)rotations;
+      can.dataTx[5] = (uint8_t)enc_data_right.error_flag;
+      can.dataTx[6] = 0;
+      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
+      can.id = 0xD0;
+      can.size = 8;
+      CAN_Send(&can);
+
+      sent_flag = 2;
+    }
+
+    millis += increment_value;
+
+    //--------------------ENCODER DEBUG DATA--------------------//
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      uint16_t a0 = enc_data_right.angle0 * 100;
+      uint16_t a1 = enc_data_right.angle1 * 100;
+      uint16_t da = enc_data_right.delta_angle * 100;
+
+      can.dataTx[0] = 0x015;
+      can.dataTx[1] = a0 / 256;
+      can.dataTx[2] = a0 % 256;
+      can.dataTx[3] = a1 / 256;
+      can.dataTx[4] = a1 % 256;
+      can.dataTx[5] = da / 256;
+      can.dataTx[6] = da % 256;
+      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
+      can.id = 0xD0;
+      can.size = 8;
+      CAN_Send(&can);
+
+      sent_flag = 3;
+    }
+
+    millis += increment_value;
+  }
+
+  if (USE_STEER) {
+    //--------------------SEND Steer--------------------//
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      if (calibration_flag == 0) {
+        uint16_t angle = pot_2.val_100 * 100;
+
+        can.dataTx[0] = 2;
+        can.dataTx[1] = (uint8_t)(angle >> 8);
+        can.dataTx[2] = (uint8_t)(angle);
+        can.dataTx[3] = 0;
+        can.dataTx[4] = 0;
+        can.dataTx[5] = 0;
+        can.dataTx[6] = 0;
+        can.dataTx[7] = 0;
+        can.id = 0xC0;
+        can.size = 8;
+        CAN_Send(&can);
+
+        sent_flag = 4;
+      }
+    }
+
+    millis += increment_value;
+  }
+
+  return sent_flag;
 }
 
+void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settings *left) {
+  //---------------- RIGHT ----------------//
+  right->steer_enc_prescaler = CAN_SEND_FREQUENCY / 2;
 
+  right->DataPinName          = GPIOC;
+  right->ClockPinName         = GPIOC;
+  right->DataPinNumber        = GPIO_PIN_8;
+  right->ClockPinNumber       = GPIO_PIN_6;
 
-void init_encoder_settings(struct Encoder_Settings* right, struct Encoder_Settings* left){
+  right->dx_wheel             = 1;
+  right->interrupt_flag       = 0;
+  right->clock_timer          = &a_TimerInstance3;
+  right->wheel_diameter       = WHEEL_DIAMETER;
+  right->clock_period         = 2;
+  right->data_size            = 15;
 
-    // RIGHT
-    right->steer_enc_prescaler = CAN_SEND_FREQUENCY/2;
+  right->max_delta_angle      = 3;
+  right->frequency_timer      = &htim7;
+  right->frequency_timer_Hz   = 72000000;
+  right->frequency            = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
 
-    right->DataPinName = GPIOC;
-    right->ClockPinName = GPIOC;
-    right->DataPinNumber = GPIO_PIN_8;
-    right->ClockPinNumber = GPIO_PIN_6;
+  //---------------- LEFT ----------------//
+  left->steer_enc_prescaler   = CAN_SEND_FREQUENCY / 2;
 
-    right->dx_wheel = 1;
-    right->interrupt_flag = 0;
-    right->clock_timer = &a_TimerInstance3;
-    right->wheel_diameter = WHEEL_DIAMETER;
-    right->clock_period = 2;
-    right->data_size = 15;
+  left->DataPinName           = GPIOB;
+  left->ClockPinName          = GPIOB;
+  left->DataPinNumber         = GPIO_PIN_9;
+  left->ClockPinNumber        = GPIO_PIN_8;
 
-    right->max_delta_angle = 3;
-    right->frequency_timer = &htim7;
-    right->frequency_timer_Hz = 36000000;
-    right->frequency = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+  left->dx_wheel              = 0;
+  left->interrupt_flag        = 0;
+  left->clock_timer           = &a_TimerInstance3;
+  left->wheel_diameter        = WHEEL_DIAMETER;
+  left->clock_period          = 2;
+  left->data_size             = 15;
 
-    // LEFT
-    left->steer_enc_prescaler = CAN_SEND_FREQUENCY/2;
+  left->max_delta_angle       = 3;
+  left->frequency_timer       = &htim7;
+  left->frequency_timer_Hz    = 72000000;
+  left->frequency             = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
 
-    left->ClockPinName = GPIOC;
-    left->ClockPinNumber = GPIO_PIN_6;
-    left->DataPinName = GPIOC;
-    left->DataPinNumber = GPIO_PIN_8;
-
-    left->dx_wheel = 1;
-    left->interrupt_flag = 0;
-    left->clock_timer = &a_TimerInstance3;
-    left->wheel_diameter = WHEEL_DIAMETER;
-    left->clock_period = 2;
-    left->data_size = 15;
-
-    left->max_delta_angle = 3;
-    left->frequency_timer = &htim7;
-    left->frequency_timer_Hz = 36000000;
-    left->frequency = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
-
-    // CLOCK PINS TO HIGH
-    HAL_GPIO_WritePin(right->ClockPinName, right->ClockPinNumber, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(left->ClockPinName,  left->ClockPinNumber,  GPIO_PIN_SET);
+  // CLOCK PINS TO HIGH
+  HAL_GPIO_WritePin(right->ClockPinName, right->ClockPinNumber, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(left->ClockPinName,  left->ClockPinNumber,  GPIO_PIN_SET);
 }
 
-void init_encoder_data( struct Encoder_Settings* right, struct Encoder_Data* right_d,
-                        struct Encoder_Settings* left,  struct Encoder_Data* left_d){
+void init_encoder_data(struct Encoder_Settings *right, struct Encoder_Data *right_d,
+                       struct Encoder_Settings *left, struct Encoder_Data *left_d) {
+  // RIGHT
+  right_d->Km = 0;
+  right_d->average_speed = 0;
+  right_d->wheel_rotation = 0;
 
-    // RIGHT
-    right_d->Km = 0;
-    right_d->average_speed = 0;
-    right_d->wheel_rotation = 0;
+  right_d->Data = malloc(sizeof(int) * right->data_size);
+  memset(right_d->Data, 0, sizeof(int) * right->data_size);
 
-    right_d->Data = malloc (sizeof (int) * right->data_size);
-    memset (right_d->Data, 0, sizeof (int) * right->data_size);
+  // LEFT
+  left_d->Km = 0;
+  left_d->average_speed = 0;
+  left_d->wheel_rotation = 0;
 
-    // LEFT
-    left_d->Km = 0;
-    left_d->average_speed = 0;
-    left_d->wheel_rotation = 0;
-
-    left_d->Data = malloc (sizeof (int) * left->data_size);
-    memset (left_d->Data, 0, sizeof (int) * left->data_size);
+  left_d->Data = malloc(sizeof(int) * left->data_size);
+  memset(left_d->Data, 0, sizeof(int) * left->data_size);
 }
 /* USER CODE END 4 */
 
@@ -1032,17 +991,15 @@ void init_encoder_data( struct Encoder_Settings* right, struct Encoder_Data* rig
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
-void Error_Handler(void)
-{
+void Error_Handler(void) {
   /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state */
-    while (1)
-    {
-    }
+  /* User can add his own implementation to report the HAL error return state */
+  while (1) {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -1050,10 +1007,9 @@ void Error_Handler(void)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t *file, uint32_t line)
-{
+void assert_failed(uint8_t *file, uint32_t line) {
   /* USER CODE BEGIN 6 */
-    /* User can add his own implementation to report the file name and line number,
+  /* User can add his own implementation to report the file name and line number,
     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
