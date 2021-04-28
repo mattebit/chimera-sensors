@@ -82,6 +82,8 @@ void init_encoder_settings(struct Encoder_Settings*, struct Encoder_Settings*);
 */
 void init_encoder_data(struct Encoder_Settings*, struct Encoder_Data*, struct Encoder_Settings*, struct Encoder_Data*);
 
+int decimals(double number);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

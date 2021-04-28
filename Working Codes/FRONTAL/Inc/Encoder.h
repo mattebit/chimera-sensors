@@ -30,6 +30,7 @@
 
 struct Encoder_Settings{
 	int data_size;		// Bits sent from the sensor. exclude the error flag
+	int speed_size;
 	int interrupt_flag; // Flag to switch from angles to speed calculations
 	int steer_enc_prescaler;
 	int dx_wheel; // 1 if the encoder stc is for the right wheel
@@ -60,6 +61,7 @@ struct Encoder_Data{
     float Km;
 
     int speed_sign;
+		double speed;
     double average_speed;	 // Filtered speed
     double* speed_array; // Array to store lasts speed
 
@@ -68,6 +70,9 @@ struct Encoder_Data{
     double angle0_prec;
     double angle1_prec;
     double delta_angle;
+		double delta_angle_prec;
+
+		int new_data;
 };
 
 void read_SSI(struct Encoder_Settings *, struct Encoder_Data *);

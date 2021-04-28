@@ -47,6 +47,8 @@ void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Dat
     data->speed_sign = data->average_speed < 0 ? 1 : 0;
 
 		settings->interrupt_flag = 0;
+
+		data->new_data = 1;
 	}
 }
 
@@ -115,14 +117,14 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 // Wheel_diameter = diameter of the wheel expressed meters
 void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* data)
 {
-	double speed = 0;
 
 	if (settings->dx_wheel == 1)
 		data->delta_angle = data->angle1 - data->angle0;
 	else
 		data->delta_angle = data->angle0 - data->angle1;
 
-	// Calculate correct delta angle if near to 0-2*pi
+	data->delta_angle_prec = data->delta_angle;
+
 	if ((data->angle0 < settings->max_delta_angle && data->angle1 > (2 * M_PI) - settings->max_delta_angle) ||
 		  (data->angle1 < settings->max_delta_angle && data->angle0 > (2 * M_PI) - settings->max_delta_angle))
 	{
@@ -132,11 +134,16 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 		}
 		else
 		{
-      data->delta_angle = (2 * M_PI) - data->delta_angle;
+      data->delta_angle = data->delta_angle - (2 * M_PI);
 		}
 	}
 
-	speed = data->delta_angle * settings->frequency;
+	data->speed = data->delta_angle * settings->frequency;
+
+	// Remove noise mediating previous values with actual
+	encoder_shift_array(data->speed_array, settings->speed_size, data->speed);
+	//data->average_speed = encoder_dynamic_average(data->speed_array, settings->speed_size);
+	data->average_speed = encoder_speed_filter(data->speed_array, settings->speed_size);
 
 	if (data->average_speed < -1 || data->average_speed > 1)
 	{
@@ -147,12 +154,6 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 			data->Km += ((2 * M_PI) * (settings->wheel_diameter / 2));
 		}
 	}
-
-	// Remove noise mediating previous values with actual
-	// shift_array(settings->speed_array, 5, speed);
-	// settings->average_speed = dynamic_average(settings->speed_array, 5);
-
-	data->average_speed = speed;
 }
 
 
