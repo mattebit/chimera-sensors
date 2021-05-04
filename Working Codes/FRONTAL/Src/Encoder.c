@@ -151,7 +151,7 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 			  ((data->angle0      > (2 * M_PI) - settings->max_delta_angle) && (data->angle0_prec < settings->max_delta_angle)))
 		{
 			data->wheel_rotation++;
-			data->Km += ((2 * M_PI) * (settings->wheel_diameter / 2));
+			data->Km = data->wheel_rotation * settings->wheel_diameter * M_PI;
 		}
 	}
 }

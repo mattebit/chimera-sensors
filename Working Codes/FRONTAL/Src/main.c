@@ -113,9 +113,6 @@ static void MX_TIM7_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
-
-int send_CAN_data(uint32_t);
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -731,25 +728,21 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
   /// CALIBRATION CODE///
-  int idsave = CAN_Receive(&can);
-  //201/202
+  int id = CAN_Receive(&can);
 
-  if (idsave == 0x55 || idsave == 0x201) {
-    if (can.dataRx[0] == 0x51 || can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0x0A || can.dataRx[0] == 0x0B) {
-      //command_flag = 1;
-      idsave = 0;
-    }
-  }
-  if (idsave == 0xA0 || idsave == 0xAA || idsave == 0x181) {
-    if (can.dataRx[0] == 0x03 || can.dataRx[0] == 0x04 || can.dataRx[0] == 0x05 || can.dataRx[0] == 0x08 || can.dataRx[0] == 0xD8) {
-      //command_flag = 1;
-      idsave = 0;
-    }
+  if (id == 0xD2){
+    int rotations = 0;
+    rotations  = can.dataRx[3];
+    rotations += can.dataRx[2] << 8;
+    rotations += can.dataRx[1] << 16;
+
+    enc_data_left .wheel_rotation = rotations;
+    enc_data_right.wheel_rotation = rotations;
+    enc_data_left .Km = rotations * enc_setting_left .wheel_diameter * (M_PI);
+    enc_data_right.Km = rotations * enc_setting_right.wheel_diameter * (M_PI);
   }
 
-  if (idsave == 0xBB) {
-    //sprintf(val0, "APPS1: %d \r\n", idsave);  //use "%lu" for long, "%d" for int
-    //HAL_UART_Transmit(&huart2, (uint8_t*)val0, strlen(val0), 10);
+  if (id == 0xBB) {
     if ((can.dataRx[0] == 2) && (can.dataRx[1] == 0)) {
       set_min(&pot_2);
       calibration_flag = 1;
@@ -764,9 +757,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
       can.dataTx[7] = 0;
       can.id = 0xBC;
       can.size = 8;
-      for (int i = 0; i < 2; i++) {
-        CAN_Send(&can);
-      }
+      CAN_Send(&can);
     }
     if ((can.dataRx[0] == 2) && (can.dataRx[1] == 1)) {
       set_max(&pot_2);
@@ -782,14 +773,11 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
       can.dataTx[7] = 0;
       can.id = 0xBC;
       can.size = 8;
-      for (int i = 0; i < 2; i++) {
-        CAN_Send(&can);
-      }
+      CAN_Send(&can);
     }
-    //val0rang = abs(valMax0 - valMin0);
-    pot_2.range = abs(pot_2.max - pot_2.min);
-    int max_tmp = pot_2.max;
-    int min_tmp = pot_2.min;
+    pot_2.range = fabs(pot_2.max - pot_2.min);
+    float max_tmp = pot_2.max;
+    float min_tmp = pot_2.min;
     if (max_tmp > min_tmp) {
       pot_2.max = max_tmp;
       pot_2.min = min_tmp;
@@ -800,8 +788,8 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
     }
   }
 
-  //TIMER Interrupt setup via CAN Message
-  if (idsave == 195 && can.dataRx[0] == 1) {
+  // TIMER Interrupt setup via CAN Message
+  if (id == 195 && can.dataRx[0] == 1) {
     multiplier = can.dataRx[1] * 256 + can.dataRx[2];
   }
 }
@@ -824,8 +812,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   }
 }
 
-int send_CAN_data(uint32_t millis) {
-  int sent_flag = 0;
+void send_CAN_data(uint32_t millis) {
   int increment_value = 1;
 
   if (USE_ENCODER) {
@@ -838,28 +825,28 @@ int send_CAN_data(uint32_t millis) {
       uint16_t speed_rads = enc_data_right.average_speed * 100;
 
       can.dataTx[0] = 0x06;
-      can.dataTx[1] = speed_kmh / 256;
-      can.dataTx[2] = speed_kmh % 256;
-      can.dataTx[3] = enc_data_right.speed_sign;
-      can.dataTx[4] = speed_rads / 256;
-      can.dataTx[5] = speed_rads % 256;
-      can.dataTx[6] = enc_data_right.error_flag;
-      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
+      can.dataTx[1] = (uint8_t) speed_kmh >> 8;
+      can.dataTx[2] = (uint8_t) speed_kmh;
+      can.dataTx[3] = (uint8_t) enc_data_right.speed_sign;
+      can.dataTx[4] = (uint8_t) speed_rads >> 8;
+      can.dataTx[5] = (uint8_t) speed_rads;
+      can.dataTx[6] = (uint8_t) enc_data_right.error_flag;
+      can.dataTx[7] = (uint8_t) enc_setting_right.steer_enc_prescaler;
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
-
-      sent_flag = 1;
     }
 
     millis += increment_value;
 
     if (millis % CAN_SEND_FREQUENCY == 0) {
-      if (enc_data_right.speed_sign == 1)
+      if (enc_data_left.average_speed < 0)
+        enc_data_left.average_speed *= -1;
+      if (enc_data_right.average_speed < 0)
         enc_data_right.average_speed *= -1;
 
-      uint32_t left_rads = enc_data_right.average_speed * 10000;
-      uint32_t right_rads = 0;
+      uint32_t left_rads  = enc_data_left .average_speed * 10000;
+      uint32_t right_rads = enc_data_right.average_speed * 10000;
 
       can.dataTx[0] = 0x07;
       can.dataTx[1] = (uint8_t)(left_rads >> 16);
@@ -872,8 +859,25 @@ int send_CAN_data(uint32_t millis) {
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
+    }
 
-      sent_flag = 1;
+    millis += increment_value;
+
+    if (millis % CAN_SEND_FREQUENCY == 0) {
+      uint32_t rotations  = enc_data_right.wheel_rotation;
+      uint32_t km         = enc_data_right.Km;
+
+      can.dataTx[0] = (uint8_t)(rotations >> 16);
+      can.dataTx[1] = (uint8_t)(rotations >> 8);
+      can.dataTx[2] = (uint8_t)(rotations);
+      can.dataTx[3] = (uint8_t)(km >> 16);
+      can.dataTx[4] = (uint8_t)(km >> 8);
+      can.dataTx[5] = (uint8_t)(km);
+      can.dataTx[6] = 0;
+      can.dataTx[7] = 0;
+      can.id = 0xD1;
+      can.size = 8;
+      CAN_Send(&can);
     }
 
     millis += increment_value;
@@ -894,8 +898,6 @@ int send_CAN_data(uint32_t millis) {
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
-
-      sent_flag = 2;
     }
 
     millis += increment_value;
@@ -917,8 +919,6 @@ int send_CAN_data(uint32_t millis) {
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
-
-      sent_flag = 3;
     }
 
     millis += increment_value;
@@ -941,15 +941,11 @@ int send_CAN_data(uint32_t millis) {
         can.id = 0xC0;
         can.size = 8;
         CAN_Send(&can);
-
-        sent_flag = 4;
       }
     }
 
     millis += increment_value;
   }
-
-  return sent_flag;
 }
 
 void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settings *left) {
