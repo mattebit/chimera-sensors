@@ -304,8 +304,8 @@ int main(void)
     {
       if (requested_conv == 0)
       {
+        requested_conv = 1;
         HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
-        requested_conv == 1;
       }
 
       if (HAL_GetTick() % 2 == 0 && conv_compleated == 1)
