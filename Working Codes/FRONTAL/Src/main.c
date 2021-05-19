@@ -64,9 +64,9 @@ UART_HandleTypeDef huart2;
 // Diameter in meters
 #define WHEEL_DIAMETER 0.395
 
-#define DEBUG 1
-#define CSV 0
-#define FULL_DEBUG 1
+#define DEBUG 0
+#define CSV 1
+#define FULL_DEBUG 0
 #define DEBUG_DELAY 2
 
 extern can_stc can;
@@ -256,7 +256,6 @@ int main(void) {
   CAN_Send(&can);
   */
 
-  HAL_UART_Transmit(&huart2, (uint8_t *)"start while\n\r", strlen("start while\n\r"), 10);
   while (1) {
     /* USER CODE END WHILE */
 
@@ -269,17 +268,16 @@ int main(void) {
     }
 
     if(CSV && enc_data_right.new_data == 1){
-      sprintf(txt, "%d.%d;%d.%d;%d.%d;%d.%d;%d;%d;%d\r\n",
+      sprintf(txt, "%d.%d;%d.%d;%d.%d;%d.%d;%d;%d\r\n",
               (int)(enc_data_right.speed),
               decimals(enc_data_right.speed),
               (int)(enc_data_right.average_speed),
               decimals(enc_data_right.average_speed),
-              (int)(enc_data_right.angle0),
-              decimals(enc_data_right.angle0),
-              (int)(enc_data_right.angle1),
-              decimals(enc_data_right.angle1),
+              (int)(enc_data_right.angle_prec),
+              decimals(enc_data_right.angle_prec),
+              (int)(enc_data_right.angle),
+              decimals(enc_data_right.angle),
               (int)(enc_data_right.delta_angle*1000),
-              (int)(enc_data_right.delta_angle_prec*1000),
               (int)enc_data_right.wheel_rotation);
       HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
       enc_data_right.new_data = 0;
@@ -524,7 +522,7 @@ static void MX_TIM7_Init(void) {
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 72;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 2000;
+  htim7.Init.Period = 4000;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK) {
     Error_Handler();
@@ -803,13 +801,15 @@ void send_CAN_data(uint32_t millis) {
     millis += increment_value;
 
     if (millis % CAN_SEND_FREQUENCY == 0) {
-      if (enc_data_left.average_speed < 0)
-        enc_data_left.average_speed *= -1;
-      if (enc_data_right.average_speed < 0)
-        enc_data_right.average_speed *= -1;
+      double left_buffer  = enc_data_left.average_speed;
+      double right_buffer = enc_data_right.average_speed;
+      if (left_buffer < 0)
+        left_buffer *= -1;
+      if (right_buffer < 0)
+        right_buffer *= -1;
 
-      uint32_t left_rads  = enc_data_left .average_speed * 10000;
-      uint32_t right_rads = enc_data_right.average_speed * 10000;
+      uint32_t left_rads  = left_buffer * 10000;
+      uint32_t right_rads = right_buffer * 10000;
 
       can.dataTx[0] = 0x07;
       can.dataTx[1] = (uint8_t)(left_rads >> 16);
@@ -867,18 +867,18 @@ void send_CAN_data(uint32_t millis) {
 
     //--------------------ENCODER DEBUG DATA--------------------//
     if (millis % CAN_SEND_FREQUENCY == 0) {
-      uint16_t a0 = enc_data_right.angle0 * 100;
-      uint16_t a1 = enc_data_right.angle1 * 100;
+      uint16_t la = enc_data_left.angle * 100;
+      uint16_t ra = enc_data_right.angle * 100;
       uint16_t da = enc_data_right.delta_angle * 100;
 
       can.dataTx[0] = 0x015;
-      can.dataTx[1] = a0 / 256;
-      can.dataTx[2] = a0 % 256;
-      can.dataTx[3] = a1 / 256;
-      can.dataTx[4] = a1 % 256;
-      can.dataTx[5] = da / 256;
-      can.dataTx[6] = da % 256;
-      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
+      can.dataTx[1] = (uint8_t)(la >> 8);
+      can.dataTx[2] = (uint8_t)(la);
+      can.dataTx[3] = (uint8_t)(ra >> 8);
+      can.dataTx[4] = (uint8_t)(ra);
+      can.dataTx[5] = (uint8_t)(da >> 8);
+      can.dataTx[6] = (uint8_t)(da);
+      can.dataTx[7] = (uint8_t)(enc_setting_right.steer_enc_prescaler);
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
@@ -920,7 +920,7 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   right->DataPinNumber        = GPIO_PIN_8;
   right->ClockPinNumber       = GPIO_PIN_6;
 
-  right->dx_wheel             = 1;
+  right->dx_wheel             = 0;
   right->interrupt_flag       = 0;
   right->clock_timer          = &a_TimerInstance3;
   right->wheel_diameter       = WHEEL_DIAMETER;
@@ -932,6 +932,8 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   right->frequency_timer      = &htim7;
   right->frequency_timer_Hz   = 72000000;
   right->frequency            = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+  right->conversion = (((double)encoder_Power(2, right->data_size))/(2*M_PI));
 
   //---------------- LEFT ----------------//
   left->steer_enc_prescaler   = CAN_SEND_FREQUENCY / 2;
@@ -949,10 +951,12 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   left->data_size             = 15;
   left->speed_size            = 10;
 
-  left->max_delta_angle       = 3;
+  left->max_delta_angle       = right->max_delta_angle;
   left->frequency_timer       = &htim7;
   left->frequency_timer_Hz    = 72000000;
   left->frequency             = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+  left->conversion = (((double)encoder_Power(2, left->data_size))/(2*M_PI));
 
   // CLOCK PINS TO HIGH
   HAL_GPIO_WritePin(right->ClockPinName, right->ClockPinNumber, GPIO_PIN_SET);
@@ -966,8 +970,8 @@ void init_encoder_data(struct Encoder_Settings *right, struct Encoder_Data *righ
   right_d->average_speed = 0;
   right_d->wheel_rotation = 0;
 
-  right_d->Data = malloc(sizeof(int) * right->data_size);
-  memset(right_d->Data, 0, sizeof(int) * right->data_size);
+  right_d->binary_data = malloc(sizeof(int) * right->data_size);
+  memset(right_d->binary_data, 0, sizeof(int) * right->data_size);
   right_d->speed_array = malloc(sizeof(double) * right->speed_size);
   memset(right_d->speed_array, 0, sizeof(double) * right->speed_size);
 
@@ -976,8 +980,8 @@ void init_encoder_data(struct Encoder_Settings *right, struct Encoder_Data *righ
   left_d->average_speed = 0;
   left_d->wheel_rotation = 0;
 
-  left_d->Data = malloc(sizeof(int) * left->data_size);
-  memset(left_d->Data, 0, sizeof(int) * left->data_size);
+  left_d->binary_data = malloc(sizeof(int) * left->data_size);
+  memset(left_d->binary_data, 0, sizeof(int) * left->data_size);
   left_d->speed_array = malloc(sizeof(double) * left->speed_size);
   memset(left_d->speed_array, 0, sizeof(double) * left->speed_size);
 }
@@ -989,47 +993,47 @@ int decimals(double number){
 
 void full_debug(){
   // ALL DATA
-  char* str = "\n\n------------------------------------------------------------------------\r\n";
+  char* str = "\n\n________________________________________________________________________\r\n";
   HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
   str = "DATA\t\t\t| LEFT\t\t\t| RIGHT\r\n";
   HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
 
   // Encoder Raw Data
   sprintf(txt, "Raw:\t\t\t| %d%d%d%d%d%d%d%d%d%d%d%d%d%d%d  %d",
-          enc_data_left.Data[0],
-          enc_data_left.Data[1],
-          enc_data_left.Data[2],
-          enc_data_left.Data[3],
-          enc_data_left.Data[4],
-          enc_data_left.Data[5],
-          enc_data_left.Data[6],
-          enc_data_left.Data[7],
-          enc_data_left.Data[8],
-          enc_data_left.Data[9],
-          enc_data_left.Data[10],
-          enc_data_left.Data[11],
-          enc_data_left.Data[12],
-          enc_data_left.Data[13],
-          enc_data_left.Data[14],
+          enc_data_left.binary_data[0],
+          enc_data_left.binary_data[1],
+          enc_data_left.binary_data[2],
+          enc_data_left.binary_data[3],
+          enc_data_left.binary_data[4],
+          enc_data_left.binary_data[5],
+          enc_data_left.binary_data[6],
+          enc_data_left.binary_data[7],
+          enc_data_left.binary_data[8],
+          enc_data_left.binary_data[9],
+          enc_data_left.binary_data[10],
+          enc_data_left.binary_data[11],
+          enc_data_left.binary_data[12],
+          enc_data_left.binary_data[13],
+          enc_data_left.binary_data[14],
           enc_data_left.error_flag);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
 
   sprintf(txt, "\t| %d%d%d%d%d%d%d%d%d%d%d%d%d%d%d  %d\r\n\n",
-          enc_data_right.Data[0],
-          enc_data_right.Data[1],
-          enc_data_right.Data[2],
-          enc_data_right.Data[3],
-          enc_data_right.Data[4],
-          enc_data_right.Data[5],
-          enc_data_right.Data[6],
-          enc_data_right.Data[7],
-          enc_data_right.Data[8],
-          enc_data_right.Data[9],
-          enc_data_right.Data[10],
-          enc_data_right.Data[11],
-          enc_data_right.Data[12],
-          enc_data_right.Data[13],
-          enc_data_right.Data[14],
+          enc_data_right.binary_data[0],
+          enc_data_right.binary_data[1],
+          enc_data_right.binary_data[2],
+          enc_data_right.binary_data[3],
+          enc_data_right.binary_data[4],
+          enc_data_right.binary_data[5],
+          enc_data_right.binary_data[6],
+          enc_data_right.binary_data[7],
+          enc_data_right.binary_data[8],
+          enc_data_right.binary_data[9],
+          enc_data_right.binary_data[10],
+          enc_data_right.binary_data[11],
+          enc_data_right.binary_data[12],
+          enc_data_right.binary_data[13],
+          enc_data_right.binary_data[14],
           enc_data_right.error_flag);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
   // Encoder calcuated speeds
@@ -1038,8 +1042,8 @@ void full_debug(){
           (int)(enc_data_right.average_speed * 1000));
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
   sprintf(txt, "Angle [rad*1000]:\t| %d\t\t\t| %d\r\n",
-          (int)(enc_data_left.angle1 * 1000),
-          (int)(enc_data_right.angle1 * 1000));
+          (int)(enc_data_left.angle * 1000),
+          (int)(enc_data_right.angle * 1000));
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
   sprintf(txt, "Km:\t\t\t| %d\t\t\t| %d\r\n",
           (int)(enc_data_left.Km * 1000),
@@ -1049,17 +1053,17 @@ void full_debug(){
           (int)(enc_data_left.wheel_rotation),
           (int)(enc_data_right.wheel_rotation));
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
-  str = "Callbacks are one per angle sample, speed calculation is half of this frequency\r\n";
-  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
   // Encoder Frequency
   sprintf(txt, "Callbacks:\t\t| %d\t\t\t| %d\r\n",
           (int)(left_sample_printable),
           (int)(right_sample_printable));
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
-  sprintf(txt, "Frequency:\t\t| %d\t\t\t| %d\r\n\n",
+  sprintf(txt, "Frequency:\t\t| %d\t\t\t| %d\r\n",
           (int)(enc_setting_left.frequency),
           (int)(enc_setting_right.frequency));
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+  str = "________________________________________________________________________\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
 
   // Steer        
   str = "DATA\t\t\t| STEER\t\t\t| \r\n";
@@ -1074,6 +1078,9 @@ void full_debug(){
   sprintf(txt, "Callbacks:\t\t| %d\r\n",
           steer_sample_printable);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  str = "________________________________________________________________________\r\n\n\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
 }
 
 /* USER CODE END 4 */

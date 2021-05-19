@@ -42,6 +42,8 @@ struct Encoder_Settings{
 	float clock_period;	// Period of the clock generated
 	int frequency_timer_Hz;
 
+	double conversion;
+
 	TIM_HandleTypeDef *clock_timer; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
 
@@ -52,8 +54,8 @@ struct Encoder_Settings{
 };
 
 struct Encoder_Data{
-  	int* Data;
-    int converted_data;		 // Angle data
+  	int* binary_data;
+	int  decimal_data;
 
     int error_flag;		// Return value if the encoder has errors
 
@@ -61,18 +63,15 @@ struct Encoder_Data{
     float Km;
 
     int speed_sign;
-		double speed;
+	double speed;
     double average_speed;	 // Filtered speed
     double* speed_array; // Array to store lasts speed
 
-    double angle0; // First angle calculated
-    double angle1; // Second angle calculated
-    double angle0_prec;
-    double angle1_prec;
+    double angle; // First angle calculated
+    double angle_prec;
     double delta_angle;
-		double delta_angle_prec;
 
-		int new_data;
+	int new_data;
 };
 
 void read_SSI(struct Encoder_Settings *, struct Encoder_Data *);

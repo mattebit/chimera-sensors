@@ -23,33 +23,17 @@
 // Speed = pointer to the speed value
 void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Data* data)
 {
-  double conversion = (((double)encoder_Power(2, settings->data_size))/(2*M_PI));
+	// Requesting second angle
+	data->angle_prec = data->angle;
+	read_SSI(settings, data);
+	data->angle = ((double)data->decimal_data) / settings->conversion;
 
-	if (settings->interrupt_flag == 0)
-	{
-		// Requesting first angle
-		data->angle0_prec = data->angle0;
-		read_SSI(settings, data);
-		data->angle0 = ((double)data->converted_data) / conversion;
-
-    settings->interrupt_flag = 1;
-	}
-	else
-	{
-		// Requesting second angle
-		data->angle1_prec = data->angle1;
-		read_SSI(settings, data);
-		data->angle1 = ((double)data->converted_data) / conversion;
-
-		// Calculate speed from the two angles
-		get_speed_encoder(settings, data);
+	// Calculate speed from the two angles
+	get_speed_encoder(settings, data);
 
     data->speed_sign = data->average_speed < 0 ? 1 : 0;
 
-		settings->interrupt_flag = 0;
-
-		data->new_data = 1;
-	}
+	data->new_data = 1;
 }
 
 
@@ -62,9 +46,7 @@ void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Dat
 void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 {
 
-	int bin_data[settings->data_size];
-
-  // From HIGH set to LOW
+  	// From HIGH set to LOW
 	HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
 	__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
 	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
@@ -79,23 +61,22 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 	for (int i = 0; i < settings->data_size; i++)
 	{
 		// CLOCK HIGH
-    // Waiting only half of period to read incoming data
+    	// Waiting only half of period to read incoming data
 		HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_SET);
 		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
+	  	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
 
 		//Reading the Pin at the half of the clock period
 		// Set the bit as the pin state (0 or 1)
-		bin_data[i] = HAL_GPIO_ReadPin(settings->DataPinName, settings->DataPinNumber);
-		data->Data[i] = bin_data[i];
+		data->binary_data[i] = HAL_GPIO_ReadPin(settings->DataPinName, settings->DataPinNumber);
 
 		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
+	  	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period/2){}
 
 		// CLOCK LOW
 		HAL_GPIO_WritePin(settings->ClockPinName, settings->ClockPinNumber, GPIO_PIN_RESET);
 		__HAL_TIM_SET_COUNTER(settings->clock_timer, 0);
-	  while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
+	  	while (__HAL_TIM_GET_COUNTER(settings->clock_timer) <= settings->clock_period){}
 	}
 
 	// Requesting an other bit for the eventual error sent from the sensor
@@ -106,7 +87,7 @@ void read_SSI(struct Encoder_Settings *settings, struct Encoder_Data* data)
 	data->error_flag = HAL_GPIO_ReadPin(settings->DataPinName, settings->DataPinNumber);
 
 	// Converting bits into number and converting it into angle in degrees (0 ~ 359)
-	data->converted_data = encoder_bin_dec(data->Data, settings->data_size);
+	data->decimal_data = encoder_bin_dec(data->binary_data, settings->data_size);
 }
 
 
@@ -119,14 +100,12 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 {
 
 	if (settings->dx_wheel == 1)
-		data->delta_angle = data->angle1 - data->angle0;
+		data->delta_angle = data->angle - data->angle_prec;
 	else
-		data->delta_angle = data->angle0 - data->angle1;
+		data->delta_angle = data->angle_prec - data->angle;
 
-	data->delta_angle_prec = data->delta_angle;
-
-	if ((data->angle0 < settings->max_delta_angle && data->angle1 > (2 * M_PI) - settings->max_delta_angle) ||
-		  (data->angle1 < settings->max_delta_angle && data->angle0 > (2 * M_PI) - settings->max_delta_angle))
+	if ((data->angle_prec 	< settings->max_delta_angle && data->angle 		> (2 * M_PI) - settings->max_delta_angle) ||
+		(data->angle 		< settings->max_delta_angle && data->angle_prec > (2 * M_PI) - settings->max_delta_angle))
 	{
 		if (data->delta_angle < 0)
 		{
@@ -134,7 +113,7 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 		}
 		else
 		{
-      data->delta_angle = data->delta_angle - (2 * M_PI);
+      		data->delta_angle = data->delta_angle - (2 * M_PI);
 		}
 	}
 
@@ -147,8 +126,8 @@ void get_speed_encoder(struct Encoder_Settings *settings, struct Encoder_Data* d
 
 	if (data->average_speed < -1 || data->average_speed > 1)
 	{
-		if (((data->angle0_prec > (2 * M_PI) - settings->max_delta_angle) && (data->angle0      < settings->max_delta_angle)) ||
-			  ((data->angle0      > (2 * M_PI) - settings->max_delta_angle) && (data->angle0_prec < settings->max_delta_angle)))
+		if (((data->angle_prec > (2 * M_PI) - settings->max_delta_angle) && (data->angle      < settings->max_delta_angle)) ||
+			  ((data->angle    > (2 * M_PI) - settings->max_delta_angle) && (data->angle_prec < settings->max_delta_angle)))
 		{
 			data->wheel_rotation++;
 			data->Km = data->wheel_rotation * settings->wheel_diameter * M_PI;
@@ -196,9 +175,9 @@ void encoder_shift_array(double *array, int size, double data)
 
 double encoder_speed_filter(double *data, int size)
 {
-	double min = 1000000000;
-	double max = -min;
-	double sum = 0;
+	double min = data[0];
+	double max = data[0];
+	long double sum = 0;
 	int index_1 = 0;
 	int index_2 = 0;
 

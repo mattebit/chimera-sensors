@@ -8,7 +8,7 @@ ser.baudrate = 115200
 
 ser.open()
 
-log = open('logs/log', 'w')
+log = open('logs/log.csv', 'w')
 while True:
   line = str(time.time()) + ";" + ser.readline().decode() 
   log.write(line)
