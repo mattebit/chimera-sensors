@@ -40,13 +40,6 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <math.h>
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
-#include <stdbool.h>
 
 #define LONG_DELTA 3000
 #define SHORT_DELTA 850
@@ -199,7 +192,7 @@ static void MX_NVIC_Init(void);
 
 //------------------CAN------------------
 int CAN_Send(int id, uint8_t *dataTx, int size);
-int CAN_Receive(uint8_t *DataRx, int size);
+int CAN_Receive(uint8_t *DataRx);
 
 //-----State functions declarations-----
 state_t run_state(state_t cur_state, state_global_data_t *data);
@@ -308,27 +301,30 @@ int main(void)
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	uint32_t previous_millis = 0;
+	uint32_t tick = HAL_GetTick();
+	uint32_t previous_millis = tick;
 	while (1)
 	{
 
 		STATO = run_state(STATO, &data);
 
-		if (previous_millis != HAL_GetTick())
+		if (previous_millis != tick)
 		{
-			if (HAL_GetTick() % SHORT_DELTA == 0)
+			if (tick % SHORT_DELTA == 0)
 			{
-				checkTimeStamp(&data);
+				//checkTimeStamp(&data);
+				data.errors = 0;
+				data.warningsB1 = 0;
 			}
 
-			if (HAL_GetTick() % 1000 == 0)
+			if (tick % 1000 == 0)
 			{
 				sendStatus(&data);
 			}
-			previous_millis = HAL_GetTick();
+			previous_millis = tick;
 		}
 
-		if (HAL_GetTick() % 10 > 0 && data.writeInCan == false)
+		if (tick % 10 > 0 && data.writeInCan == false)
 		{
 			data.writeInCan = true;
 		}
@@ -585,12 +581,10 @@ int CAN_Send(int id, uint8_t dataTx[], int size)
 		flag = 1;
 	}
 
-	HAL_Delay(0.1);
-
 	return flag;
 }
 
-int CAN_Receive(uint8_t *DataRx, int size)
+int CAN_Receive(uint8_t *DataRx)
 {
 	/* This function is used to receive the msgs sent by other devices */
 	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0)
@@ -617,25 +611,21 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 	 * After all the CounterUp is incremented to point out a new msg is arrived.
 	 * Than the operation mod is done so that prevents to make counter overflow */
 
-	bool insert_in_fifo = true;
+	bool insert_in_fifo = false;
 	int idsave;
 	uint8_t RxData[MSG_LENGHT];
 
-	idsave = CAN_Receive(RxData, MSG_LENGHT);
+	idsave = CAN_Receive(RxData);
 
 	switch (idsave)
 	{
 	case ID_STEERING_WHEEL:
+		insert_in_fifo = true;
 		data.steeringPresence = true;
 		data.steeringTimeStamp = HAL_GetTick();
-		if (RxData[0] == 0x09)
-		{
-			char mander[50];
-			sprintf(mander, "Request Received\n\r");
-			HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
-		}
 		break;
 	case ID_PEDALS:
+		insert_in_fifo = true;
 		if (RxData[0] == 0x01 && data.go == 1)
 		{
 			data.accelerator = RxData[1];
@@ -648,35 +638,23 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 		data.pedalsPresence = true;
 		data.pedalsTimeStamp = HAL_GetTick();
 		break;
-	case ID_FRONT:
-		data.frontalPresence = true;
-		data.frontalTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case ID_CENTER:
-		data.centralPresence = true;
-		data.centralTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case GYRO:
-		insert_in_fifo = false;
-		break;
-	case ACCEL:
-		insert_in_fifo = false;
-		break;
 	case ID_REQ_INV_SX:
+		insert_in_fifo = true;
 		data.invSxPresence = true;
 		data.invSxTimeStamp = HAL_GetTick();
 		break;
 	case ID_REQ_INV_DX:
+		insert_in_fifo = true;
 		data.invDxPresence = true;
 		data.invDxTimeStamp = HAL_GetTick();
 		break;
 	case ID_BMS_HV:
+		insert_in_fifo = true;
 		data.bmsHvPresence = true;
 		data.bmsHvTimeStamp = HAL_GetTick();
 		break;
 	case ID_BMS_LV:
+		insert_in_fifo = true;
 		data.bmsLvPresence = true;
 		data.bmsLvTimeStamp = HAL_GetTick();
 		break;
@@ -687,100 +665,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 
 	if (insert_in_fifo)
 	{
-		data.fifoData[data.dataCounterUp].idsave = idsave;
-		for (int i = 0; i < MSG_LENGHT; i++)
-		{
-			data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
-		}
-
-		data.dataCounterUp += 1;
-		data.dataCounterUp = data.dataCounterUp % NUM_DATA;
-
-		if (data.dataCounterUp == data.dataCounterDown)
-		{
-			//shutdownErrors(&data, 0x23);
-		}
-	}
-}
-
-void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
-{
-	/* This function works in interrupt mode, whenever there is a new msg sent by other
-	 * devices this is called back.
-	 * The idea is to save the new msg in a circular FIFO so that is possible to process
-	 * it during the execution of the state in which you are after the interrupt is ended.
-	 * Then it looks at the id of the msg to know which device sent it and saves the time
-	 * msg is arrived.
-	 * In case of the pedals the variables are immediately set because of the delay could
-	 * be introduced during the processing of the FIFO in the states.
-	 * After all the CounterUp is incremented to point out a new msg is arrived.
-	 * Than the operation mod is done so that prevents to make counter overflow */
-
-	bool insert_in_fifo = true;
-	int idsave;
-	uint8_t RxData[MSG_LENGHT];
-
-	idsave = CAN_Receive(RxData, MSG_LENGHT);
-
-	switch (idsave)
-	{
-	case ID_STEERING_WHEEL:
-		data.steeringPresence = true;
-		data.steeringTimeStamp = HAL_GetTick();
-		break;
-	case ID_PEDALS:
-		if (RxData[0] == 0x01 && data.go == 1)
-		{
-			data.accelerator = RxData[1];
-		}
-		else if (RxData[0] == 0x02 && data.go == 1)
-		{
-			data.breakingPedal = RxData[1];
-		}
-
-		data.pedalsPresence = true;
-		data.pedalsTimeStamp = HAL_GetTick();
-		break;
-	case ID_FRONT:
-		data.frontalPresence = true;
-		data.frontalTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case ID_CENTER:
-		data.centralPresence = true;
-		data.centralTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case GYRO:
-		insert_in_fifo = false;
-		break;
-	case ACCEL:
-		insert_in_fifo = false;
-		break;
-	case ID_REQ_INV_SX:
-		data.invSxPresence = true;
-		data.invSxTimeStamp = HAL_GetTick();
-		break;
-	case ID_REQ_INV_DX:
-		data.invDxPresence = true;
-		data.invDxTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_HV:
-		data.bmsHvPresence = true;
-		data.bmsHvTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_LV:
-		data.bmsLvPresence = true;
-		data.bmsLvTimeStamp = HAL_GetTick();
-		break;
-	default:
-		/* Non succede niente ai timestamp */
-		break;
-	}
-
-	if (insert_in_fifo)
-	{
-
 		data.fifoData[data.dataCounterUp].idsave = idsave;
 		for (int i = 0; i < MSG_LENGHT; i++)
 		{
@@ -850,7 +734,7 @@ state_t do_state_idle(state_global_data_t *data)
 		case ID_ASK_STATE:
 			canSendMSGInit(canSendMSG);
 			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x01;
+			canSendMSG[1] = 0x01;		// state
 			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 			break;
 		case ID_STEERING_WHEEL:
@@ -1007,8 +891,8 @@ state_t do_state_setup(state_global_data_t *data)
 					{
 						data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
 					}
-					__HAL_TIM_SetCounter(&htim7, 0);
 					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+					__HAL_TIM_SetCounter(&htim7, 0);
 				}
 				else
 				{
@@ -1713,7 +1597,7 @@ void initData(state_global_data_t *data)
 	data->invLeftCur = 0x0000;
 	data->invRightCur = 0x0000;
 	data->hvCur = 0x0000;
-	;
+	
 	data->hvVol = 0x00000000;
 	data->curRequested = 0.0;
 	data->powerRequested = 0x00;
@@ -1762,14 +1646,6 @@ void checkTimeStamp(state_global_data_t *data)
 	/* Steering Wheel Timer */
 	if (data->steeringPresence == false)
 		data->steeringPresence = true;
-	/*
-	if (data->steeringPresence == true)
-	{
-		if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
-		{
-			data->steeringPresence = false;
-		}
-	}*/
 
 	/* Pedals Timer */
 	if (data->pedalsPresence == true)
@@ -1875,12 +1751,6 @@ void checkTimeStamp(state_global_data_t *data)
 	{
 		data->errors += 64;
 	}
-
-	/*if (data->errors != 0){
-		char mander[10];
-		sprintf(mander, "%d\n\r", data->errors);
-		HAL_UART_Transmit(&huart2, (uint8_t*)mander, strlen(mander), 10);
-	}*/
 }
 
 void sendStatus(state_global_data_t *data)
@@ -1970,7 +1840,8 @@ void shutdownErrors(state_global_data_t *data, int err)
 	//data->requestOfShutdown = 1;
 }
 
-void checkValues(state_global_data_t *data)
+void 
+checkValues(state_global_data_t *data)
 {
 	/* This function is used to check data coming from inverter.
 	 * The scs array is used to keep in memory the situation of the errors. */
