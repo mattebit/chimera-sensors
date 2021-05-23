@@ -60,8 +60,8 @@ struct Encoder_Data{
 
     int error_flag;		// Return value if the encoder has errors
 
-    long int wheel_rotation;
-    float Km;
+    uint32_t wheel_rotation;
+    double Km;
 
     int speed_sign;
 	double speed;

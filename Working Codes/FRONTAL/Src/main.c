@@ -60,7 +60,8 @@ UART_HandleTypeDef huart2;
 #define USE_ENCODER 1
 
 // ms beween two messages of same device
-#define CAN_SEND_FREQUENCY 20
+#define CAN_SEND_FREQUENCY 100.0
+#define CAN_SEND_DELAY (int)(1000.0/CAN_SEND_FREQUENCY)
 
 // Diameter in meters
 #define WHEEL_DIAMETER 0.395
@@ -81,10 +82,9 @@ struct Encoder_Data enc_data_left;
 struct Encoder_Settings enc_setting_left;
 
 CAN_FilterTypeDef sFilter;
-uint32_t valMax0, valMin0, val0rang;
+
 uint32_t ADC_buffer[4], val[3];
 char txt[100];
-int flag = 0;
 int multiplier = 1;
 int timer_factor = 2;
 int calibration_flag = 0;
@@ -120,11 +120,11 @@ static void MX_NVIC_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
-  steer_sample++;
   pot_1.val = ADC_buffer[0];
   pot_2.val = ADC_buffer[1];
   pot_3.val = ADC_buffer[2];
 
+  steer_sample++;
   adc_conv_compleated = 1;
 }
 
@@ -191,10 +191,6 @@ int main(void)
 
   // ------------      CAN      ------------ //
   can.hcan = &hcan1;
-
-  // imu initialization //
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);  ///CS_G to 1
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);  ///CS_XM to 1
 
   // ------------    ENCODER    ------------ //
   init_encoder_settings(&enc_setting_right, &enc_setting_left);
@@ -293,8 +289,6 @@ int main(void)
 
       send_CAN_data(tick);
 
-      // sprintf(txt, "%d\r\n", (int)(enc_data_right.actual_frequency));
-      // HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
       if (tick % 999 == 0) {
         left_sample_printable = left_sample;
         right_sample_printable = right_sample;
@@ -834,7 +828,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       right_sample++;
       encoder_tim_interrupt(&enc_setting_right, &enc_data_right);
       encoder_tim_interrupt(&enc_setting_left, &enc_data_left);
+    }
 
+    if(USE_STEER){
       // Start conversion of 3 ADC
       HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 3);
     }
@@ -845,31 +841,7 @@ void send_CAN_data(uint32_t millis) {
   int increment_value = 1;
 
   if (USE_ENCODER) {
-    //-------------------SEND Encoder-------------------//
-    if (millis % CAN_SEND_FREQUENCY == 0) {
-      double right_buffer = enc_data_right.average_speed;
-      if (right_buffer < 0)
-        right_buffer *= -1;
-
-      uint16_t speed_kmh  = (uint16_t)(right_buffer * ((enc_setting_right.wheel_diameter / 2) * 3.6));
-      uint16_t speed_rads = (uint16_t)(right_buffer * 100);
-
-      can.dataTx[0] = 0x06;
-      can.dataTx[1] = (uint8_t)(speed_kmh >> 8);
-      can.dataTx[2] = (uint8_t)(speed_kmh);
-      can.dataTx[3] = (uint8_t)(enc_data_right.speed_sign);
-      can.dataTx[4] = (uint8_t)(speed_rads >> 8);
-      can.dataTx[5] = (uint8_t)(speed_rads);
-      can.dataTx[6] = (uint8_t)(enc_data_right.error_flag);
-      can.dataTx[7] = (uint8_t)(enc_setting_right.steer_enc_prescaler);
-      can.id = 0xD0;
-      can.size = 8;
-      CAN_Send(&can);
-    }
-
-    millis += increment_value;
-
-    if (millis % CAN_SEND_FREQUENCY == 0) {
+    if (millis % CAN_SEND_DELAY == 0) {
       double left_buffer  = enc_data_left.average_speed;
       double right_buffer = enc_data_right.average_speed;
 
@@ -878,16 +850,16 @@ void send_CAN_data(uint32_t millis) {
       if (right_buffer < 0)
         right_buffer *= -1;
 
-      uint32_t left_rads  = left_buffer * 10000;
-      uint32_t right_rads = right_buffer * 10000;
+      uint32_t left_rads  = (uint32_t)(left_buffer * 10000);
+      uint32_t right_rads = (uint32_t)(right_buffer * 10000);
 
-      can.dataTx[0] = 0x07;
-      can.dataTx[1] = (uint8_t)(left_rads >> 16);
-      can.dataTx[2] = (uint8_t)(left_rads >> 8);
-      can.dataTx[3] = (uint8_t)(left_rads);
-      can.dataTx[4] = (uint8_t)(right_rads >> 16);
-      can.dataTx[5] = (uint8_t)(right_rads >> 8);
-      can.dataTx[6] = (uint8_t)(right_rads);
+      can.dataTx[0] = (uint8_t)(left_rads >> 16 );
+      can.dataTx[1] = (uint8_t)(left_rads >> 8  );
+      can.dataTx[2] = (uint8_t)(left_rads       );
+      can.dataTx[3] = (uint8_t)(right_rads >> 16);
+      can.dataTx[4] = (uint8_t)(right_rads >> 8 );
+      can.dataTx[5] = (uint8_t)(right_rads      );
+      can.dataTx[6] = enc_data_left.speed_sign;
       can.dataTx[7] = enc_data_right.speed_sign;
       can.id = 0xD0;
       can.size = 8;
@@ -896,16 +868,18 @@ void send_CAN_data(uint32_t millis) {
 
     millis += increment_value;
 
-    if (millis % CAN_SEND_FREQUENCY == 0) {
+    //-------------------SEND Encoder ROTATIONS-------------------//
+
+    if (millis % CAN_SEND_DELAY == 0) {
       uint32_t rotations  = enc_data_right.wheel_rotation;
       uint32_t km         = enc_data_right.Km;
 
-      can.dataTx[0] = (uint8_t)(rotations >> 16);
-      can.dataTx[1] = (uint8_t)(rotations >> 8);
-      can.dataTx[2] = (uint8_t)(rotations);
-      can.dataTx[3] = (uint8_t)(km >> 16);
-      can.dataTx[4] = (uint8_t)(km >> 8);
-      can.dataTx[5] = (uint8_t)(km);
+      can.dataTx[0] = (uint8_t)(rotations >> 16 );
+      can.dataTx[1] = (uint8_t)(rotations >> 8  );
+      can.dataTx[2] = (uint8_t)(rotations       );
+      can.dataTx[3] = (uint8_t)(km >> 16        );
+      can.dataTx[4] = (uint8_t)(km >> 8         );
+      can.dataTx[5] = (uint8_t)(km              );
       can.dataTx[6] = (uint8_t)(enc_data_right.error_flag);
       can.dataTx[7] = (uint8_t)(enc_data_left.error_flag);
       can.id = 0xD1;
@@ -915,21 +889,45 @@ void send_CAN_data(uint32_t millis) {
 
     millis += increment_value;
 
+    //-------------------SEND Encoder-------------------//
+    if (millis % CAN_SEND_DELAY == 0) {
+      double right_buffer = enc_data_right.average_speed;
+      if (right_buffer < 0)
+        right_buffer *= -1;
+
+      uint32_t speed_kmh  = (uint32_t)((right_buffer * ((enc_setting_right.wheel_diameter / 2) * 3.6))*1000);
+      uint32_t km         = enc_data_right.Km;
+
+      can.dataTx[0] = (uint8_t)(speed_kmh >> 16   );
+      can.dataTx[1] = (uint8_t)(speed_kmh >> 8    );
+      can.dataTx[2] = (uint8_t)(speed_kmh         );
+      can.dataTx[3] = (uint8_t)(enc_data_right.speed_sign);
+      can.dataTx[4] = (uint8_t)(km >> 16          );
+      can.dataTx[5] = (uint8_t)(km >> 8           );
+      can.dataTx[6] = (uint8_t)(km                );
+      can.dataTx[7] = (uint8_t)(enc_setting_left.wheel_diameter*1000);
+      can.id = 0xD2;
+      can.size = 8;
+      CAN_Send(&can);
+    }
+
+    millis += increment_value;
+
     //--------------------ENCODER DEBUG DATA--------------------//
-    if (millis % CAN_SEND_FREQUENCY == 0) {
+    if (millis % CAN_SEND_DELAY == 0) {
       uint16_t la = (uint16_t)(enc_data_left.angle * 100);
       uint16_t ra = (uint16_t)(enc_data_right.angle * 100);
       uint16_t da = (uint16_t)(enc_data_right.delta_angle * 100);
 
-      can.dataTx[0] = 0x015;
-      can.dataTx[1] = (uint8_t)(la >> 8);
-      can.dataTx[2] = (uint8_t)(la);
-      can.dataTx[3] = (uint8_t)(ra >> 8);
-      can.dataTx[4] = (uint8_t)(ra);
-      can.dataTx[5] = (uint8_t)(da >> 8);
-      can.dataTx[6] = (uint8_t)(da);
-      can.dataTx[7] = (uint8_t)(enc_setting_right.steer_enc_prescaler);
-      can.id = 0xD0;
+      can.dataTx[0] = (uint8_t)(la >> 8 );
+      can.dataTx[1] = (uint8_t)(la      );
+      can.dataTx[2] = (uint8_t)(ra >> 8 );
+      can.dataTx[3] = (uint8_t)(ra      );
+      can.dataTx[4] = (uint8_t)(da >> 8 );
+      can.dataTx[5] = (uint8_t)(da      );
+      can.dataTx[6] = (uint8_t)(enc_setting_left.frequency);
+      can.dataTx[7] = (uint8_t)(enc_setting_right.frequency);
+      can.id = 0xD3;
       can.size = 8;
       CAN_Send(&can);
     }
@@ -939,7 +937,7 @@ void send_CAN_data(uint32_t millis) {
 
   if (USE_STEER) {
     //--------------------SEND Steer--------------------//
-    if (millis % CAN_SEND_FREQUENCY == 0) {
+    if (millis % CAN_SEND_DELAY == 0) {
       if (calibration_flag == 0) {
         uint16_t angle = pot_2.val_100 * 100;
 
@@ -956,14 +954,12 @@ void send_CAN_data(uint32_t millis) {
         CAN_Send(&can);
       }
     }
-
-    millis += increment_value;
   }
 }
 
 void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settings *left) {
   //---------------- RIGHT ----------------//
-  right->steer_enc_prescaler = CAN_SEND_FREQUENCY / 2;
+  right->steer_enc_prescaler = CAN_SEND_DELAY / 2;
 
   right->DataPinName          = GPIOC;
   right->ClockPinName         = GPIOC;
@@ -988,7 +984,7 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   right->conversion = (((double)encoder_Power(2, right->data_size))/(2*M_PI));
 
   //---------------- LEFT ----------------//
-  left->steer_enc_prescaler   = CAN_SEND_FREQUENCY / 2;
+  left->steer_enc_prescaler   = CAN_SEND_DELAY / 2;
 
   left->DataPinName           = GPIOB;
   left->ClockPinName          = GPIOB;
@@ -1131,6 +1127,12 @@ void full_debug(){
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
   sprintf(txt, "Callbacks:\t\t| %d\r\n",
           steer_sample_printable);
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  str = "________________________________________________________________________\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
+  sprintf(txt, "CAN_SEND FREQUENCY:\t| %d\r\n",
+          CAN_SEND_DELAY);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
 
   str = "________________________________________________________________________\r\n\n\n";
