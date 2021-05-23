@@ -49,6 +49,7 @@ CAN_HandleTypeDef hcan1;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim10;
+TIM_HandleTypeDef htim11;
 
 UART_HandleTypeDef huart2;
 
@@ -64,10 +65,10 @@ UART_HandleTypeDef huart2;
 // Diameter in meters
 #define WHEEL_DIAMETER 0.395
 
-#define DEBUG 0
-#define CSV 1
-#define FULL_DEBUG 0
-#define DEBUG_DELAY 2
+#define DEBUG 1
+#define CSV 0
+#define FULL_DEBUG 1
+#define DEBUG_DELAY 200
 
 extern can_stc can;
 extern pot_stc pot_1;
@@ -86,7 +87,6 @@ char txt[100];
 int flag = 0;
 int multiplier = 1;
 int timer_factor = 2;
-int command_flag = 0;
 int calibration_flag = 0;
 int inverter_rpm = 0;
 
@@ -98,9 +98,7 @@ int right_sample_printable = 0;
 int steer_sample = 0;
 int steer_sample_printable = 0;
 
-TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
-TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
-TIM_HandleTypeDef a_TimerInstance10 = {.Instance = TIM10};
+int adc_conv_compleated = 0;
 
 /* USER CODE END PV */
 
@@ -114,6 +112,7 @@ static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_TIM11_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
@@ -125,9 +124,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
   pot_1.val = ADC_buffer[0];
   pot_2.val = ADC_buffer[1];
   pot_3.val = ADC_buffer[2];
-}
 
-int previous_millis;
+  adc_conv_compleated = 1;
+}
 
 /* USER CODE END 0 */
 
@@ -135,7 +134,8 @@ int previous_millis;
   * @brief  The application entry point.
   * @retval int
   */
-int main(void) {
+int main(void)
+{
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
 
@@ -164,6 +164,7 @@ int main(void) {
   MX_TIM3_Init();
   MX_TIM7_Init();
   MX_TIM10_Init();
+  MX_TIM11_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -178,7 +179,6 @@ int main(void) {
   sFilter.FilterBank = 0;
   sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
   sFilter.FilterActivation = ENABLE;
-  HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
   HAL_CAN_Start(&hcan1);
 
@@ -210,14 +210,16 @@ int main(void) {
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_Base_Start(&htim7);
   HAL_TIM_Base_Start(&htim10);
+  HAL_TIM_Base_Start(&htim11);
 
-  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_Delay(1);
+
   HAL_TIM_Base_Start_IT(&htim7);
-  HAL_TIM_Base_Start_IT(&htim10);
 
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance7, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance10, 0);
+  __HAL_TIM_SET_COUNTER(&htim3, 0);
+  __HAL_TIM_SET_COUNTER(&htim7, 0);
+  __HAL_TIM_SET_COUNTER(&htim10, 0);
+  __HAL_TIM_SET_COUNTER(&htim11, 0);
 
   HAL_Delay(1);
 
@@ -256,15 +258,18 @@ int main(void) {
   CAN_Send(&can);
   */
 
+  uint32_t tick = HAL_GetTick();
+  uint32_t previous_millis = tick;
+
   while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-    // If CAN is free from important messages, send data
-    if (command_flag == 0) {
-      command_flag = 1;
-      continue;
+    tick = HAL_GetTick();
+
+    if(adc_conv_compleated && USE_STEER){
+      calc_pot_value(&pot_2, 200);
     }
 
     if(CSV && enc_data_right.new_data == 1){
@@ -283,11 +288,14 @@ int main(void) {
       enc_data_right.new_data = 0;
     }
 
-    if (previous_millis != HAL_GetTick()) {
-      send_CAN_data(HAL_GetTick());
-      previous_millis = HAL_GetTick();
+    if (previous_millis != tick) {
+      previous_millis = tick;
 
-      if (HAL_GetTick() % 1000 == 0) {
+      send_CAN_data(tick);
+
+      // sprintf(txt, "%d\r\n", (int)(enc_data_right.actual_frequency));
+      // HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+      if (tick % 999 == 0) {
         left_sample_printable = left_sample;
         right_sample_printable = right_sample;
         left_sample = 0;
@@ -296,12 +304,13 @@ int main(void) {
         steer_sample_printable = steer_sample;
         steer_sample = 0;
 
-        if(DEBUG){
+
+        if(DEBUG && FULL_DEBUG){
           full_debug();
         }
       }
 
-      if (DEBUG && HAL_GetTick() % DEBUG_DELAY == 0) {
+      if (DEBUG && tick % DEBUG_DELAY == 0) {
         if(!CSV && !FULL_DEBUG){
           sprintf(txt, "ENC_L: %d.%d\r\nENC_R: %d.%d\r\nSteer(*1000): %d\r\n",
                   (int)(enc_data_left.average_speed),
@@ -321,7 +330,8 @@ int main(void) {
   * @brief System Clock Configuration
   * @retval None
   */
-void SystemClock_Config(void) {
+void SystemClock_Config(void)
+{
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -340,18 +350,21 @@ void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
     Error_Handler();
   }
   /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  {
     Error_Handler();
   }
 }
@@ -360,7 +373,8 @@ void SystemClock_Config(void) {
   * @brief NVIC Configuration.
   * @retval None
   */
-static void MX_NVIC_Init(void) {
+static void MX_NVIC_Init(void)
+{
   /* CAN1_TX_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(CAN1_TX_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
@@ -379,9 +393,6 @@ static void MX_NVIC_Init(void) {
   /* TIM7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM7_IRQn);
-  /* TIM1_UP_TIM10_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 }
 
 /**
@@ -389,7 +400,9 @@ static void MX_NVIC_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void) {
+static void MX_ADC1_Init(void)
+{
+
   /* USER CODE BEGIN ADC1_Init 0 */
 
   /* USER CODE END ADC1_Init 0 */
@@ -413,7 +426,8 @@ static void MX_ADC1_Init(void) {
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK) {
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
     Error_Handler();
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
@@ -421,12 +435,14 @@ static void MX_ADC1_Init(void) {
   sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -434,7 +450,9 @@ static void MX_ADC1_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_CAN1_Init(void) {
+static void MX_CAN1_Init(void)
+{
+
   /* USER CODE BEGIN CAN1_Init 0 */
 
   /* USER CODE END CAN1_Init 0 */
@@ -454,12 +472,14 @@ static void MX_CAN1_Init(void) {
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK) {
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
+
 }
 
 /**
@@ -467,7 +487,9 @@ static void MX_CAN1_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_TIM3_Init(void) {
+static void MX_TIM3_Init(void)
+{
+
   /* USER CODE BEGIN TIM3_Init 0 */
 
   /* USER CODE END TIM3_Init 0 */
@@ -484,21 +506,25 @@ static void MX_TIM3_Init(void) {
   htim3.Init.Period = 65500;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
+
 }
 
 /**
@@ -506,7 +532,9 @@ static void MX_TIM3_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_TIM7_Init(void) {
+static void MX_TIM7_Init(void)
+{
+
   /* USER CODE BEGIN TIM7_Init 0 */
 
   // APB1 timer
@@ -524,17 +552,20 @@ static void MX_TIM7_Init(void) {
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 4000;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim7) != HAL_OK) {
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK) {
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
+
 }
 
 /**
@@ -542,7 +573,9 @@ static void MX_TIM7_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_TIM10_Init(void) {
+static void MX_TIM10_Init(void)
+{
+
   /* USER CODE BEGIN TIM10_Init 0 */
 
   /* USER CODE END TIM10_Init 0 */
@@ -553,15 +586,48 @@ static void MX_TIM10_Init(void) {
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 72;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 500;
+  htim10.Init.Period = 50000;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK) {
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM10_Init 2 */
 
   /* USER CODE END TIM10_Init 2 */
+
+}
+
+/**
+  * @brief TIM11 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM11_Init(void)
+{
+
+  /* USER CODE BEGIN TIM11_Init 0 */
+
+  /* USER CODE END TIM11_Init 0 */
+
+  /* USER CODE BEGIN TIM11_Init 1 */
+
+  /* USER CODE END TIM11_Init 1 */
+  htim11.Instance = TIM11;
+  htim11.Init.Prescaler = 72;
+  htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim11.Init.Period = 50000;
+  htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM11_Init 2 */
+
+  /* USER CODE END TIM11_Init 2 */
+
 }
 
 /**
@@ -569,7 +635,9 @@ static void MX_TIM10_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void) {
+static void MX_USART2_UART_Init(void)
+{
+
   /* USER CODE BEGIN USART2_Init 0 */
 
   /* USER CODE END USART2_Init 0 */
@@ -585,18 +653,22 @@ static void MX_USART2_UART_Init(void) {
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK) {
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
 }
 
 /**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) {
+static void MX_DMA_Init(void)
+{
+
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
 
@@ -604,6 +676,7 @@ static void MX_DMA_Init(void) {
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
 }
 
 /**
@@ -611,7 +684,8 @@ static void MX_DMA_Init(void) {
   * @param None
   * @retval None
   */
-static void MX_GPIO_Init(void) {
+static void MX_GPIO_Init(void)
+{
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
@@ -671,6 +745,7 @@ static void MX_GPIO_Init(void) {
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -752,13 +827,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim == &htim10) {
-    // STEER
-    if (USE_STEER) {
-      //steer_sample++;
-      calc_pot_value(&pot_2, 200);
-    }
-  }
 
   if (htim == &htim7) {
     if (USE_ENCODER) {
@@ -779,20 +847,21 @@ void send_CAN_data(uint32_t millis) {
   if (USE_ENCODER) {
     //-------------------SEND Encoder-------------------//
     if (millis % CAN_SEND_FREQUENCY == 0) {
-      if (enc_data_right.speed_sign == 1)
-        enc_data_right.average_speed *= -1;
+      double right_buffer = enc_data_right.average_speed;
+      if (right_buffer < 0)
+        right_buffer *= -1;
 
-      uint16_t speed_kmh = enc_data_right.average_speed * ((enc_setting_right.wheel_diameter / 2) * 3.6);
-      uint16_t speed_rads = enc_data_right.average_speed * 100;
+      uint16_t speed_kmh  = (uint16_t)(right_buffer * ((enc_setting_right.wheel_diameter / 2) * 3.6));
+      uint16_t speed_rads = (uint16_t)(right_buffer * 100);
 
       can.dataTx[0] = 0x06;
-      can.dataTx[1] = (uint8_t) speed_kmh >> 8;
-      can.dataTx[2] = (uint8_t) speed_kmh;
-      can.dataTx[3] = (uint8_t) enc_data_right.speed_sign;
-      can.dataTx[4] = (uint8_t) speed_rads >> 8;
-      can.dataTx[5] = (uint8_t) speed_rads;
-      can.dataTx[6] = (uint8_t) enc_data_right.error_flag;
-      can.dataTx[7] = (uint8_t) enc_setting_right.steer_enc_prescaler;
+      can.dataTx[1] = (uint8_t)(speed_kmh >> 8);
+      can.dataTx[2] = (uint8_t)(speed_kmh);
+      can.dataTx[3] = (uint8_t)(enc_data_right.speed_sign);
+      can.dataTx[4] = (uint8_t)(speed_rads >> 8);
+      can.dataTx[5] = (uint8_t)(speed_rads);
+      can.dataTx[6] = (uint8_t)(enc_data_right.error_flag);
+      can.dataTx[7] = (uint8_t)(enc_setting_right.steer_enc_prescaler);
       can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
@@ -803,6 +872,7 @@ void send_CAN_data(uint32_t millis) {
     if (millis % CAN_SEND_FREQUENCY == 0) {
       double left_buffer  = enc_data_left.average_speed;
       double right_buffer = enc_data_right.average_speed;
+
       if (left_buffer < 0)
         left_buffer *= -1;
       if (right_buffer < 0)
@@ -836,29 +906,9 @@ void send_CAN_data(uint32_t millis) {
       can.dataTx[3] = (uint8_t)(km >> 16);
       can.dataTx[4] = (uint8_t)(km >> 8);
       can.dataTx[5] = (uint8_t)(km);
-      can.dataTx[6] = 0;
-      can.dataTx[7] = 0;
+      can.dataTx[6] = (uint8_t)(enc_data_right.error_flag);
+      can.dataTx[7] = (uint8_t)(enc_data_left.error_flag);
       can.id = 0xD1;
-      can.size = 8;
-      CAN_Send(&can);
-    }
-
-    millis += increment_value;
-
-    //-------------SEND KM & WHEEL ROTAIONS-------------//
-    if (millis % CAN_SEND_FREQUENCY == 0) {
-      uint16_t Km = (enc_data_right.Km);
-      uint16_t rotations = enc_data_right.wheel_rotation;
-
-      can.dataTx[0] = 0x08;
-      can.dataTx[1] = Km >> 8;
-      can.dataTx[2] = Km;
-      can.dataTx[3] = (uint8_t)rotations >> 8;
-      can.dataTx[4] = (uint8_t)rotations;
-      can.dataTx[5] = (uint8_t)enc_data_right.error_flag;
-      can.dataTx[6] = 0;
-      can.dataTx[7] = enc_setting_right.steer_enc_prescaler;
-      can.id = 0xD0;
       can.size = 8;
       CAN_Send(&can);
     }
@@ -867,9 +917,9 @@ void send_CAN_data(uint32_t millis) {
 
     //--------------------ENCODER DEBUG DATA--------------------//
     if (millis % CAN_SEND_FREQUENCY == 0) {
-      uint16_t la = enc_data_left.angle * 100;
-      uint16_t ra = enc_data_right.angle * 100;
-      uint16_t da = enc_data_right.delta_angle * 100;
+      uint16_t la = (uint16_t)(enc_data_left.angle * 100);
+      uint16_t ra = (uint16_t)(enc_data_right.angle * 100);
+      uint16_t da = (uint16_t)(enc_data_right.delta_angle * 100);
 
       can.dataTx[0] = 0x015;
       can.dataTx[1] = (uint8_t)(la >> 8);
@@ -922,7 +972,7 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
 
   right->dx_wheel             = 0;
   right->interrupt_flag       = 0;
-  right->clock_timer          = &a_TimerInstance3;
+  right->clock_timer          = &htim3;
   right->wheel_diameter       = WHEEL_DIAMETER;
   right->clock_period         = 4;
   right->data_size            = 15;
@@ -932,6 +982,8 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   right->frequency_timer      = &htim7;
   right->frequency_timer_Hz   = 72000000;
   right->frequency            = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+  right->microsecond_timer    = &htim10;
 
   right->conversion = (((double)encoder_Power(2, right->data_size))/(2*M_PI));
 
@@ -945,7 +997,7 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
 
   left->dx_wheel              = 0;
   left->interrupt_flag        = 0;
-  left->clock_timer           = &a_TimerInstance3;
+  left->clock_timer           = &htim3;
   left->wheel_diameter        = WHEEL_DIAMETER;
   left->clock_period          = 2;
   left->data_size             = 15;
@@ -955,6 +1007,8 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   left->frequency_timer       = &htim7;
   left->frequency_timer_Hz    = 72000000;
   left->frequency             = right->frequency_timer_Hz / (htim7.Init.Prescaler * htim7.Init.Period);
+
+  left->microsecond_timer    = &htim11;
 
   left->conversion = (((double)encoder_Power(2, left->data_size))/(2*M_PI));
 
@@ -1089,7 +1143,8 @@ void full_debug(){
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
-void Error_Handler(void) {
+void Error_Handler(void)
+{
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   while (1) {
@@ -1097,7 +1152,7 @@ void Error_Handler(void) {
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -1105,7 +1160,8 @@ void Error_Handler(void) {
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t *file, uint32_t line) {
+void assert_failed(uint8_t *file, uint32_t line)
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

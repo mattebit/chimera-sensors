@@ -27,6 +27,12 @@ void encoder_tim_interrupt(struct Encoder_Settings *settings, struct Encoder_Dat
 	data->angle_prec = data->angle;
 	read_SSI(settings, data);
 	data->angle = ((double)data->decimal_data) / settings->conversion;
+	
+
+	// Timer counter, the timer MUST me setted to tick one per microsecond.
+	// data->actual_frequency = settings->microsecond_timer->Instance->CNT;
+	data->actual_frequency = 1000000/((double)(__HAL_TIM_GET_COUNTER(settings->microsecond_timer)));
+	__HAL_TIM_SET_COUNTER(settings->microsecond_timer, 0);
 
 	// Calculate speed from the two angles
 	get_speed_encoder(settings, data);

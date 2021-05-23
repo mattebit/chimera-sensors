@@ -46,6 +46,7 @@ struct Encoder_Settings{
 
 	TIM_HandleTypeDef *clock_timer; // Instance to the timer used to generate the clock
 	TIM_HandleTypeDef *frequency_timer;
+	TIM_HandleTypeDef *microsecond_timer; // timer to count elased microseconds. Set one tick per microsecond
 
 	GPIO_TypeDef *ClockPinName;
 	GPIO_TypeDef *DataPinName;
@@ -70,6 +71,8 @@ struct Encoder_Data{
     double angle; // First angle calculated
     double angle_prec;
     double delta_angle;
+
+	double actual_frequency;
 
 	int new_data;
 };
