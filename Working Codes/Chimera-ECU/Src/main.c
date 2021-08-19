@@ -23,13 +23,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <math.h>
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_tim.h"
+#include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LONG_DELTA 3000
 #define SHORT_DELTA 850
@@ -93,86 +93,86 @@ typedef uint8_t errorsInt;
 // List of SCS
 typedef enum
 {
-	APPS,
-	BSE,
-	LV,
-	MOT_TEMP_SX,
-	MOT_TEMP_DX,
-	INV_TEMP_SX,
-	INV_TEMP_DX,
-	INV_CUR_SX,
-	INV_CUR_DX,
-	NUM_SCS
+    APPS,
+    BSE,
+    LV,
+    MOT_TEMP_SX,
+    MOT_TEMP_DX,
+    INV_TEMP_SX,
+    INV_TEMP_DX,
+    INV_CUR_SX,
+    INV_CUR_DX,
+    NUM_SCS
 } scsList;
 
 typedef struct fifoDataType
 {
-	int idsave;
-	uint8_t RxData[MSG_LENGHT];
+    int idsave;
+    uint8_t RxData[MSG_LENGHT];
 } fifoDataType;
 
 typedef struct state_global_data_t
 {
-	bool tractiveSystem;	// Tractive system on=1/off=0
-	bool go;				// run=1/setup=0
-	bool breakingPedal;		// breaking pedal down=1/up=0
-	bool inverterSx;		// inverter Sx enable=1/disable=0
-	bool inverterDx;		// inverter Dx enable=1/disable=0
-	bool requestOfShutdown; // shutdown request done yes=1/no=0
-	bool writeInCan;		// write in can=1/wait next timeout=0
+    bool tractiveSystem;    // Tractive system on=1/off=0
+    bool go;                // run=1/setup=0
+    bool breakingPedal;     // breaking pedal down=1/up=0
+    bool inverterSx;        // inverter Sx enable=1/disable=0
+    bool inverterDx;        // inverter Dx enable=1/disable=0
+    bool requestOfShutdown; // shutdown request done yes=1/no=0
+    bool writeInCan;        // write in can=1/wait next timeout=0
 
-	bool steeringPresence;
-	bool pedalsPresence;
-	bool frontalPresence;
-	bool centralPresence;
-	bool bmsLvPresence;
-	bool bmsHvPresence;
-	bool invDxPresence;
-	bool invSxPresence;
+    bool steeringPresence;
+    bool pedalsPresence;
+    bool frontalPresence;
+    bool centralPresence;
+    bool bmsLvPresence;
+    bool bmsHvPresence;
+    bool invDxPresence;
+    bool invSxPresence;
 
-	errorsInt errors;
-	errorsInt warningsB1;
+    errorsInt errors;
+    errorsInt warningsB1;
 
-	uint8_t scs[NUM_SCS];
+    uint8_t scs[NUM_SCS];
 
-	fifoDataType fifoData[NUM_DATA];
+    fifoDataType fifoData[NUM_DATA];
 
-	uint16_t dataCounterUp;
-	uint16_t dataCounterDown;
+    uint16_t dataCounterUp;
+    uint16_t dataCounterDown;
 
-	uint8_t accelerator; // apps value
-	uint16_t motLeftTemp;
-	uint16_t motRightTemp;
-	uint16_t invLeftTemp;
-	uint16_t invRightTemp;
-	uint16_t invLeftVol;
-	uint16_t invRightVol;
-	uint16_t invLeftCur;
-	uint16_t invRightCur;
-	uint32_t hvVol;
-	int16_t hvCur;
-	int curRequested;
-	int8_t powerRequested; // % of power requested
+    uint8_t accelerator; // apps value
+    uint16_t motLeftTemp;
+    uint16_t motRightTemp;
+    uint16_t invLeftTemp;
+    uint16_t invRightTemp;
+    uint16_t invLeftVol;
+    uint16_t invRightVol;
+    uint16_t invLeftCur;
+    uint16_t invRightCur;
+    uint32_t hvVol;
+    int16_t hvCur;
+    int curRequested;
+    int8_t powerRequested; // % of power requested
 
-	uint32_t steeringTimeStamp;
-	uint32_t pedalsTimeStamp;
-	uint32_t frontalTimeStamp;
-	uint32_t centralTimeStamp;
-	uint32_t bmsLvTimeStamp;
-	uint32_t bmsHvTimeStamp;
-	uint32_t invDxTimeStamp;
-	uint32_t invSxTimeStamp;
-	uint32_t actualTime;
+    uint32_t steeringTimeStamp;
+    uint32_t pedalsTimeStamp;
+    uint32_t frontalTimeStamp;
+    uint32_t centralTimeStamp;
+    uint32_t bmsLvTimeStamp;
+    uint32_t bmsHvTimeStamp;
+    uint32_t invDxTimeStamp;
+    uint32_t invSxTimeStamp;
+    uint32_t actualTime;
 } state_global_data_t;
 
 // List of states
 typedef enum
 {
-	STATE_INIT,
-	STATE_IDLE,
-	STATE_SETUP,
-	STATE_RUN,
-	NUM_STATES
+    STATE_INIT,
+    STATE_IDLE,
+    STATE_SETUP,
+    STATE_RUN,
+    NUM_STATES
 } state_t;
 
 // State function and state transition prototypes
@@ -657,49 +657,49 @@ static void MX_GPIO_Init(void)
 //---------------CAN--------------
 int CAN_Send(int id, uint8_t dataTx[], int size)
 {
-	/* This function is used to send msgs via can.
+    /* This function is used to send msgs via can.
 	 * In the condition all the mailbox are considered to be sure that
 	 * you can physically send the msg.
 	 * The delay is needed because of the hardware: if you must send more
 	 * than one msgs the hardware has to take its time to reload the msg. */
-	uint32_t mailbox;
-	uint8_t flag = 0;
+    uint32_t mailbox;
+    uint8_t flag = 0;
 
-	CAN_TxHeaderTypeDef TxHeader;
-	TxHeader.StdId = id;
-	TxHeader.IDE = CAN_ID_STD;
-	TxHeader.RTR = CAN_RTR_DATA;
-	TxHeader.DLC = size;
-	TxHeader.TransmitGlobalTime = DISABLE;
+    CAN_TxHeaderTypeDef TxHeader;
+    TxHeader.StdId = id;
+    TxHeader.IDE = CAN_ID_STD;
+    TxHeader.RTR = CAN_RTR_DATA;
+    TxHeader.DLC = size;
+    TxHeader.TransmitGlobalTime = DISABLE;
 
-	if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0 + CAN_TX_MAILBOX1 + CAN_TX_MAILBOX2) == 0)
-	{
-		HAL_CAN_AddTxMessage(&hcan1, &TxHeader, dataTx, &mailbox);
-		flag = 1;
-	}
+    if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 0 && HAL_CAN_IsTxMessagePending(&hcan1, CAN_TX_MAILBOX0 + CAN_TX_MAILBOX1 + CAN_TX_MAILBOX2) == 0)
+    {
+        HAL_CAN_AddTxMessage(&hcan1, &TxHeader, dataTx, &mailbox);
+        flag = 1;
+    }
 
-	HAL_Delay(0.1);
+    HAL_Delay(0.1);
 
-	return flag;
+    return flag;
 }
 
 int CAN_Receive(uint8_t *DataRx, int size)
 {
-	/* This function is used to receive the msgs sent by other devices */
-	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0)
-	{
-		HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, DataRx);
-	}
+    /* This function is used to receive the msgs sent by other devices */
+    if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0)
+    {
+        HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, DataRx);
+    }
 
-	int id = RxHeader.StdId;
+    int id = RxHeader.StdId;
 
-	return id;
+    return id;
 }
 
 //-----------Interrupt-----------
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 {
-	/* This function works in interrupt mode, whenever there is a new msg sent by other
+    /* This function works in interrupt mode, whenever there is a new msg sent by other
 	 * devices this is called back.
 	 * The idea is to save the new msg in a circular FIFO so that is possible to process
 	 * it during the execution of the state in which you are after the interrupt is ended.
@@ -801,7 +801,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 {
-	/* This function works in interrupt mode, whenever there is a new msg sent by other
+    /* This function works in interrupt mode, whenever there is a new msg sent by other
 	 * devices this is called back.
 	 * The idea is to save the new msg in a circular FIFO so that is possible to process
 	 * it during the execution of the state in which you are after the interrupt is ended.
@@ -898,38 +898,38 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	/* This functions works in interrupt mode, there are two conditions based on the
+    /* This functions works in interrupt mode, there are two conditions based on the
 	 * timer.
 	 * The first one is used to timing the writing in can of recursived msgs like the
 	 * torque request to inverter.
 	 * The second one is used to make buzzer sounds for just two seconds like set in
 	 * the settings of the timer. */
 
-	/*if (htim->Instance == TIM6){
+    /*if (htim->Instance == TIM6){
 		data.writeInCan = true;
 	}*/
 
-	if (htim->Instance == TIM7)
-	{
-		if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_SET)
-		{
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
-		}
-	}
+    if (htim->Instance == TIM7)
+    {
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_SET)
+        {
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
+        }
+    }
 }
 
 //-------do_state functions-------
 state_t do_state_init(state_global_data_t *data)
 {
-	/* This state is the initialization state: it's the first of the Finite State Machine
+    /* This state is the initialization state: it's the first of the Finite State Machine
 	 * but it's executed just one time suddenly the car is turned on. */
-	initData(data);
-	return STATE_IDLE;
+    initData(data);
+    return STATE_IDLE;
 }
 
 state_t do_state_idle(state_global_data_t *data)
 {
-	/* In this state the Tractive System is completely disable. This is the first state
+    /* In this state the Tractive System is completely disable. This is the first state
 	 * which the driver is put in contact, here it's possible to turning on the car.
 	 * The first thing to do is to check if the CounterDown and the CounterUp are different,
 	 * if they are it means that new msgs have been saved in the FIFO so it's possible to
@@ -941,116 +941,116 @@ state_t do_state_idle(state_global_data_t *data)
 	 * At the end, if the driver asks for the turning on of the car ECU sends a msg
 	 * to the BMS_HV, after receiving back the confirm the variable Tractive System
 	 * is set to true and there the FSM goes to the SETUP state. */
-	if (data->dataCounterUp != data->dataCounterDown)
-	{
-		switch (data->fifoData[data->dataCounterDown].idsave)
-		{
-		/* Debug case: just to know if it's online and in which state */
-		case ID_ASK_STATE:
-			canSendMSGInit(canSendMSG);
-			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x01;
-			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-			break;
-		case ID_STEERING_WHEEL:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Check who is online */
-			case 0x02:
-				sendErrors(data);
-				if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-				{
-					data->powerRequested = -20;
-				}
-				else
-				{
-					data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
-				}
-				break;
-			/* Turning on car driver request */
-			case 0x03:
-				sendErrors(data);
-				/* Check for critical errors */
-				if (data->errors == 0 || data->errors == 16 || data->errors == 32 || data->errors == 48)
-				{
-					/* Turning on car request to bms_hv*/
-					canSendMSGInit(canSendMSG);
-					canSendMSG[0] = 0x0A;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_HV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Turning on car confirmed */
-			case 0x03:
-				data->tractiveSystem = true;
-				break;
-			/* Turning off car: shouldn't never happen here */
-			case 0x04:
-				data->tractiveSystem = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_SX:
-			/* Check for Inverter status */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
-			{
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
-				{
-					canSendMSG[0] = 0x08;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0C;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = false;
-				}
-			}
-			break;
-		case ID_REQ_INV_DX:
-			/* Check for Inverter status */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
-			{
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
-				{
-					canSendMSG[0] = 0x09;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0D;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = false;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		data->dataCounterDown += 1;
-		data->dataCounterDown = data->dataCounterDown % NUM_DATA;
-	}
+    if (data->dataCounterUp != data->dataCounterDown)
+    {
+        switch (data->fifoData[data->dataCounterDown].idsave)
+        {
+        /* Debug case: just to know if it's online and in which state */
+        case ID_ASK_STATE:
+            canSendMSGInit(canSendMSG);
+            canSendMSG[0] = 0x10;
+            canSendMSG[1] = 0x01;
+            CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+            break;
+        case ID_STEERING_WHEEL:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Check who is online */
+            case 0x02:
+                sendErrors(data);
+                if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+                {
+                    data->powerRequested = -20;
+                }
+                else
+                {
+                    data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+                }
+                break;
+            /* Turning on car driver request */
+            case 0x03:
+                sendErrors(data);
+                /* Check for critical errors */
+                if (data->errors == 0 || data->errors == 16 || data->errors == 32 || data->errors == 48)
+                {
+                    /* Turning on car request to bms_hv*/
+                    canSendMSGInit(canSendMSG);
+                    canSendMSG[0] = 0x0A;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_HV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Turning on car confirmed */
+            case 0x03:
+                data->tractiveSystem = true;
+                break;
+            /* Turning off car: shouldn't never happen here */
+            case 0x04:
+                data->tractiveSystem = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_SX:
+            /* Check for Inverter status */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
+            {
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
+                {
+                    canSendMSG[0] = 0x08;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0C;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = false;
+                }
+            }
+            break;
+        case ID_REQ_INV_DX:
+            /* Check for Inverter status */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
+            {
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
+                {
+                    canSendMSG[0] = 0x09;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0D;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = false;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        data->dataCounterDown += 1;
+        data->dataCounterDown = data->dataCounterDown % NUM_DATA;
+    }
 
-	if (data->steeringPresence == true && data->tractiveSystem == true)
-	{
-		return STATE_SETUP;
-	}
-	return STATE_IDLE;
+    if (data->steeringPresence == true && data->tractiveSystem == true)
+    {
+        return STATE_SETUP;
+    }
+    return STATE_IDLE;
 }
 
 state_t do_state_setup(state_global_data_t *data)
 {
-	/* This state is structured like IDLE.
+    /* This state is structured like IDLE.
 	 * In this state is possible to:
 	 * 	1. enable inverters on driver request. At the moment it's possible to
 	 * 	   enable just once a time. Before sending the request it checks the
@@ -1064,236 +1064,236 @@ state_t do_state_setup(state_global_data_t *data)
 	 *	   the variable go is set to true.
 	 * Since the tractive system is on, all the critical issues have to be checked
 	 * so scs signals are analyzed. */
-	if (data->dataCounterUp != data->dataCounterDown)
-	{
-		switch (data->fifoData[data->dataCounterDown].idsave)
-		{
-		/* Debug case: just to know if it's online and in which state */
-		case ID_ASK_STATE:
-			canSendMSGInit(canSendMSG);
-			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x02;
-			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-			break;
-		case ID_STEERING_WHEEL:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Check who is online */
-			case 0x02:
-				sendErrors(data);
-				// TODO: reinsert
-				//if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
-				/* Turning on car request to bms_hv*/
-				//shutdownErrors(data, data->errors);
-				//}
-				break;
-			/* Stop msg from driver */
-			case 0x04:
-				shutdown(data);
-				break;
-			/* Going to run mode driver request */
-			case 0x05:
-				/* If inverter are turned on and break is pressed i can go to run */
-				if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
-				{
-					data->go = true;
-					/* Map */
-					if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-					{
-						data->powerRequested = -20;
-					}
-					else
-					{
-						data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
-					}
-					__HAL_TIM_SetCounter(&htim7, 0);
-					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
-				}
-				else
-				{
-					uint8_t tosend = 0;
-					if (data->inverterSx)
-						tosend += 8;
-					if (data->inverterDx)
-						tosend += 16;
-					if (data->breakingPedal)
-						tosend += 32;
-					if (data->requestOfShutdown)
-						tosend += 64;
+    if (data->dataCounterUp != data->dataCounterDown)
+    {
+        switch (data->fifoData[data->dataCounterDown].idsave)
+        {
+        /* Debug case: just to know if it's online and in which state */
+        case ID_ASK_STATE:
+            canSendMSGInit(canSendMSG);
+            canSendMSG[0] = 0x10;
+            canSendMSG[1] = 0x02;
+            CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+            break;
+        case ID_STEERING_WHEEL:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Check who is online */
+            case 0x02:
+                sendErrors(data);
+                // TODO: reinsert
+                //if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
+                /* Turning on car request to bms_hv*/
+                //shutdownErrors(data, data->errors);
+                //}
+                break;
+            /* Stop msg from driver */
+            case 0x04:
+                shutdown(data);
+                break;
+            /* Going to run mode driver request */
+            case 0x05:
+                /* If inverter are turned on and break is pressed i can go to run */
+                if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
+                {
+                    data->go = true;
+                    /* Map */
+                    if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+                    {
+                        data->powerRequested = -20;
+                    }
+                    else
+                    {
+                        data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+                    }
+                    __HAL_TIM_SetCounter(&htim7, 0);
+                    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+                }
+                else
+                {
+                    uint8_t tosend = 0;
+                    if (data->inverterSx)
+                        tosend += 8;
+                    if (data->inverterDx)
+                        tosend += 16;
+                    if (data->breakingPedal)
+                        tosend += 32;
+                    if (data->requestOfShutdown)
+                        tosend += 64;
 
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = tosend;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			/* Turning on Inverter sx driver request */
-			case 0x08:
-				if (data->invLeftTemp < 80)
-				{
-					canSendMSGInit(canSendMSG);
+                    canSendMSG[0] = 0xFF;
+                    canSendMSG[1] = tosend;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            /* Turning on Inverter sx driver request */
+            case 0x08:
+                if (data->invLeftTemp < 80)
+                {
+                    canSendMSGInit(canSendMSG);
 
-					/* Enable Inverter msg */
-					canSendMSG[0] = 0x51;
-					canSendMSG[1] = 0x08;
-					CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+                    /* Enable Inverter msg */
+                    canSendMSG[0] = 0x51;
+                    canSendMSG[1] = 0x08;
+                    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
 
-					/* Status Request */
-					canSendMSG[0] = 0x3D;
-					canSendMSG[1] = 0xD8;
-					CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			/* Turning on Inverter dx driver request */
-			case 0x09:
-				if (data->invRightTemp < 80)
-				{
-					canSendMSGInit(canSendMSG);
+                    /* Status Request */
+                    canSendMSG[0] = 0x3D;
+                    canSendMSG[1] = 0xD8;
+                    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            /* Turning on Inverter dx driver request */
+            case 0x09:
+                if (data->invRightTemp < 80)
+                {
+                    canSendMSGInit(canSendMSG);
 
-					/* Enable Inverter msg */
-					canSendMSG[0] = 0x51;
-					canSendMSG[1] = 0x08;
-					CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+                    /* Enable Inverter msg */
+                    canSendMSG[0] = 0x51;
+                    canSendMSG[1] = 0x08;
+                    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-					/* Status Request */
-					canSendMSG[0] = 0x3D;
-					canSendMSG[1] = 0xD8;
-					CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_HV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Shutdown confirmed */
-			case 0x04:
-				data->tractiveSystem = false;
-				break;
-			/* Shutdown caused by an error */
-			case 0x08:
-				data->tractiveSystem = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_LV:
-			/* Saving SCS */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0x01)
-			{
-				data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
-			}
-			break;
-		case ID_PEDALS:
-			/* Saving SCS */
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x01:
-				data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			case 0x02:
-				data->breakingPedal = data->fifoData[data->dataCounterDown].RxData[1];
-				data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_FRONT:
-			break;
-		case ID_CENTER:
-			break;
-		case ID_REQ_INV_SX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invLeftTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
-				break;
-			/* Check for Inverter status */
-			case 0xD8:
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
-				{
-					canSendMSG[0] = 0x08;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0C;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					//data->inverterSx = false;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_DX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invRightTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
-				break;
-			/* Check for Inverter status */
-			case 0xD8:
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
-				{
-					canSendMSG[0] = 0x09;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0D;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					//data->inverterDx = false;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		default:
-			break;
-		}
-		data->dataCounterDown += 1;
-		data->dataCounterDown = data->dataCounterDown % NUM_DATA;
-	}
+                    /* Status Request */
+                    canSendMSG[0] = 0x3D;
+                    canSendMSG[1] = 0xD8;
+                    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_HV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Shutdown confirmed */
+            case 0x04:
+                data->tractiveSystem = false;
+                break;
+            /* Shutdown caused by an error */
+            case 0x08:
+                data->tractiveSystem = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_LV:
+            /* Saving SCS */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0x01)
+            {
+                data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
+            }
+            break;
+        case ID_PEDALS:
+            /* Saving SCS */
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x01:
+                data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            case 0x02:
+                data->breakingPedal = data->fifoData[data->dataCounterDown].RxData[1];
+                data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_FRONT:
+            break;
+        case ID_CENTER:
+            break;
+        case ID_REQ_INV_SX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invLeftTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
+                break;
+            /* Check for Inverter status */
+            case 0xD8:
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
+                {
+                    canSendMSG[0] = 0x08;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0C;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    //data->inverterSx = false;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_DX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invRightTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
+                break;
+            /* Check for Inverter status */
+            case 0xD8:
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
+                {
+                    canSendMSG[0] = 0x09;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0D;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    //data->inverterDx = false;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+        data->dataCounterDown += 1;
+        data->dataCounterDown = data->dataCounterDown % NUM_DATA;
+    }
 
-	/* Check SCS */
-	for (int i = 0; i < NUM_SCS; i++)
-	{
-		if (data->scs[i] != 0)
-		{
-			shutdownErrors(data, ID_STEERING_WHEEL);
-		}
-	}
+    /* Check SCS */
+    for (int i = 0; i < NUM_SCS; i++)
+    {
+        if (data->scs[i] != 0)
+        {
+            shutdownErrors(data, ID_STEERING_WHEEL);
+        }
+    }
 
-	/* TODO: inserire un messaggio mandato ogni tot, serve per avvisare il BMS_HV che l'ecu � online */
-	/*if (data->writeInCan){
+    /* TODO: inserire un messaggio mandato ogni tot, serve per avvisare il BMS_HV che l'ecu � online */
+    /*if (data->writeInCan){
 		canSendMSGInit(canSendMSG);
 		CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
 		data->writeInCan = false;
 	}*/
 
-	if (data->tractiveSystem == false)
-	{
-		return STATE_IDLE;
-	}
-	if (data->go == true)
-	{
-		return STATE_RUN;
-	}
+    if (data->tractiveSystem == false)
+    {
+        return STATE_IDLE;
+    }
+    if (data->go == true)
+    {
+        return STATE_RUN;
+    }
 
-	return STATE_SETUP;
+    return STATE_SETUP;
 }
 
 state_t do_state_run(state_global_data_t *data)
 {
-	/* This state is structured like IDLE. Here the car is completely able to run.
+    /* This state is structured like IDLE. Here the car is completely able to run.
 	 * In this state is possible to:
 	 * 	1. go back to state SETUP on driver request, please note: from here is
 	 * 	   not possible to go to state IDLE except for some error.
@@ -1304,264 +1304,264 @@ state_t do_state_run(state_global_data_t *data)
 	 * could be possible to block the can-bus.
 	 * Since the tractive system is on, all the critical issues have to be checked
 	 * so scs signals are analyzed. */
-	if (data->dataCounterDown != data->dataCounterUp)
-	{
-		switch (data->fifoData[data->dataCounterDown].idsave)
-		{
-		/* Debug case: just to know if it's online and in which state */
-		case ID_ASK_STATE:
-			canSendMSGInit(canSendMSG);
-			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x03;
-			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-			break;
-		case ID_STEERING_WHEEL:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Check who is online */
-			case 0x02:
-				sendErrors(data);
-				/* map changing */
-				if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-				{
-					data->powerRequested = -20;
-				}
-				else
-				{
-					data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
-				}
-				break;
-				// TODO: reinsert
-				//if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
-				/* Turning on car request to bms_hv*/
-				//shutdownErrors(data, data->errors);
-				//}
-				break;
-			/* Setup request */
-			case 0x06:
-				data->go = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_PEDALS:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Saving SCS */
-			case 0x01:
-				data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			case 0x02:
-				data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_FRONT:
-			break;
-		case ID_CENTER:
-			break;
-		case ID_BMS_LV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Saving SCS */
-			case 0x01:
-				data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_HV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Volt --> must be converted */
-			case 0x01:
-				data->hvVol = ((data->fifoData[data->dataCounterDown].RxData[1] << 16) + (data->fifoData[data->dataCounterDown].RxData[2] << 8) + 0x00) / 10000;
-				break;
-			case 0x05:
-				data->hvCur = (*(int16_t *)(data->fifoData[data->dataCounterDown].RxData + 1)) / 10;
-				break;
-			/* Shutdown caused by an error */
-			case 0x08:
-				data->tractiveSystem = false;
-				data->go = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_SX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
-				break;
-			case 0x49:
-				data->motLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_DX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
-				break;
-			case 0x49:
-				data->motRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
-				break;
-			default:
-				break;
-			}
-			break;
-		default:
-			break;
-		}
-		data->dataCounterDown += 1;
-		data->dataCounterDown = data->dataCounterDown % NUM_DATA;
-	}
+    if (data->dataCounterDown != data->dataCounterUp)
+    {
+        switch (data->fifoData[data->dataCounterDown].idsave)
+        {
+        /* Debug case: just to know if it's online and in which state */
+        case ID_ASK_STATE:
+            canSendMSGInit(canSendMSG);
+            canSendMSG[0] = 0x10;
+            canSendMSG[1] = 0x03;
+            CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+            break;
+        case ID_STEERING_WHEEL:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Check who is online */
+            case 0x02:
+                sendErrors(data);
+                /* map changing */
+                if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+                {
+                    data->powerRequested = -20;
+                }
+                else
+                {
+                    data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+                }
+                break;
+                // TODO: reinsert
+                //if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
+                /* Turning on car request to bms_hv*/
+                //shutdownErrors(data, data->errors);
+                //}
+                break;
+            /* Setup request */
+            case 0x06:
+                data->go = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_PEDALS:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Saving SCS */
+            case 0x01:
+                data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            case 0x02:
+                data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_FRONT:
+            break;
+        case ID_CENTER:
+            break;
+        case ID_BMS_LV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Saving SCS */
+            case 0x01:
+                data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_HV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Volt --> must be converted */
+            case 0x01:
+                data->hvVol = ((data->fifoData[data->dataCounterDown].RxData[1] << 16) + (data->fifoData[data->dataCounterDown].RxData[2] << 8) + 0x00) / 10000;
+                break;
+            case 0x05:
+                data->hvCur = (*(int16_t *)(data->fifoData[data->dataCounterDown].RxData + 1)) / 10;
+                break;
+            /* Shutdown caused by an error */
+            case 0x08:
+                data->tractiveSystem = false;
+                data->go = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_SX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
+                break;
+            case 0x49:
+                data->motLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_DX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
+                break;
+            case 0x49:
+                data->motRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+        data->dataCounterDown += 1;
+        data->dataCounterDown = data->dataCounterDown % NUM_DATA;
+    }
 
-	//TODO: controllo
+    //TODO: controllo
 
-	if (data->writeInCan)
-	{
-		transmission(data);
-		data->writeInCan = false;
-	}
+    if (data->writeInCan)
+    {
+        transmission(data);
+        data->writeInCan = false;
+    }
 
-	if (data->hvCur * data->hvVol > 1500)
-	{
-		//shutdownErrors(data, 0x99);
-	}
+    if (data->hvCur * data->hvVol > 1500)
+    {
+        //shutdownErrors(data, 0x99);
+    }
 
-	checkValues(data);
+    checkValues(data);
 
-	/* Check SCS */
-	/*for (int i = 0; i < NUM_SCS; i++){
+    /* Check SCS */
+    /*for (int i = 0; i < NUM_SCS; i++){
 		if (data->scs[i] != 0){
 			shutdownErrors(data, ID_STEERING_WHEEL);
 		}
 	}*/
 
-	if (data->tractiveSystem == false)
-	{
-		return STATE_IDLE;
-	}
-	if (data->go == false)
-	{
-		return STATE_SETUP;
-	}
-	return STATE_RUN;
+    if (data->tractiveSystem == false)
+    {
+        return STATE_IDLE;
+    }
+    if (data->go == false)
+    {
+        return STATE_SETUP;
+    }
+    return STATE_RUN;
 }
 
 //-------to_state functions--------
 void to_idle(state_global_data_t *data)
 {
-	/* This function is used everytime ECU goes to state IDLE.
+    /* This function is used everytime ECU goes to state IDLE.
 	 * Here the msg to steering wheel is sent to let it know the change of
 	 * state. Errors are sent as well.
 	 * Moreover a data request for the temperature is sent to inverters.
 	 * All the other requests to the inverters are to stop msgs useless in
 	 * this state. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	data->requestOfShutdown = false;
+    data->requestOfShutdown = false;
 
-	/* Sending to steering wheel msg i'm in idle, 3 times so i'm sure it won't be lost */
-	canSendMSG[0] = 0x04;
-	for (int i = 0; i < 3; i++)
-	{
-		CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-	}
+    /* Sending to steering wheel msg i'm in idle, 3 times so i'm sure it won't be lost */
+    canSendMSG[0] = 0x04;
+    for (int i = 0; i < 3; i++)
+    {
+        CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    }
 
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	/* Sending Errors To Steering Wheel */
-	canSendMSG[0] = 0x01;
-	canSendMSG[1] = data->errors;
-	canSendMSG[2] = data->warningsB1;
-	canSendMSG[3] = 0;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    /* Sending Errors To Steering Wheel */
+    canSendMSG[0] = 0x01;
+    canSendMSG[1] = data->errors;
+    canSendMSG[2] = data->warningsB1;
+    canSendMSG[3] = 0;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	/* Inverter Disable */
-	canSendMSG[0] = 0x51;
-	canSendMSG[1] = 0x04;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Inverter Disable */
+    canSendMSG[0] = 0x51;
+    canSendMSG[1] = 0x04;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Status Request */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xD8;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Status Request */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xD8;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/*IGBT Temperature: 100 ms*/
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x4A;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /*IGBT Temperature: 100 ms*/
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x4A;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Actual Speed Value Filtered: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xA8;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Actual Speed Value Filtered: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xA8;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Filtered Actual Current: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x5F;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Filtered Actual Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Command Current: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x26;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Command Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x26;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Motor Temperature: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x49;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Motor Temperature: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x49;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* VDC-Bus: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xEB;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* VDC-Bus: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xEB;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Max Motor Current: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x4D;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Max Motor Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x4D;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Motor Continuous Current: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x4E;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Motor Continuous Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x4E;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 }
 
 void from_idle_to_setup(state_global_data_t *data)
 {
-	/* This function is used everytime ECU goes from the state IDLE to state
+    /* This function is used everytime ECU goes from the state IDLE to state
 	 * SETUP.
 	 * Here the msg to steering wheel is sent to let it know the change of
 	 * state.
@@ -1569,60 +1569,60 @@ void from_idle_to_setup(state_global_data_t *data)
 	 * After that a status request is sent to let it know to steering wheel.
 	 * Moreover some data requests are sent to inverters. Read the
 	 * descriptions for every msg. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	/* Sending to steering wheel msg i'm in setup */
-	canSendMSG[0] = 0x03;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    /* Sending to steering wheel msg i'm in setup */
+    canSendMSG[0] = 0x03;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-	/* Inverter Disable */
-	canSendMSG[0] = 0x51;
-	canSendMSG[1] = 0x04;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Inverter Disable */
+    canSendMSG[0] = 0x51;
+    canSendMSG[1] = 0x04;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Status Request */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xD8;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Status Request */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xD8;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Motor Temperature: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x49;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Motor Temperature: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x49;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* VDC-Bus: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xEB;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* VDC-Bus: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xEB;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* V-Out: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x8A;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* V-Out: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x8A;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Motor Power: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xF6;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Motor Power: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xF6;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Torque-Out: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xA0;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Torque-Out: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xA0;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/*
+    /*
 	//Max Motor Current: 20 ms --> logging
 	canSendMSG[0] = 0x3D;
 	canSendMSG[1] = 0x4D;
@@ -1641,7 +1641,7 @@ void from_idle_to_setup(state_global_data_t *data)
 
 void from_run_to_setup(state_global_data_t *data)
 {
-	/* This function is used everytime ECU goes from the state RUN to state
+    /* This function is used everytime ECU goes from the state RUN to state
 	 * SETUP.
 	 * Here the msg to steering wheel is sent to let it know the change of
 	 * state.
@@ -1649,44 +1649,44 @@ void from_run_to_setup(state_global_data_t *data)
 	 * After that a status request is sent to let it know to steering wheel.
 	 * All the other requests to the inverters are to stop msgs useless in
 	 * this state. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	data->accelerator = 0;
+    data->accelerator = 0;
 
-	/* Sending to steering wheel msg i'm in setup */
-	canSendMSG[0] = 0x06;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    /* Sending to steering wheel msg i'm in setup */
+    canSendMSG[0] = 0x06;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	/* Inverter Disable */
-	canSendMSG[0] = 0x51;
-	canSendMSG[1] = 0x04;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Inverter Disable */
+    canSendMSG[0] = 0x51;
+    canSendMSG[1] = 0x04;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Status Request */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xD8;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Status Request */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xD8;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Actual Speed Value Filtered: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xA8;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Actual Speed Value Filtered: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xA8;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Filtered Actual Current: stop sending */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x5F;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Filtered Actual Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Command Current: stop sending */
-	/*canSendMSG[0] = 0x3D;
+    /* Command Current: stop sending */
+    /*canSendMSG[0] = 0x3D;
 	canSendMSG[1] = 0x26;
 	canSendMSG[2] = 0xFF;
 	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
@@ -1695,37 +1695,37 @@ void from_run_to_setup(state_global_data_t *data)
 
 void to_run(state_global_data_t *data)
 {
-	/* This function is used everytime ECU goes to state RUN.
+    /* This function is used everytime ECU goes to state RUN.
 	 * First of all timer is set to 0, that's because by regulation a
 	 * buzzer has to ring for a time between 1-3 secs everytime the car
 	 * is able to run.
 	 * Here the msg to steering wheel is sent to let it know the change of
 	 * state.
 	 * Moreover some data request are sent to inverters. */
-	__HAL_TIM_SetCounter(&htim7, 0);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+    __HAL_TIM_SetCounter(&htim7, 0);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	/* Sending to steering wheel msg i'm in run */
-	canSendMSG[0] = 0x05;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    /* Sending to steering wheel msg i'm in run */
+    canSendMSG[0] = 0x05;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-	/* Actual Speed Value Filtered: 50 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0xA8;
-	canSendMSG[2] = 0x32;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Actual Speed Value Filtered: 50 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0xA8;
+    canSendMSG[2] = 0x32;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/* Filtered Actual Current: 100 ms */
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x5F;
-	canSendMSG[2] = 0x64;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    /* Filtered Actual Current: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-	/*
+    /*
 	//Command Current: 20 ms --> logging
 	canSendMSG[0] = 0x3D;
 	canSendMSG[1] = 0x26;
@@ -1737,109 +1737,109 @@ void to_run(state_global_data_t *data)
 
 //-----List of state functions-----
 state_func_t *const state_table[NUM_STATES] = {
-	/* This list is an array called back from the state manager to
+    /* This list is an array called back from the state manager to
 	 * know which state function execute according to the state returned
 	 * by the function before. */
-	do_state_init, do_state_idle,
-	do_state_setup, do_state_run};
+    do_state_init, do_state_idle,
+    do_state_setup, do_state_run};
 
 //--Table of transition functions--
 transition_func_t *const transition_table[NUM_STATES][NUM_STATES] = {
-	/* This matrix is called back from the state manager to know
+    /* This matrix is called back from the state manager to know
 	 * which transition function execute according to present state and
 	 * the future state. */
-	{NULL, to_idle, NULL, NULL},
-	{NULL, NULL, from_idle_to_setup, NULL},
-	{NULL, to_idle, NULL, to_run},
-	{NULL, to_idle, from_run_to_setup, NULL},
+    {NULL, to_idle, NULL, NULL},
+    {NULL, NULL, from_idle_to_setup, NULL},
+    {NULL, to_idle, NULL, to_run},
+    {NULL, to_idle, from_run_to_setup, NULL},
 };
 
 //call the current state and returns the next one
 state_t run_state(state_t cur_state, state_global_data_t *data)
 {
-	/* This function is the state manager.
+    /* This function is the state manager.
 	 * According to the cur_state passed by the function before is chosen the
 	 * new_state and so on. */
-	state_t new_state = state_table[cur_state](data);
-	transition_func_t *transition = transition_table[cur_state][new_state];
-	if (transition)
-	{
-		transition(data);
-	}
-	return new_state;
+    state_t new_state = state_table[cur_state](data);
+    transition_func_t *transition = transition_table[cur_state][new_state];
+    if (transition)
+    {
+        transition(data);
+    }
+    return new_state;
 }
 
 //--------operative function--------
 void initData(state_global_data_t *data)
 {
-	/* This functions is used to initialize all the variables.
+    /* This functions is used to initialize all the variables.
 	 * It's called just during the state INIT. */
-	data->tractiveSystem = false;	 // Tractive system off
-	data->go = false;				 // setup
-	data->breakingPedal = false;	 // breaking pedal up
-	data->inverterSx = false;		 // inverter Sx disable
-	data->inverterDx = false;		 // inverter Dx disable
-	data->requestOfShutdown = false; // shutdown not request
-	data->writeInCan = false;		 // wait next timeout for writing
+    data->tractiveSystem = false;    // Tractive system off
+    data->go = false;                // setup
+    data->breakingPedal = false;     // breaking pedal up
+    data->inverterSx = false;        // inverter Sx disable
+    data->inverterDx = false;        // inverter Dx disable
+    data->requestOfShutdown = false; // shutdown not request
+    data->writeInCan = false;        // wait next timeout for writing
 
-	data->steeringPresence = false;
-	data->pedalsPresence = false;
-	data->frontalPresence = false;
-	data->centralPresence = false;
-	data->bmsLvPresence = false;
-	data->bmsHvPresence = false;
-	data->invDxPresence = false;
-	data->invSxPresence = false;
+    data->steeringPresence = false;
+    data->pedalsPresence = false;
+    data->frontalPresence = false;
+    data->centralPresence = false;
+    data->bmsLvPresence = false;
+    data->bmsHvPresence = false;
+    data->invDxPresence = false;
+    data->invSxPresence = false;
 
-	data->errors = 255;		// no devices connected
-	data->warningsB1 = 255; // no sensors connected
+    data->errors = 255;     // no devices connected
+    data->warningsB1 = 255; // no sensors connected
 
-	for (int i = 0; i < NUM_SCS; i++)
-	{
-		data->scs[i] = 0;
-	}
+    for (int i = 0; i < NUM_SCS; i++)
+    {
+        data->scs[i] = 0;
+    }
 
-	data->dataCounterUp = 0x0000;
-	data->dataCounterDown = 0x0000;
+    data->dataCounterUp = 0x0000;
+    data->dataCounterDown = 0x0000;
 
-	data->accelerator = 0x00;
-	data->motLeftTemp = 0x0000;
-	data->motRightTemp = 0x0000;
-	data->invLeftTemp = 0x0000;
-	data->invRightTemp = 0x0000;
-	data->invLeftVol = 0x0000;
-	data->invRightVol = 0x0000;
-	data->invLeftCur = 0x0000;
-	data->invRightCur = 0x0000;
-	data->hvCur = 0x0000;
-	;
-	data->hvVol = 0x00000000;
-	data->curRequested = 0.0;
-	data->powerRequested = 0x00;
+    data->accelerator = 0x00;
+    data->motLeftTemp = 0x0000;
+    data->motRightTemp = 0x0000;
+    data->invLeftTemp = 0x0000;
+    data->invRightTemp = 0x0000;
+    data->invLeftVol = 0x0000;
+    data->invRightVol = 0x0000;
+    data->invLeftCur = 0x0000;
+    data->invRightCur = 0x0000;
+    data->hvCur = 0x0000;
+    ;
+    data->hvVol = 0x00000000;
+    data->curRequested = 0.0;
+    data->powerRequested = 0x00;
 
-	data->steeringTimeStamp = 0x0000;
-	data->pedalsTimeStamp = 0x0000;
-	data->frontalTimeStamp = 0x0000;
-	data->centralTimeStamp = 0x0000;
-	data->bmsLvTimeStamp = 0x0000;
-	data->bmsHvTimeStamp = 0x0000;
-	data->invDxTimeStamp = 0x0000;
-	data->invSxTimeStamp = 0x0000;
+    data->steeringTimeStamp = 0x0000;
+    data->pedalsTimeStamp = 0x0000;
+    data->frontalTimeStamp = 0x0000;
+    data->centralTimeStamp = 0x0000;
+    data->bmsLvTimeStamp = 0x0000;
+    data->bmsHvTimeStamp = 0x0000;
+    data->invDxTimeStamp = 0x0000;
+    data->invSxTimeStamp = 0x0000;
 }
 
 void canSendMSGInit(uint8_t *CanSendMSG)
 {
-	/* This function is used to initialize the msg everytime you need to send
+    /* This function is used to initialize the msg everytime you need to send
 	 * something via can. */
-	for (int i = 0; i < MSG_LENGHT; i++)
-	{
-		CanSendMSG[i] = 0;
-	}
+    for (int i = 0; i < MSG_LENGHT; i++)
+    {
+        CanSendMSG[i] = 0;
+    }
 }
 
 void checkTimeStamp(state_global_data_t *data)
 {
-	/* This function is used to compare the current time with the time of the last msg
+    /* This function is used to compare the current time with the time of the last msg
 	 * sent by a device, if a difference is greater than the preset delta the device
 	 * is considered out of order.
 	 * There are case since the timer is linear (from 0 to 49999 and than
@@ -1852,16 +1852,16 @@ void checkTimeStamp(state_global_data_t *data)
 	 * After the check if a device is disabled it increments the variables errors and
 	 * warningB1, these are reading bit for bit from the steering wheel so every bit
 	 * corresponds to a device, that's why the increment is done in exponentiation of 2. */
-	data->errors = 0;
-	data->warningsB1 = 0;
+    data->errors = 0;
+    data->warningsB1 = 0;
 
-	//data->actualTime = __HAL_TIM_GetCounter(&htim10);
-	data->actualTime = HAL_GetTick();
+    //data->actualTime = __HAL_TIM_GetCounter(&htim10);
+    data->actualTime = HAL_GetTick();
 
-	/* Steering Wheel Timer */
-	if (data->steeringPresence == false)
-		data->steeringPresence = true;
-	/*
+    /* Steering Wheel Timer */
+    if (data->steeringPresence == false)
+        data->steeringPresence = true;
+    /*
 	if (data->steeringPresence == true)
 	{
 		if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
@@ -1870,112 +1870,112 @@ void checkTimeStamp(state_global_data_t *data)
 		}
 	}*/
 
-	/* Pedals Timer */
-	if (data->pedalsPresence == true)
-	{
-		if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
-		{
-			data->pedalsPresence = false;
-			data->errors += 8;
-			data->warningsB1 += 192;
-		}
-	}
-	else
-	{
-		data->errors += 8;
-		data->warningsB1 += 192;
-	}
+    /* Pedals Timer */
+    if (data->pedalsPresence == true)
+    {
+        if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
+        {
+            data->pedalsPresence = false;
+            data->errors += 8;
+            data->warningsB1 += 192;
+        }
+    }
+    else
+    {
+        data->errors += 8;
+        data->warningsB1 += 192;
+    }
 
-	/* Frontal Timer */
-	if (data->frontalPresence == true)
-	{
-		if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
-		{
-			data->frontalPresence = false;
-			data->errors += 32;
-			data->warningsB1 += 60;
-		}
-	}
-	else
-	{
-		data->errors += 32;
-		data->warningsB1 += 60;
-	}
+    /* Frontal Timer */
+    if (data->frontalPresence == true)
+    {
+        if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
+        {
+            data->frontalPresence = false;
+            data->errors += 32;
+            data->warningsB1 += 60;
+        }
+    }
+    else
+    {
+        data->errors += 32;
+        data->warningsB1 += 60;
+    }
 
-	/* Central Timer */
-	if (data->centralPresence == true)
-	{
-		if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
-		{
-			data->centralPresence = false;
-			data->errors += 16;
-			data->warningsB1 += 3;
-		}
-	}
-	else
-	{
-		data->errors += 16;
-		data->warningsB1 += 3;
-	}
+    /* Central Timer */
+    if (data->centralPresence == true)
+    {
+        if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
+        {
+            data->centralPresence = false;
+            data->errors += 16;
+            data->warningsB1 += 3;
+        }
+    }
+    else
+    {
+        data->errors += 16;
+        data->warningsB1 += 3;
+    }
 
-	/* BmsLv Timer */
-	if (data->bmsLvPresence == true)
-	{
-		if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
-		{
-			data->bmsLvPresence = false;
-			data->errors += 2;
-		}
-	}
-	else
-	{
-		data->errors += 2;
-	}
+    /* BmsLv Timer */
+    if (data->bmsLvPresence == true)
+    {
+        if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
+        {
+            data->bmsLvPresence = false;
+            data->errors += 2;
+        }
+    }
+    else
+    {
+        data->errors += 2;
+    }
 
-	/* BmsHv Timer */
-	if (data->bmsHvPresence == true)
-	{
-		if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
-		{
-			data->bmsHvPresence = false;
-			data->errors += 1;
-		}
-	}
-	else
-	{
-		data->errors += 1;
-	}
+    /* BmsHv Timer */
+    if (data->bmsHvPresence == true)
+    {
+        if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
+        {
+            data->bmsHvPresence = false;
+            data->errors += 1;
+        }
+    }
+    else
+    {
+        data->errors += 1;
+    }
 
-	/* TODO: Reintroduce Inverter Dx*/
-	/* Inverter Dx Timer */
-	if (data->invDxPresence == true)
-	{
-		if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
-		{
-			data->invDxPresence = false;
-			data->errors += 128;
-		}
-	}
-	else
-	{
-		data->errors += 128;
-	}
+    /* TODO: Reintroduce Inverter Dx*/
+    /* Inverter Dx Timer */
+    if (data->invDxPresence == true)
+    {
+        if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
+        {
+            data->invDxPresence = false;
+            data->errors += 128;
+        }
+    }
+    else
+    {
+        data->errors += 128;
+    }
 
-	/* Inverter Sx Timer */
-	if (data->invSxPresence == true)
-	{
-		if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
-		{
-			data->invSxPresence = false;
-			data->errors += 64;
-		}
-	}
-	else
-	{
-		data->errors += 64;
-	}
+    /* Inverter Sx Timer */
+    if (data->invSxPresence == true)
+    {
+        if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
+        {
+            data->invSxPresence = false;
+            data->errors += 64;
+        }
+    }
+    else
+    {
+        data->errors += 64;
+    }
 
-	/*if (data->errors != 0){
+    /*if (data->errors != 0){
 		char mander[10];
 		sprintf(mander, "%d\n\r", data->errors);
 		HAL_UART_Transmit(&huart2, (uint8_t*)mander, strlen(mander), 10);
@@ -1984,124 +1984,124 @@ void checkTimeStamp(state_global_data_t *data)
 
 void sendStatus(state_global_data_t *data)
 {
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	uint8_t map = data->powerRequested;
-	uint8_t state = 0;
+    uint8_t map = data->powerRequested;
+    uint8_t state = 0;
 
-	if (STATO == STATE_IDLE)
-		state = 0;
-	if (STATO == STATE_SETUP)
-		state = 1;
-	if (STATO == STATE_RUN)
-		state = 2;
+    if (STATO == STATE_IDLE)
+        state = 0;
+    if (STATO == STATE_SETUP)
+        state = 1;
+    if (STATO == STATE_RUN)
+        state = 2;
 
-	canSendMSG[0] = 0x01;
-	canSendMSG[1] = data->errors;
-	canSendMSG[2] = data->warningsB1;
-	canSendMSG[3] = map;
-	canSendMSG[4] = state;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    canSendMSG[0] = 0x01;
+    canSendMSG[1] = data->errors;
+    canSendMSG[2] = data->warningsB1;
+    canSendMSG[3] = map;
+    canSendMSG[4] = state;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 }
 
 void sendErrors(state_global_data_t *data)
 {
-	/* This function is used to send errors and warnings to the steering wheel.
+    /* This function is used to send errors and warnings to the steering wheel.
 	 * Errors and Warnings are calculated every cycle but sent just on request. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	uint8_t map = data->powerRequested;
-	uint8_t state = 0;
+    uint8_t map = data->powerRequested;
+    uint8_t state = 0;
 
-	if (STATO == STATE_IDLE)
-		state = 0;
-	if (STATO == STATE_SETUP)
-		state = 1;
-	if (STATO == STATE_RUN)
-		state = 2;
+    if (STATO == STATE_IDLE)
+        state = 0;
+    if (STATO == STATE_SETUP)
+        state = 1;
+    if (STATO == STATE_RUN)
+        state = 2;
 
-	canSendMSG[0] = 0x01;
-	canSendMSG[1] = data->errors;
-	canSendMSG[2] = data->warningsB1;
-	canSendMSG[3] = map;
-	canSendMSG[4] = state;
-	CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    canSendMSG[0] = 0x01;
+    canSendMSG[1] = data->errors;
+    canSendMSG[2] = data->warningsB1;
+    canSendMSG[3] = map;
+    canSendMSG[4] = state;
+    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 }
 
 void shutdown(state_global_data_t *data)
 {
-	/* This function is used to sand the turning off request to the BMS_HV.
+    /* This function is used to sand the turning off request to the BMS_HV.
 	 * This is used just on driver request.
 	 * The msg is sent three times to be sure that BMS_HV would received that. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	char mander[50];
-	sprintf(mander, "ShutDown\n\r");
-	HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
+    char mander[50];
+    sprintf(mander, "ShutDown\n\r");
+    HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
 
-	canSendMSG[0] = 0x0B;
-	canSendMSG[1] = 0x04;
-	for (int i = 0; i < 3; i++)
-	{
-		CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-	}
-	//data->requestOfShutdown = 1;
+    canSendMSG[0] = 0x0B;
+    canSendMSG[1] = 0x04;
+    for (int i = 0; i < 3; i++)
+    {
+        CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    }
+    //data->requestOfShutdown = 1;
 }
 
 void shutdownErrors(state_global_data_t *data, int err)
 {
-	/* This function is used to sand the turning off request to the BMS_HV.
+    /* This function is used to sand the turning off request to the BMS_HV.
 	 * This is used just in case of an error occurred.
 	 * The msg is sent three times to be sure that BMS_HV would received that. */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	char mander[50];
-	sprintf(mander, "ShutDown_Errors: %d\n\r", err);
-	HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
+    char mander[50];
+    sprintf(mander, "ShutDown_Errors: %d\n\r", err);
+    HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
 
-	canSendMSG[0] = 0x0B;
-	canSendMSG[1] = 0x08;
-	canSendMSG[2] = err;
-	for (int i = 0; i < 3; i++)
-	{
-		CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-	}
-	//data->requestOfShutdown = 1;
+    canSendMSG[0] = 0x0B;
+    canSendMSG[1] = 0x08;
+    canSendMSG[2] = err;
+    for (int i = 0; i < 3; i++)
+    {
+        CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+    }
+    //data->requestOfShutdown = 1;
 }
 
 void checkValues(state_global_data_t *data)
 {
-	/* This function is used to check data coming from inverter.
+    /* This function is used to check data coming from inverter.
 	 * The scs array is used to keep in memory the situation of the errors. */
-	if ((data->motLeftTemp - 9393.9) / 55.1 > 115)
-	{
-		data->scs[MOT_TEMP_SX] = 0x01;
-	}
-	if ((data->motRightTemp - 9393.9) / 55.1 > 115)
-	{
-		data->scs[MOT_TEMP_DX] = 0x01;
-	}
-	if ((data->invLeftTemp - 15797) / 112.12 > 80)
-	{
-		data->scs[INV_TEMP_SX] = 0x01;
-	}
-	if ((data->invRightTemp - 15797) / 112.12 > 80)
-	{
-		data->scs[INV_TEMP_DX] = 0x01;
-	}
-	if (data->invLeftCur * 200 / 560 > 235)
-	{
-		data->scs[INV_CUR_SX] = 0x01;
-	}
-	if (data->invRightCur * 200 / 560 > 235)
-	{
-		data->scs[INV_CUR_DX] = 0x01;
-	}
+    if ((data->motLeftTemp - 9393.9) / 55.1 > 115)
+    {
+        data->scs[MOT_TEMP_SX] = 0x01;
+    }
+    if ((data->motRightTemp - 9393.9) / 55.1 > 115)
+    {
+        data->scs[MOT_TEMP_DX] = 0x01;
+    }
+    if ((data->invLeftTemp - 15797) / 112.12 > 80)
+    {
+        data->scs[INV_TEMP_SX] = 0x01;
+    }
+    if ((data->invRightTemp - 15797) / 112.12 > 80)
+    {
+        data->scs[INV_TEMP_DX] = 0x01;
+    }
+    if (data->invLeftCur * 200 / 560 > 235)
+    {
+        data->scs[INV_CUR_SX] = 0x01;
+    }
+    if (data->invRightCur * 200 / 560 > 235)
+    {
+        data->scs[INV_CUR_DX] = 0x01;
+    }
 }
 
 void transmission(state_global_data_t *data)
 {
-	/* This function is used to send the current request to the inverters.
+    /* This function is used to send the current request to the inverters.
 	 * The current needed is calculated considering the max power (80kW) and the
 	 * voltage sent by the BMS_HV.
 	 * The condition is a recommendation coming from the code of rules, is to be
@@ -2109,51 +2109,50 @@ void transmission(state_global_data_t *data)
 	 * both.
 	 * Current requested are opposite because of the resolver positioned in
 	 * opposite direction (right and left). */
-	canSendMSGInit(canSendMSG);
+    canSendMSGInit(canSendMSG);
 
-	uint8_t firstByte;
-	uint8_t secondByte;
-	uint8_t negFirstByte;
-	uint8_t negSecondByte;
-	int negativeCurrentToInverter;
+    //uint8_t firstByte;
+    //uint8_t secondByte;
+    //uint8_t negFirstByte;
+    //uint8_t negSecondByte;
+    int negativeCurrentToInverter;
 
-	/* TODO: check rules */
-	//if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
-	if ((data->requestOfShutdown == true))
-	{
-		data->curRequested = 0;
+    /* TODO: check rules */
+    //if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
+    if ((data->requestOfShutdown == true))
+    {
+        data->curRequested = 0;
 
-		canSendMSG[0] = 0x90;
-		canSendMSG[1] = 0x00;
-		canSendMSG[2] = 0x00;
+        canSendMSG[0] = 0x90;
+        canSendMSG[1] = 0x00;
+        canSendMSG[2] = 0x00;
 
-		CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-		CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-	}
-	else
-	{
-		/* Check Inverter datasheet */
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    }
+    else
+    {
+        /* Check Inverter datasheet */
 
-		int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
-		//int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
+        //int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
+        int16_t currentToInverter = round(16384 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
 
-		/* Convert current to inverter */
-		firstByte = currentToInverter % 256;
-		secondByte = currentToInverter / 256;
-		canSendMSG[0] = 0x90;
-		canSendMSG[1] = firstByte;
-		canSendMSG[2] = secondByte;
-		CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        //int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
 
-		/* Convert current to inverter must be negative */
-		negativeCurrentToInverter = -currentToInverter;
-		negFirstByte = negativeCurrentToInverter % 256;
-		negSecondByte = negativeCurrentToInverter / 256;
-		canSendMSG[0] = 0x90;
-		canSendMSG[1] = negFirstByte;
-		canSendMSG[2] = negSecondByte;
-		CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-	}
+        /* Convert current to inverter */
+        canSendMSG[0] = 0x90;
+        canSendMSG[1] = currentToInverter & 0x00FF;
+        canSendMSG[2] = (currentToInverter & 0xFF00) >> 8;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+
+        /* Convert current to inverter must be negative */
+        negativeCurrentToInverter = -currentToInverter;
+        canSendMSG[1] = negativeCurrentToInverter & 0x00FF;
+        canSendMSG[2] = (negativeCurrentToInverter & 0xFF00) >> 8;
+        //negFirstByte = (uint8_t)negativeCurrentToInverter;
+        //negSecondByte = negativeCurrentToInverter >> 8;
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
@@ -2173,12 +2172,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
   */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	while (1)
-	{
-	}
-  /* USER CODE END Error_Handler_Debug */
+    /* USER CODE BEGIN Error_Handler_Debug */
+    /* User can add his own implementation to report the HAL error return state */
+    while (1)
+    {
+    }
+    /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
@@ -2191,10 +2190,10 @@ void Error_Handler(void)
   */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-	/* User can add his own implementation to report the file name and line number,
+    /* USER CODE BEGIN 6 */
+    /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+    /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 
