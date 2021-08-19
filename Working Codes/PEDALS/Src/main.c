@@ -52,15 +52,16 @@ DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan1;
 
-TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+
+#define DEGUB 1
+#define DEBUG_DELAY 400
 
 extern pot_stc pot_1;
 extern pot_stc pot_2;
@@ -71,44 +72,27 @@ extern can_stc can;
 int val0_100, val1_100, val2_100, Error, SCS, SCS1, SCS_Send, SCS_Send_real, Time1, Time2, fake_i, check, flag;
 int fake_min0 = 60000, fake_max0 = 0;
 int fake_min1 = 60000, fake_max1 = 0;
-uint32_t fake1[5];
-uint32_t fake2[5];
 
 uint32_t valMax0, valMin0, valMax1, valMin1, valMax2, valMin2, val0rang, val1rang, val2rang;
 uint32_t ADC_buffer[4], val[4];
 
-uint8_t requested_conv = 0;
 uint8_t conv_compleated = 0;
 
-static TIM_HandleTypeDef a_TimerInstance2 = {.Instance = TIM2};
-static TIM_HandleTypeDef a_TimerInstance3 = {.Instance = TIM3};
-static TIM_HandleTypeDef a_TimerInstance4 = {.Instance = TIM4};
-static TIM_HandleTypeDef a_TimerInstance7 = {.Instance = TIM7};
-
-CAN_RxHeaderTypeDef RxHeader;
 CAN_FilterTypeDef sFilter;
-HAL_CAN_StateTypeDef state;
-uint32_t full;
 
 uint8_t CheckControl[4];
 
-char val0[256];
-char value_Error[256];
 char txt[500];
-
-int multiplier = 1;
 
 int pc6 = 0;
 
-int timer_flag = 0;
 int command_flag = 0;
 
 int steer_wheel_prescaler;
-int previous_millis;
 
-int stampa = 0;
+uint16_t sample_counter = 0;
+uint16_t sample_per_sec = 0;
 
-uint8_t RxData[8];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,8 +103,6 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_CAN1_Init(void);
-static void MX_TIM2_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
@@ -138,7 +120,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
   pot_4.val = ADC_buffer[3];
 
   conv_compleated = 1;
-  requested_conv = 0;
 }
 void print_Max_Min()
 {
@@ -158,7 +139,7 @@ void print_Max_Min()
   {
     fake_max1 = pot_2.val;
   }
-  sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0 = %d val1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, pot_1.val, pot_2.val, pot_1.val_100, pot_2.val_100);
+  sprintf(txt, "valMIN0 = %d valMAX0 = %d \t valMIN1 = %d valMAX1 = %d val0 = %d val1 = %d val0_100 = %d val1_100 = %d \r\n", fake_min0, fake_max0, fake_min1, fake_max1, (int)pot_1.val, (int)pot_2.val, (int)pot_1.val_100, (int)pot_2.val_100);
   HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
 }
 
@@ -206,13 +187,12 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   MX_CAN1_Init();
-  MX_TIM2_Init();
-  MX_TIM4_Init();
   MX_TIM7_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+
 
   sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilter.FilterIdLow = 0;
@@ -227,28 +207,17 @@ int main(void)
 
   HAL_CAN_Start(&hcan1);
 
-  uint8_t TxData[8];
-
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
 
   HAL_TIM_Base_Start(&htim3);
-  //HAL_TIM_Base_Start(&htim4);
   HAL_TIM_Base_Start(&htim7);
-  //HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_TIM_Base_Start_IT(&htim4);
-
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance2, 0);
-  __HAL_TIM_SET_COUNTER(&a_TimerInstance3, 0);
-  //__HAL_TIM_SET_COUNTER(&a_TimerInstance4, 500);
+  HAL_TIM_Base_Start_IT(&htim7);
 
   pot_1.TimerInstance = &htim3;
   can.hcan = &hcan1;
-
-  steer_wheel_prescaler = htim2.Init.Period;
-  steer_wheel_prescaler /= 8;
-  steer_wheel_prescaler /= 20;
-  steer_wheel_prescaler += 2;
+  
+  steer_wheel_prescaler = 0;
 
   //HAL_TIM_Base_Start(&htim2);
   pot_1.max = 2670;
@@ -277,61 +246,61 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t tick = HAL_GetTick();
+  uint32_t previous_millis = tick;
   while (1)
   {
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    uint8_t CanSendMSG[8];
-    uint8_t RxData[8];
+    
+    tick = HAL_GetTick();
+
+
     //SCS = 0;
     SCS_Send = 0;
     SCS_Send_real = 0;
 
-    ///CALCULATING APPS% GAIN///
-    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET)
-    {
-      pc6 = 100;
-    }
-    else
-    {
-      pc6 = 0;
-    }
 
-    // If CAN is free from important messages, send data
-    if (previous_millis != HAL_GetTick())
-    {
-      if (requested_conv == 0)
-      {
-        requested_conv = 1;
-        HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
-      }
-
-      if (HAL_GetTick() % 2 == 0 && conv_compleated == 1)
-      {
-
+    if(conv_compleated){
         calc_pot_value(&pot_1);
         calc_pot_value(&pot_2);
         calc_pot_value(&pot_3);
         calc_pot_value(&pot_4);
-
         conv_compleated = 0;
+    }
+
+    // If CAN is free from important messages, send data
+    if (previous_millis != tick)
+    {
+      send_CAN_data(tick);
+      previous_millis = tick;
+
+
+      // Getting if breaking
+      // Activate brake LED
+      if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) == GPIO_PIN_SET)
+      {
+        pc6 = 100;
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
+      }
+      else
+      {
+        pc6 = 0;
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
       }
 
-      send_CAN_data(HAL_GetTick());
-      previous_millis = HAL_GetTick();
+      if(DEGUB){
+        if(tick % 1000 == 0){
+          sample_per_sec = sample_counter;
+          sample_counter = 0;
+        }
+        if(tick % DEBUG_DELAY == 0){
+          full_debug();
+        }
+      }
     }
 
-    ///LED STRIP BRAKE LIGHT CODE///
-    if (pc6 == 100)
-    {
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
-    }
-    else if (pc6 == 0)
-    {
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
-    }
   }
 
   /* USER CODE END 3 */
@@ -367,7 +336,8 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -403,12 +373,9 @@ static void MX_NVIC_Init(void)
   /* TIM3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM3_IRQn);
-  /* TIM4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM4_IRQn);
-  /* TIM2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM7_IRQn);
 }
 
 /**
@@ -482,6 +449,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -518,50 +486,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-}
 
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 3600;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 500;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
 }
 
 /**
@@ -606,50 +531,7 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-}
 
-/**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 3600;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 500;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
 }
 
 /**
@@ -670,9 +552,9 @@ static void MX_TIM7_Init(void)
 
   /* USER CODE END TIM7_Init 1 */
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 18;
+  htim7.Init.Prescaler = 72;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 10000;
+  htim7.Init.Period = 1000;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
@@ -687,6 +569,7 @@ static void MX_TIM7_Init(void)
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
+
 }
 
 /**
@@ -719,6 +602,7 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
 }
 
 /**
@@ -734,6 +618,7 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
 }
 
 /**
@@ -792,6 +677,7 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -800,7 +686,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 {
   ///CALIBRATION CODE///
   int idsave = CAN_Receive(&can);
-  uint8_t CanSendMSG[8];
 
   if (idsave == 0xBB)
   {
@@ -845,89 +730,21 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     pot_1.range = abs(pot_1.max - pot_1.min);
     pot_2.range = abs(pot_2.max - pot_2.min);
   }
-  if (idsave == 195 && can.dataRx[0] == 0)
-  {
-    multiplier = can.dataRx[1] * 256 + can.dataRx[2];
-  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
-  if (htim == &htim2)
-  {
-    if (timer_flag == 1 * multiplier)
-    {
-
-      can.dataTx[0] = 0x02;
-      can.dataTx[1] = pc6;
-      can.dataTx[2] = 0;
-      can.dataTx[3] = steer_wheel_prescaler;
-      can.dataTx[4] = 0;
-      can.dataTx[5] = 0;
-      can.dataTx[6] = SCS_Send;
-      can.dataTx[7] = 0;
-      can.id = 0xB0;
-      can.size = 8;
-      CAN_Send(&can);
-      //SCS = 0;
-      //SCS_Send = 0;
-    }
-    if (timer_flag == 2 * multiplier)
-    {
-    }
-    if (timer_flag == 3 * multiplier)
-    {
-    }
-    if (timer_flag == 4 * multiplier)
-    {
-      if (check != 1)
-      {
-        can.dataTx[0] = 0x01;
-        can.dataTx[1] = pot_2.val_100;
-        can.dataTx[2] = pot_1.val_100;
-        can.dataTx[3] = steer_wheel_prescaler;
-        can.dataTx[4] = 0;
-        can.dataTx[5] = 0;
-        can.dataTx[6] = SCS_Send;
-        can.dataTx[7] = 0;
-        can.id = 0xB0;
-        can.size = 8;
-        CAN_Send(&can);
-        //SCS = 0;
-        //SCS_Send = 0;
-      }
-    }
-    if (timer_flag == 5 * multiplier)
-    {
-    }
-    if (timer_flag == 6 * multiplier)
-    {
-    }
-    if (timer_flag == 7 * multiplier)
-    {
-    }
-    if (timer_flag == 8 * multiplier)
-    {
-    }
-
-    if (timer_flag > 8 * multiplier)
-    {
-      timer_flag = 0;
-    }
-    else
-    {
-      timer_flag++;
-    }
+  if(htim == &htim7){
+    HAL_ADC_Start_DMA(&hadc1, ADC_buffer, 4);
+    sample_counter ++;
   }
 }
 
-int send_CAN_data(uint32_t millis)
+void send_CAN_data(uint32_t millis)
 {
 
-  int sent_flag = 0;
-
-  if (millis % 25 == 0)
+  if (millis % 10 == 0)
   {
 
     uint16_t front = pot_3.val_100 * 500;
@@ -947,7 +764,7 @@ int send_CAN_data(uint32_t millis)
   }
   millis += 1;
 
-  if (millis % 25 == 0)
+  if (millis % 10 == 0)
   {
 
     if (check != 1)
@@ -967,6 +784,50 @@ int send_CAN_data(uint32_t millis)
   }
 }
 
+void full_debug(){
+  // ALL DATA
+  char* str = "\n\n________________________________________________________________________\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
+  str = "DATA\t\t\t| RAW\t\t\t| VALUE\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
+
+  // Encoder Raw Data
+  sprintf(txt, "APPS1:\t\t\t| %d\t\t\t| %d.%d\r\n",
+          pot_1.val,
+          (int)(pot_1.val),
+          decimals(pot_1.val_100));
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  sprintf(txt, "APPS2:\t\t\t| %d\t\t\t| %d.%d\r\n",
+          pot_2.val,
+          (int)(pot_2.val),
+          decimals(pot_2.val_100));
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  sprintf(txt, "FRONT:\t\t\t| %d\t\t\t| %d.%d\r\n",
+          pot_3.val,
+          (int)(pot_3.val),
+          decimals(pot_3.val_100));
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  sprintf(txt, "REAR:\t\t\t| %d\t\t\t| %d.%d\r\n",
+          pot_4.val,
+          (int)(pot_4.val),
+          decimals(pot_4.val_100));
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  sprintf(txt, "Frequency:\t\t| %d\r\n",
+          sample_per_sec);
+  HAL_UART_Transmit(&huart2, (uint8_t *)txt, strlen(txt), 10);
+
+  str = "________________________________________________________________________\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
+}
+
+int decimals(double number){
+  return abs(1000*(floor(number) - number));
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -983,7 +844,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

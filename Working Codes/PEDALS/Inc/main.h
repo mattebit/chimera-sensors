@@ -55,6 +55,10 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+void send_CAN_data(uint32_t millis);
+void full_debug();
+int decimals(double);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

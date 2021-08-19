@@ -8,6 +8,7 @@
 #include "stdint.h"
 #include "stdlib.h"
 #include "string.h"
+#include <math.h>
 
 //----------------GPS----------------//
 #ifdef HAL_UART_MODULE_ENABLED
@@ -97,6 +98,7 @@ typedef struct
 } pot_stc;
 int implausibility_check(pot_stc *, pot_stc *);
 int calc_pot_value(pot_stc *);
+double pot_filter(double *data, int size);
 void set_max(pot_stc *);
 void set_min(pot_stc *);
 
@@ -187,8 +189,7 @@ int CAN_Receive(can_stc *);
 #define PMTK_SET_BAUD_57600 "$PMTK251,57600*2C\r\n"
 #define PMTK_SET_BAUD_9600 "$PMTK251,9600*17"
 #define PMTK_SET_BAUD_115200 "$PMTK251,115200*1F\r\n"
-#define PMKT_SER_BAUD_DEFAULT "$PMTK251,0*28" //It works only if: a.full cold start command issue \
-											  //				     b.enter standby mode
+#define PMKT_SER_BAUD_DEFAULT "$PMTK251,0*28" // It works only if: a.full cold start command issue b.enter standby mode
 /*
 	Supported NMEA Sentences
 	0 NMEA_SEN_GLL, // GPGLL interval - Geographic Position - Latitude longitude

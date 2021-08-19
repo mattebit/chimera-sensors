@@ -912,10 +912,10 @@ pot_stc pot_4;
 
 int calc_pot_value(pot_stc *pot)
 {
-
-	shift_array((pot->average), 10, pot->val);
-	pot->val = dynamic_average(pot->average, 10);
-	pot->val_100 = (abs(pot->val - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
+	int buff;
+	shift_array((pot->average), 15, pot->val);
+	buff = pot_filter(pot->average, 15);
+	pot->val_100 = (fabs(buff - pot->min) * 100 / (pot->range)); //val0_100 -->STEER --> 0 = SX | 100 = DX
 
 	if (pot->val_100 >= 100)
 	{
@@ -926,6 +926,40 @@ int calc_pot_value(pot_stc *pot)
 		pot->val_100 = 0;
 	}
 	return 1;
+}
+
+double pot_filter(double *data, int size)
+{
+	double min = data[0];
+	double max = data[0];
+	long double sum = 0;
+	int index_1 = 0;
+	int index_2 = 0;
+
+	for (int i = 0; i < size; i++)
+	{
+		if (data[i] < min)
+		{
+			min = data[i];
+			index_1 = i;
+		}
+
+		if (data[i] > max)
+		{
+			max = data[i];
+			index_2 = i;
+		}
+	}
+
+	for (int i = 0; i < size; i++)
+	{
+		if (i != index_1 && i != index_2)
+		{
+			sum += data[i];
+		}
+	}
+
+	return sum / (size - 2);
 }
 
 //Function to check if the two ADC values are approximately the same

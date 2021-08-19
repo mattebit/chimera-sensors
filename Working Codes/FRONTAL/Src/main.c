@@ -60,13 +60,13 @@ UART_HandleTypeDef huart2;
 #define USE_ENCODER 1
 
 // ms beween two messages of same device
-#define CAN_SEND_FREQUENCY 100.0
+#define CAN_SEND_FREQUENCY 200.0
 #define CAN_SEND_DELAY (int)(1000.0/CAN_SEND_FREQUENCY)
 
 // Diameter in meters
 #define WHEEL_DIAMETER 0.395
 
-#define DEBUG 1
+#define DEBUG 0
 #define CSV 0
 #define FULL_DEBUG 1
 #define DEBUG_DELAY 200
@@ -179,11 +179,11 @@ int main(void)
   sFilter.FilterBank = 0;
   sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
   sFilter.FilterActivation = ENABLE;
+  HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
   HAL_CAN_Start(&hcan1);
 
   HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
-  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -257,6 +257,9 @@ int main(void)
   uint32_t tick = HAL_GetTick();
   uint32_t previous_millis = tick;
 
+  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+  HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+
   while (1) {
     /* USER CODE END WHILE */
 
@@ -266,6 +269,7 @@ int main(void)
 
     if(adc_conv_compleated && USE_STEER){
       calc_pot_value(&pot_2, 200);
+      adc_conv_compleated = 0;
     }
 
     if(CSV && enc_data_right.new_data == 1){
@@ -743,24 +747,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-  if (huart == &huart2) {
-    //print_it(&huart2);
-  }
-}
 
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
   /// CALIBRATION CODE///
   int id = CAN_Receive(&can);
 
-  if (id == 0xD2){
-    int rotations = 0;
-    rotations  = can.dataRx[3];
-    rotations += can.dataRx[2] << 8;
-    rotations += can.dataRx[1] << 16;
+  if (id == 0xD4){
+    uint32_t rotations = 0;
+    rotations = (can.dataRx[0] << 16) + (can.dataRx[1] << 8) + (can.dataRx[2]);
 
     enc_data_left .wheel_rotation = rotations;
     enc_data_right.wheel_rotation = rotations;
@@ -871,8 +865,8 @@ void send_CAN_data(uint32_t millis) {
     //-------------------SEND Encoder ROTATIONS-------------------//
 
     if (millis % CAN_SEND_DELAY == 0) {
-      uint32_t rotations  = enc_data_right.wheel_rotation;
-      uint32_t km         = enc_data_right.Km;
+      uint32_t rotations  = enc_data_left.wheel_rotation;
+      uint32_t km         = enc_data_left.Km;
 
       can.dataTx[0] = (uint8_t)(rotations >> 16 );
       can.dataTx[1] = (uint8_t)(rotations >> 8  );
@@ -880,8 +874,8 @@ void send_CAN_data(uint32_t millis) {
       can.dataTx[3] = (uint8_t)(km >> 16        );
       can.dataTx[4] = (uint8_t)(km >> 8         );
       can.dataTx[5] = (uint8_t)(km              );
-      can.dataTx[6] = (uint8_t)(enc_data_right.error_flag);
-      can.dataTx[7] = (uint8_t)(enc_data_left.error_flag);
+      can.dataTx[6] = (uint8_t)(enc_data_left.error_flag);
+      can.dataTx[7] = (uint8_t)(enc_data_right.error_flag);
       can.id = 0xD1;
       can.size = 8;
       CAN_Send(&can);
@@ -896,7 +890,7 @@ void send_CAN_data(uint32_t millis) {
         right_buffer *= -1;
 
       uint32_t speed_kmh  = (uint32_t)((right_buffer * ((enc_setting_right.wheel_diameter / 2) * 3.6))*1000);
-      uint32_t km         = enc_data_right.Km;
+      uint32_t km         = enc_data_left.Km;
 
       can.dataTx[0] = (uint8_t)(speed_kmh >> 16   );
       can.dataTx[1] = (uint8_t)(speed_kmh >> 8    );
@@ -966,7 +960,7 @@ void init_encoder_settings(struct Encoder_Settings *right, struct Encoder_Settin
   right->DataPinNumber        = GPIO_PIN_8;
   right->ClockPinNumber       = GPIO_PIN_6;
 
-  right->dx_wheel             = 0;
+  right->dx_wheel             = 1;
   right->interrupt_flag       = 0;
   right->clock_timer          = &htim3;
   right->wheel_diameter       = WHEEL_DIAMETER;
@@ -1115,7 +1109,7 @@ void full_debug(){
   str = "________________________________________________________________________\r\n";
   HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
 
-  // Steer        
+  // Steer
   str = "DATA\t\t\t| STEER\t\t\t| \r\n";
   HAL_UART_Transmit(&huart2, (uint8_t *)str, strlen(str), 10);
 
