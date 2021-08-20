@@ -23,13 +23,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
+#include <string.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <math.h>
+#include "stm32f4xx_hal_gpio.h"
+#include "stm32f4xx_hal_tim.h"
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define LONG_DELTA 3000
 #define SHORT_DELTA 850
@@ -200,7 +200,7 @@ static void MX_NVIC_Init(void);
 
 //------------------CAN------------------
 int CAN_Send(int id, uint8_t *dataTx, int size);
-int CAN_Receive(uint8_t *DataRx);
+int CAN_Receive(uint8_t *DataRx, int size);
 
 //-----State functions declarations-----
 state_t run_state(state_t cur_state, state_global_data_t *data);
@@ -249,110 +249,111 @@ char txt[100];
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+    /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+    /* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+    /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
 
-  /* USER CODE BEGIN Init */
-  /* USER CODE END Init */
+    /* USER CODE BEGIN Init */
+    /* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    /* Configure the system clock */
+    SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+    /* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+    /* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
-  MX_TIM6_Init();
-  MX_TIM7_Init();
-  MX_CAN1_Init();
-  MX_TIM10_Init();
+    /* Initialize all configured peripherals */
+    MX_GPIO_Init();
+    MX_USART2_UART_Init();
+    MX_TIM6_Init();
+    MX_TIM7_Init();
+    MX_CAN1_Init();
+    MX_TIM10_Init();
 
-  /* Initialize interrupts */
-  MX_NVIC_Init();
-  /* USER CODE BEGIN 2 */
-	sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
-	sFilter.FilterIdLow = 0;
-	sFilter.FilterIdHigh = 0;
-	sFilter.FilterMaskIdHigh = 0;
-	sFilter.FilterMaskIdLow = 0;
-	sFilter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-	sFilter.FilterBank = 0;
-	sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
-	sFilter.FilterActivation = ENABLE;
-	HAL_CAN_ConfigFilter(&hcan1, &sFilter);
+    /* Initialize interrupts */
+    MX_NVIC_Init();
+    /* USER CODE BEGIN 2 */
+    sFilter.FilterMode = CAN_FILTERMODE_IDMASK;
+    sFilter.FilterIdLow = 0;
+    sFilter.FilterIdHigh = 0;
+    sFilter.FilterMaskIdHigh = 0;
+    sFilter.FilterMaskIdLow = 0;
+    sFilter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+    sFilter.FilterBank = 0;
+    sFilter.FilterScale = CAN_FILTERSCALE_16BIT;
+    sFilter.FilterActivation = ENABLE;
+    HAL_CAN_ConfigFilter(&hcan1, &sFilter);
 
-	//HAL_CAN_Init(&hcan1);
-	HAL_CAN_Start(&hcan1);
+    //HAL_CAN_Init(&hcan1);
+    HAL_CAN_Start(&hcan1);
 
-	HAL_TIM_Base_Start(&htim6);
-	HAL_TIM_Base_Start(&htim7);
-	HAL_TIM_Base_Start_IT(&htim6);
-	HAL_TIM_Base_Start_IT(&htim7);
-	HAL_TIM_Base_Start(&htim10);
+    HAL_TIM_Base_Start(&htim6);
+    HAL_TIM_Base_Start(&htim7);
+    HAL_TIM_Base_Start_IT(&htim6);
+    HAL_TIM_Base_Start_IT(&htim7);
+    HAL_TIM_Base_Start(&htim10);
 
-	__HAL_TIM_SetCounter(&htim6, 0);
-	__HAL_TIM_SetCounter(&htim7, 0);
-	__HAL_TIM_SetCounter(&htim10, 0);
+    __HAL_TIM_SetCounter(&htim6, 0);
+    __HAL_TIM_SetCounter(&htim7, 0);
+    __HAL_TIM_SetCounter(&htim10, 0);
 
-	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
-	HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
-  /* USER CODE END 2 */
+    HAL_CAN_ActivateNotification(&hcan1, CAN1_RX0_IRQn);
+    HAL_CAN_ActivateNotification(&hcan1, CAN1_RX1_IRQn);
+    /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  	uint32_t tick = HAL_GetTick();
-	uint32_t previous_millis = tick;
-	while (1)
-	{
-		STATO = run_state(STATO, &data);
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    uint32_t previous_millis = 0;
+    while (1)
+    {
 
-		if (previous_millis != tick)
-		{
-			if (tick % SHORT_DELTA == 0)
-			{
-				//checkTimeStamp(&data);
-				data.errors = 0;
-				data.warningsB1 = 0;
-			}
+        STATO = run_state(STATO, &data);
 
-			if (tick % 1000 == 0)
-			{
-				sendStatus(&data);
-			}
-			previous_millis = tick;
-		}
+        if (previous_millis != HAL_GetTick())
+        {
+            if (HAL_GetTick() % SHORT_DELTA == 0)
+            {
+                checkTimeStamp(&data);
+            }
 
-		if (tick % 10 > 0 && data.writeInCan == false)
-		{
-			data.writeInCan = true;
-		}
+            if (HAL_GetTick() % 1000 == 0)
+            {
+                sendStatus(&data);
+            }
+            previous_millis = HAL_GetTick();
+        }
 
-		if(telemetry_to_send){
-			telemetry_to_send = false;
-			if(buttonState){
-				uint8_t msg[2] = {0x65, 0x01};
-				CAN_Send(0xA0, msg, 2);
-			}
-			else{
-				uint8_t msg[2] = {0x65, 0x00};
-				CAN_Send(0xA0, msg, 2);
-			}
-		}
+        if (HAL_GetTick() % 10 > 0 && data.writeInCan == false)
+        {
+            data.writeInCan = true;
+        }
 
-    /* USER CODE END WHILE */
+        if (telemetry_to_send)
+        {
+            telemetry_to_send = false;
+            if (buttonState)
+            {
+                uint8_t msg[2] = {0x65, 0x01};
+                CAN_Send(0xA0, msg, 2);
+            }
+            else
+            {
+                uint8_t msg[2] = {0x65, 0x00};
+                CAN_Send(0xA0, msg, 2);
+            }
+        }
 
-    /* USER CODE BEGIN 3 */
-	}
-  /* USER CODE END 3 */
+        /* USER CODE END WHILE */
+
+        /* USER CODE BEGIN 3 */
+    }
+    /* USER CODE END 3 */
 }
 
 /**
@@ -361,41 +362,40 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
+    /** Configure the main internal regulator output voltage
   */
-  __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 288;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 8;
-  RCC_OscInitStruct.PLL.PLLR = 2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Initializes the CPU, AHB and APB busses clocks
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    RCC_OscInitStruct.PLL.PLLM = 8;
+    RCC_OscInitStruct.PLL.PLLN = 288;
+    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+    RCC_OscInitStruct.PLL.PLLQ = 8;
+    RCC_OscInitStruct.PLL.PLLR = 2;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+    {
+        Error_Handler();
+    }
 }
 
 /**
@@ -404,24 +404,24 @@ void SystemClock_Config(void)
   */
 static void MX_NVIC_Init(void)
 {
-  /* CAN1_RX0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-  /* CAN1_RX1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
-  /* CAN1_SCE_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
-  /* TIM6_DAC_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
-  /* TIM7_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM7_IRQn);
-  /* EXTI9_5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+    /* CAN1_RX0_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+    /* CAN1_RX1_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
+    /* CAN1_SCE_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
+    /* TIM6_DAC_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+    /* TIM7_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM7_IRQn);
+    /* EXTI9_5_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 }
 
 /**
@@ -432,33 +432,32 @@ static void MX_NVIC_Init(void)
 static void MX_CAN1_Init(void)
 {
 
-  /* USER CODE BEGIN CAN1_Init 0 */
+    /* USER CODE BEGIN CAN1_Init 0 */
 
-  /* USER CODE END CAN1_Init 0 */
+    /* USER CODE END CAN1_Init 0 */
 
-  /* USER CODE BEGIN CAN1_Init 1 */
+    /* USER CODE BEGIN CAN1_Init 1 */
 
-  /* USER CODE END CAN1_Init 1 */
-  hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 2;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_12TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_5TQ;
-  hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
-  hcan1.Init.AutoWakeUp = ENABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
-  hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN1_Init 2 */
+    /* USER CODE END CAN1_Init 1 */
+    hcan1.Instance = CAN1;
+    hcan1.Init.Prescaler = 2;
+    hcan1.Init.Mode = CAN_MODE_NORMAL;
+    hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+    hcan1.Init.TimeSeg1 = CAN_BS1_12TQ;
+    hcan1.Init.TimeSeg2 = CAN_BS2_5TQ;
+    hcan1.Init.TimeTriggeredMode = DISABLE;
+    hcan1.Init.AutoBusOff = DISABLE;
+    hcan1.Init.AutoWakeUp = ENABLE;
+    hcan1.Init.AutoRetransmission = ENABLE;
+    hcan1.Init.ReceiveFifoLocked = DISABLE;
+    hcan1.Init.TransmitFifoPriority = DISABLE;
+    if (HAL_CAN_Init(&hcan1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN CAN1_Init 2 */
 
-  /* USER CODE END CAN1_Init 2 */
-
+    /* USER CODE END CAN1_Init 2 */
 }
 
 /**
@@ -469,34 +468,33 @@ static void MX_CAN1_Init(void)
 static void MX_TIM6_Init(void)
 {
 
-  /* USER CODE BEGIN TIM6_Init 0 */
+    /* USER CODE BEGIN TIM6_Init 0 */
 
-  /* USER CODE END TIM6_Init 0 */
+    /* USER CODE END TIM6_Init 0 */
 
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
+    TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE BEGIN TIM6_Init 1 */
+    /* USER CODE BEGIN TIM6_Init 1 */
 
-  /* USER CODE END TIM6_Init 1 */
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 719;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 1999;
-  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM6_Init 2 */
+    /* USER CODE END TIM6_Init 1 */
+    htim6.Instance = TIM6;
+    htim6.Init.Prescaler = 719;
+    htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim6.Init.Period = 1999;
+    htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM6_Init 2 */
 
-  /* USER CODE END TIM6_Init 2 */
-
+    /* USER CODE END TIM6_Init 2 */
 }
 
 /**
@@ -507,34 +505,33 @@ static void MX_TIM6_Init(void)
 static void MX_TIM7_Init(void)
 {
 
-  /* USER CODE BEGIN TIM7_Init 0 */
+    /* USER CODE BEGIN TIM7_Init 0 */
 
-  /* USER CODE END TIM7_Init 0 */
+    /* USER CODE END TIM7_Init 0 */
 
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
+    TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE BEGIN TIM7_Init 1 */
+    /* USER CODE BEGIN TIM7_Init 1 */
 
-  /* USER CODE END TIM7_Init 1 */
-  htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 7199;
-  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 19999;
-  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM7_Init 2 */
+    /* USER CODE END TIM7_Init 1 */
+    htim7.Instance = TIM7;
+    htim7.Init.Prescaler = 7199;
+    htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim7.Init.Period = 19999;
+    htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM7_Init 2 */
 
-  /* USER CODE END TIM7_Init 2 */
-
+    /* USER CODE END TIM7_Init 2 */
 }
 
 /**
@@ -545,27 +542,26 @@ static void MX_TIM7_Init(void)
 static void MX_TIM10_Init(void)
 {
 
-  /* USER CODE BEGIN TIM10_Init 0 */
+    /* USER CODE BEGIN TIM10_Init 0 */
 
-  /* USER CODE END TIM10_Init 0 */
+    /* USER CODE END TIM10_Init 0 */
 
-  /* USER CODE BEGIN TIM10_Init 1 */
+    /* USER CODE BEGIN TIM10_Init 1 */
 
-  /* USER CODE END TIM10_Init 1 */
-  htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 7199;
-  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 49999;
-  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM10_Init 2 */
+    /* USER CODE END TIM10_Init 1 */
+    htim10.Instance = TIM10;
+    htim10.Init.Prescaler = 7199;
+    htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim10.Init.Period = 49999;
+    htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM10_Init 2 */
 
-  /* USER CODE END TIM10_Init 2 */
-
+    /* USER CODE END TIM10_Init 2 */
 }
 
 /**
@@ -576,29 +572,28 @@ static void MX_TIM10_Init(void)
 static void MX_USART2_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART2_Init 0 */
+    /* USER CODE BEGIN USART2_Init 0 */
 
-  /* USER CODE END USART2_Init 0 */
+    /* USER CODE END USART2_Init 0 */
 
-  /* USER CODE BEGIN USART2_Init 1 */
+    /* USER CODE BEGIN USART2_Init 1 */
 
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
+    /* USER CODE END USART2_Init 1 */
+    huart2.Instance = USART2;
+    huart2.Init.BaudRate = 115200;
+    huart2.Init.WordLength = UART_WORDLENGTH_8B;
+    huart2.Init.StopBits = UART_STOPBITS_1;
+    huart2.Init.Parity = UART_PARITY_NONE;
+    huart2.Init.Mode = UART_MODE_TX_RX;
+    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+    if (HAL_UART_Init(&huart2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN USART2_Init 2 */
 
-  /* USER CODE END USART2_Init 2 */
-
+    /* USER CODE END USART2_Init 2 */
 }
 
 /**
@@ -608,50 +603,49 @@ static void MX_USART2_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* GPIO Ports Clock Enable */
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_5|GPIO_PIN_8, GPIO_PIN_RESET);
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_5 | GPIO_PIN_8, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    /*Configure GPIO pin : PA5 */
+    GPIO_InitStruct.Pin = GPIO_PIN_5;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB5 PB8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_5|GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    /*Configure GPIO pins : PB0 PB5 PB8 */
+    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_5 | GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PC6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    /*Configure GPIO pin : PC6 */
+    GPIO_InitStruct.Pin = GPIO_PIN_6;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PC8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
+    /*Configure GPIO pin : PC8 */
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 4 */
@@ -685,7 +679,7 @@ int CAN_Send(int id, uint8_t dataTx[], int size)
     return flag;
 }
 
-int CAN_Receive(uint8_t *DataRx)
+int CAN_Receive(uint8_t *DataRx, int size)
 {
     /* This function is used to receive the msgs sent by other devices */
     if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) != 0)
@@ -712,77 +706,94 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
 	 * After all the CounterUp is incremented to point out a new msg is arrived.
 	 * Than the operation mod is done so that prevents to make counter overflow */
 
-	bool insert_in_fifo = false;
-	int idsave;
-	uint8_t RxData[MSG_LENGHT];
+    bool insert_in_fifo = true;
+    int idsave;
+    uint8_t RxData[MSG_LENGHT];
 
-	idsave = CAN_Receive(RxData);
+    idsave = CAN_Receive(RxData, MSG_LENGHT);
 
-	switch (idsave)
-	{
-	case ID_STEERING_WHEEL:
-		insert_in_fifo = true;
-		data.steeringPresence = true;
-		data.steeringTimeStamp = HAL_GetTick();
-		break;
-	case ID_PEDALS:
-		insert_in_fifo = true;
-		if (RxData[0] == 0x01 && data.go == 1)
-		{
-			data.accelerator = RxData[1];
-		}
-		else if (RxData[0] == 0x02 && data.go == 1)
-		{
-			data.breakingPedal = RxData[1];
-		}
+    switch (idsave)
+    {
+    case ID_STEERING_WHEEL:
+        data.steeringPresence = true;
+        data.steeringTimeStamp = HAL_GetTick();
+        if (RxData[0] == 0x09)
+        {
+            char mander[50];
+            sprintf(mander, "Request Received\n\r");
+            HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
+        }
+        break;
+    case ID_PEDALS:
+        if (RxData[0] == 0x01 && data.go == 1)
+        {
+            data.accelerator = RxData[1];
+        }
+        else if (RxData[0] == 0x02 && data.go == 1)
+        {
+            data.breakingPedal = RxData[1];
+        }
 
-		data.pedalsPresence = true;
-		data.pedalsTimeStamp = HAL_GetTick();
-		break;
-	case ID_REQ_INV_SX:
-		insert_in_fifo = true;
-		data.invSxPresence = true;
-		data.invSxTimeStamp = HAL_GetTick();
-		break;
-	case ID_REQ_INV_DX:
-		insert_in_fifo = true;
-		data.invDxPresence = true;
-		data.invDxTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_HV:
-		insert_in_fifo = true;
-		data.bmsHvPresence = true;
-		data.bmsHvTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_LV:
-		insert_in_fifo = true;
-		data.bmsLvPresence = true;
-		data.bmsLvTimeStamp = HAL_GetTick();
-		break;
-	case ID_TELEMETRY:
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, RxData[0]);
-		break;
-	default:
-		/* Non succede niente ai timestamp */
-		break;
-	}
+        data.pedalsPresence = true;
+        data.pedalsTimeStamp = HAL_GetTick();
+        break;
+    case ID_FRONT:
+        data.frontalPresence = true;
+        data.frontalTimeStamp = HAL_GetTick();
+        insert_in_fifo = false;
+        break;
+    case ID_CENTER:
+        data.centralPresence = true;
+        data.centralTimeStamp = HAL_GetTick();
+        insert_in_fifo = false;
+        break;
+    case GYRO:
+        insert_in_fifo = false;
+        break;
+    case ACCEL:
+        insert_in_fifo = false;
+        break;
+    case ID_REQ_INV_SX:
+        data.invSxPresence = true;
+        data.invSxTimeStamp = HAL_GetTick();
+        break;
+    case ID_REQ_INV_DX:
+        data.invDxPresence = true;
+        data.invDxTimeStamp = HAL_GetTick();
+        break;
+    case ID_BMS_HV:
+        data.bmsHvPresence = true;
+        data.bmsHvTimeStamp = HAL_GetTick();
+        break;
+    case ID_BMS_LV:
+        data.bmsLvPresence = true;
+        data.bmsLvTimeStamp = HAL_GetTick();
+        break;
+    case ID_TELEMETRY:
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, RxData[0]);
+        insert_in_fifo = false;
+        break;
+    default:
+        /* Non succede niente ai timestamp */
+        break;
+    }
 
-	if (insert_in_fifo)
-	{
-		data.fifoData[data.dataCounterUp].idsave = idsave;
-		for (int i = 0; i < MSG_LENGHT; i++)
-		{
-			data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
-		}
+    if (insert_in_fifo)
+    {
+        data.fifoData[data.dataCounterUp].idsave = idsave;
+        for (int i = 0; i < MSG_LENGHT; i++)
+        {
+            data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
+        }
 
-		data.dataCounterUp += 1;
-		data.dataCounterUp = data.dataCounterUp % NUM_DATA;
+        data.dataCounterUp += 1;
+        data.dataCounterUp = data.dataCounterUp % NUM_DATA;
 
-		if (data.dataCounterUp == data.dataCounterDown)
-		{
-			//shutdownErrors(&data, 0x23);
-		}
-	}
+        if (data.dataCounterUp == data.dataCounterDown)
+        {
+            //shutdownErrors(&data, 0x23);
+        }
+    }
 }
 
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
@@ -798,88 +809,89 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
 	 * After all the CounterUp is incremented to point out a new msg is arrived.
 	 * Than the operation mod is done so that prevents to make counter overflow */
 
-	bool insert_in_fifo = true;
-	int idsave;
-	uint8_t RxData[MSG_LENGHT];
+    bool insert_in_fifo = true;
+    int idsave;
+    uint8_t RxData[MSG_LENGHT];
 
-	idsave = CAN_Receive(RxData);
+    idsave = CAN_Receive(RxData, MSG_LENGHT);
 
-	switch (idsave)
-	{
-	case ID_STEERING_WHEEL:
-		data.steeringPresence = true;
-		data.steeringTimeStamp = HAL_GetTick();
-		break;
-	case ID_PEDALS:
-		if (RxData[0] == 0x01 && data.go == 1)
-		{
-			data.accelerator = RxData[1];
-		}
-		else if (RxData[0] == 0x02 && data.go == 1)
-		{
-			data.breakingPedal = RxData[1];
-		}
+    switch (idsave)
+    {
+    case ID_STEERING_WHEEL:
+        data.steeringPresence = true;
+        data.steeringTimeStamp = HAL_GetTick();
+        break;
+    case ID_PEDALS:
+        if (RxData[0] == 0x01 && data.go == 1)
+        {
+            data.accelerator = RxData[1];
+        }
+        else if (RxData[0] == 0x02 && data.go == 1)
+        {
+            data.breakingPedal = RxData[1];
+        }
 
-		data.pedalsPresence = true;
-		data.pedalsTimeStamp = HAL_GetTick();
-		break;
-	case ID_FRONT:
-		data.frontalPresence = true;
-		data.frontalTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case ID_CENTER:
-		data.centralPresence = true;
-		data.centralTimeStamp = HAL_GetTick();
-		insert_in_fifo = false;
-		break;
-	case GYRO:
-		insert_in_fifo = false;
-		break;
-	case ACCEL:
-		insert_in_fifo = false;
-		break;
-	case ID_REQ_INV_SX:
-		data.invSxPresence = true;
-		data.invSxTimeStamp = HAL_GetTick();
-		break;
-	case ID_REQ_INV_DX:
-		data.invDxPresence = true;
-		data.invDxTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_HV:
-		data.bmsHvPresence = true;
-		data.bmsHvTimeStamp = HAL_GetTick();
-		break;
-	case ID_BMS_LV:
-		data.bmsLvPresence = true;
-		data.bmsLvTimeStamp = HAL_GetTick();
-		break;
-	case ID_TELEMETRY:
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, RxData[0]);
-		break;
-	default:
-		/* Non succede niente ai timestamp */
-		break;
-	}
+        data.pedalsPresence = true;
+        data.pedalsTimeStamp = HAL_GetTick();
+        break;
+    case ID_FRONT:
+        data.frontalPresence = true;
+        data.frontalTimeStamp = HAL_GetTick();
+        insert_in_fifo = false;
+        break;
+    case ID_CENTER:
+        data.centralPresence = true;
+        data.centralTimeStamp = HAL_GetTick();
+        insert_in_fifo = false;
+        break;
+    case GYRO:
+        insert_in_fifo = false;
+        break;
+    case ACCEL:
+        insert_in_fifo = false;
+        break;
+    case ID_REQ_INV_SX:
+        data.invSxPresence = true;
+        data.invSxTimeStamp = HAL_GetTick();
+        break;
+    case ID_REQ_INV_DX:
+        data.invDxPresence = true;
+        data.invDxTimeStamp = HAL_GetTick();
+        break;
+    case ID_BMS_HV:
+        data.bmsHvPresence = true;
+        data.bmsHvTimeStamp = HAL_GetTick();
+        break;
+    case ID_BMS_LV:
+        data.bmsLvPresence = true;
+        data.bmsLvTimeStamp = HAL_GetTick();
+        break;
+    case ID_TELEMETRY:
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, RxData[0]);
+        insert_in_fifo = false;
+        break;
+    default:
+        /* Non succede niente ai timestamp */
+        break;
+    }
 
-	if (insert_in_fifo)
-	{
+    if (insert_in_fifo)
+    {
 
-		data.fifoData[data.dataCounterUp].idsave = idsave;
-		for (int i = 0; i < MSG_LENGHT; i++)
-		{
-			data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
-		}
+        data.fifoData[data.dataCounterUp].idsave = idsave;
+        for (int i = 0; i < MSG_LENGHT; i++)
+        {
+            data.fifoData[data.dataCounterUp].RxData[i] = RxData[i];
+        }
 
-		data.dataCounterUp += 1;
-		data.dataCounterUp = data.dataCounterUp % NUM_DATA;
+        data.dataCounterUp += 1;
+        data.dataCounterUp = data.dataCounterUp % NUM_DATA;
 
-		if (data.dataCounterUp == data.dataCounterDown)
-		{
-			//shutdownErrors(&data, 0x23);
-		}
-	}
+        if (data.dataCounterUp == data.dataCounterDown)
+        {
+            //shutdownErrors(&data, 0x23);
+        }
+    }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -927,111 +939,111 @@ state_t do_state_idle(state_global_data_t *data)
 	 * At the end, if the driver asks for the turning on of the car ECU sends a msg
 	 * to the BMS_HV, after receiving back the confirm the variable Tractive System
 	 * is set to true and there the FSM goes to the SETUP state. */
-	if (data->dataCounterUp != data->dataCounterDown)
-	{
-		switch (data->fifoData[data->dataCounterDown].idsave)
-		{
-		/* Debug case: just to know if it's online and in which state */
-		case ID_ASK_STATE:
-			canSendMSGInit(canSendMSG);
-			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x01;		// state
-			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-			break;
-		case ID_STEERING_WHEEL:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Check who is online */
-			case 0x02:
-				sendErrors(data);
-				if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-				{
-					data->powerRequested = -20;
-				}
-				else
-				{
-					data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
-				}
-				break;
-			/* Turning on car driver request */
-			case 0x03:
-				sendErrors(data);
-				/* Check for critical errors */
-				if (data->errors == 0 || data->errors == 16 || data->errors == 32 || data->errors == 48)
-				{
-					/* Turning on car request to bms_hv*/
-					canSendMSGInit(canSendMSG);
-					canSendMSG[0] = 0x0A;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_HV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Turning on car confirmed */
-			case 0x03:
-				data->tractiveSystem = true;
-				break;
-			/* Turning off car: shouldn't never happen here */
-			case 0x04:
-				data->tractiveSystem = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_SX:
-			/* Check for Inverter status */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
-			{
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
-				{
-					canSendMSG[0] = 0x08;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0C;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = false;
-				}
-			}
-			break;
-		case ID_REQ_INV_DX:
-			/* Check for Inverter status */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
-			{
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
-				{
-					canSendMSG[0] = 0x09;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0D;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = false;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-		data->dataCounterDown += 1;
-		data->dataCounterDown = data->dataCounterDown % NUM_DATA;
-	}
+    if (data->dataCounterUp != data->dataCounterDown)
+    {
+        switch (data->fifoData[data->dataCounterDown].idsave)
+        {
+        /* Debug case: just to know if it's online and in which state */
+        case ID_ASK_STATE:
+            canSendMSGInit(canSendMSG);
+            canSendMSG[0] = 0x10;
+            canSendMSG[1] = 0x01;
+            CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+            break;
+        case ID_STEERING_WHEEL:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Check who is online */
+            case 0x02:
+                sendErrors(data);
+                if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+                {
+                    data->powerRequested = -20;
+                }
+                else
+                {
+                    data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+                }
+                break;
+            /* Turning on car driver request */
+            case 0x03:
+                sendErrors(data);
+                /* Check for critical errors */
+                if (data->errors == 0 || data->errors == 16 || data->errors == 32 || data->errors == 48)
+                {
+                    /* Turning on car request to bms_hv*/
+                    canSendMSGInit(canSendMSG);
+                    canSendMSG[0] = 0x0A;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_HV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Turning on car confirmed */
+            case 0x03:
+                data->tractiveSystem = true;
+                break;
+            /* Turning off car: shouldn't never happen here */
+            case 0x04:
+                data->tractiveSystem = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_SX:
+            /* Check for Inverter status */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
+            {
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
+                {
+                    canSendMSG[0] = 0x08;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0C;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = false;
+                }
+            }
+            break;
+        case ID_REQ_INV_DX:
+            /* Check for Inverter status */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0xD8)
+            {
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C)
+                {
+                    canSendMSG[0] = 0x09;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0D;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = false;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        data->dataCounterDown += 1;
+        data->dataCounterDown = data->dataCounterDown % NUM_DATA;
+    }
 
-	if (data->steeringPresence == true && data->tractiveSystem == true)
-	{
-		return STATE_SETUP;
-	}
-	return STATE_IDLE;
+    if (data->steeringPresence == true && data->tractiveSystem == true)
+    {
+        return STATE_SETUP;
+    }
+    return STATE_IDLE;
 }
 
 state_t do_state_setup(state_global_data_t *data)
@@ -1050,215 +1062,215 @@ state_t do_state_setup(state_global_data_t *data)
 	 *	   the variable go is set to true.
 	 * Since the tractive system is on, all the critical issues have to be checked
 	 * so scs signals are analyzed. */
-	if (data->dataCounterUp != data->dataCounterDown)
-	{
-		switch (data->fifoData[data->dataCounterDown].idsave)
-		{
-		/* Debug case: just to know if it's online and in which state */
-		case ID_ASK_STATE:
-			canSendMSGInit(canSendMSG);
-			canSendMSG[0] = 0x10;
-			canSendMSG[1] = 0x02;
-			CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-			break;
-		case ID_STEERING_WHEEL:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Check who is online */
-			case 0x02:
-				sendErrors(data);
-				// TODO: reinsert
-				//if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
-				/* Turning on car request to bms_hv*/
-				//shutdownErrors(data, data->errors);
-				//}
-				break;
-			/* Stop msg from driver */
-			case 0x04:
-				shutdown(data);
-				break;
-			/* Going to run mode driver request */
-			case 0x05:
-				/* If inverter are turned on and break is pressed i can go to run */
-				if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
-				{
-					data->go = true;
-					/* Map */
-					if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-					{
-						data->powerRequested = -20;
-					}
-					else
-					{
-						data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
-					}
-					HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
-					__HAL_TIM_SetCounter(&htim7, 0);
-				}
-				else
-				{
-					uint8_t tosend = 0;
-					if (data->inverterSx)
-						tosend += 8;
-					if (data->inverterDx)
-						tosend += 16;
-					if (data->breakingPedal)
-						tosend += 32;
-					if (data->requestOfShutdown)
-						tosend += 64;
+    if (data->dataCounterUp != data->dataCounterDown)
+    {
+        switch (data->fifoData[data->dataCounterDown].idsave)
+        {
+        /* Debug case: just to know if it's online and in which state */
+        case ID_ASK_STATE:
+            canSendMSGInit(canSendMSG);
+            canSendMSG[0] = 0x10;
+            canSendMSG[1] = 0x02;
+            CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+            break;
+        case ID_STEERING_WHEEL:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Check who is online */
+            case 0x02:
+                sendErrors(data);
+                // TODO: reinsert
+                //if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
+                /* Turning on car request to bms_hv*/
+                //shutdownErrors(data, data->errors);
+                //}
+                break;
+            /* Stop msg from driver */
+            case 0x04:
+                shutdown(data);
+                break;
+            /* Going to run mode driver request */
+            case 0x05:
+                /* If inverter are turned on and break is pressed i can go to run */
+                if (data->inverterSx == true && data->inverterDx == true && data->breakingPedal == true && data->requestOfShutdown == false)
+                {
+                    data->go = true;
+                    /* Map */
+                    if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
+                    {
+                        data->powerRequested = -20;
+                    }
+                    else
+                    {
+                        data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
+                    }
+                    __HAL_TIM_SetCounter(&htim7, 0);
+                    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+                }
+                else
+                {
+                    uint8_t tosend = 0;
+                    if (data->inverterSx)
+                        tosend += 8;
+                    if (data->inverterDx)
+                        tosend += 16;
+                    if (data->breakingPedal)
+                        tosend += 32;
+                    if (data->requestOfShutdown)
+                        tosend += 64;
 
-					canSendMSG[0] = 0xFF;
-					canSendMSG[1] = tosend;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			/* Turning on Inverter sx driver request */
-			case 0x08:
-				if (data->invLeftTemp < 80)
-				{
-					canSendMSGInit(canSendMSG);
+                    canSendMSG[0] = 0xFF;
+                    canSendMSG[1] = tosend;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            /* Turning on Inverter sx driver request */
+            case 0x08:
+                if (data->invLeftTemp < 80)
+                {
+                    canSendMSGInit(canSendMSG);
 
-					/* Enable Inverter msg */
-					canSendMSG[0] = 0x51;
-					canSendMSG[1] = 0x08;
-					CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+                    /* Enable Inverter msg */
+                    canSendMSG[0] = 0x51;
+                    canSendMSG[1] = 0x08;
+                    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
 
-					/* Status Request */
-					canSendMSG[0] = 0x3D;
-					canSendMSG[1] = 0xD8;
-					CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			/* Turning on Inverter dx driver request */
-			case 0x09:
-				if (data->invRightTemp < 80)
-				{
-					canSendMSGInit(canSendMSG);
+                    /* Status Request */
+                    canSendMSG[0] = 0x3D;
+                    canSendMSG[1] = 0xD8;
+                    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            /* Turning on Inverter dx driver request */
+            case 0x09:
+                if (data->invRightTemp < 80)
+                {
+                    canSendMSGInit(canSendMSG);
 
-					/* Enable Inverter msg */
-					canSendMSG[0] = 0x51;
-					canSendMSG[1] = 0x08;
-					CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+                    /* Enable Inverter msg */
+                    canSendMSG[0] = 0x51;
+                    canSendMSG[1] = 0x08;
+                    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-					/* Status Request */
-					canSendMSG[0] = 0x3D;
-					canSendMSG[1] = 0xD8;
-					CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_HV:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			/* Shutdown confirmed */
-			case 0x04:
-				data->tractiveSystem = false;
-				break;
-			/* Shutdown caused by an error */
-			case 0x08:
-				data->tractiveSystem = false;
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_BMS_LV:
-			/* Saving SCS */
-			if (data->fifoData[data->dataCounterDown].RxData[0] == 0x01)
-			{
-				data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
-			}
-			break;
-		case ID_PEDALS:
-			/* Saving SCS */
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x01:
-				data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			case 0x02:
-				data->breakingPedal = data->fifoData[data->dataCounterDown].RxData[1];
-				data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_FRONT:
-			break;
-		case ID_CENTER:
-			break;
-		case ID_REQ_INV_SX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invLeftTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
-				break;
-			/* Check for Inverter status */
-			case 0xD8:
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
-				{
-					canSendMSG[0] = 0x08;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterSx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0C;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					//data->inverterSx = false;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case ID_REQ_INV_DX:
-			switch (data->fifoData[data->dataCounterDown].RxData[0])
-			{
-			case 0x4A:
-				data->invRightTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
-				break;
-			/* Check for Inverter status */
-			case 0xD8:
-				if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
-				{
-					canSendMSG[0] = 0x09;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					data->inverterDx = true;
-				}
-				else
-				{
-					canSendMSG[0] = 0x0D;
-					CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-					//data->inverterDx = false;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		default:
-			break;
-		}
-		data->dataCounterDown += 1;
-		data->dataCounterDown = data->dataCounterDown % NUM_DATA;
-	}
+                    /* Status Request */
+                    canSendMSG[0] = 0x3D;
+                    canSendMSG[1] = 0xD8;
+                    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_HV:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            /* Shutdown confirmed */
+            case 0x04:
+                data->tractiveSystem = false;
+                break;
+            /* Shutdown caused by an error */
+            case 0x08:
+                data->tractiveSystem = false;
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_BMS_LV:
+            /* Saving SCS */
+            if (data->fifoData[data->dataCounterDown].RxData[0] == 0x01)
+            {
+                data->scs[LV] = data->fifoData[data->dataCounterDown].RxData[5];
+            }
+            break;
+        case ID_PEDALS:
+            /* Saving SCS */
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x01:
+                data->scs[APPS] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            case 0x02:
+                data->breakingPedal = data->fifoData[data->dataCounterDown].RxData[1];
+                data->scs[BSE] = data->fifoData[data->dataCounterDown].RxData[6];
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_FRONT:
+            break;
+        case ID_CENTER:
+            break;
+        case ID_REQ_INV_SX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invLeftTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
+                break;
+            /* Check for Inverter status */
+            case 0xD8:
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
+                {
+                    canSendMSG[0] = 0x08;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterSx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0C;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    //data->inverterSx = false;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ID_REQ_INV_DX:
+            switch (data->fifoData[data->dataCounterDown].RxData[0])
+            {
+            case 0x4A:
+                data->invRightTemp = (data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1] - 15797) / 112.1182;
+                break;
+            /* Check for Inverter status */
+            case 0xD8:
+                if (data->fifoData[data->dataCounterDown].RxData[2] == 0x0C && data->requestOfShutdown == false)
+                {
+                    canSendMSG[0] = 0x09;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    data->inverterDx = true;
+                }
+                else
+                {
+                    canSendMSG[0] = 0x0D;
+                    CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
+                    //data->inverterDx = false;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+        data->dataCounterDown += 1;
+        data->dataCounterDown = data->dataCounterDown % NUM_DATA;
+    }
 
-	/* Check SCS */
-	for (int i = 0; i < NUM_SCS; i++)
-	{
-		if (data->scs[i] != 0)
-		{
-			shutdownErrors(data, ID_STEERING_WHEEL);
-		}
-	}
+    /* Check SCS */
+    for (int i = 0; i < NUM_SCS; i++)
+    {
+        if (data->scs[i] != 0)
+        {
+            shutdownErrors(data, ID_STEERING_WHEEL);
+        }
+    }
 
-	/* TODO: inserire un messaggio mandato ogni tot, serve per avvisare il BMS_HV che l'ecu � online */
-	/*if (data->writeInCan){
+    /* TODO: inserire un messaggio mandato ogni tot, serve per avvisare il BMS_HV che l'ecu � online */
+    /*if (data->writeInCan){
 		canSendMSGInit(canSendMSG);
 		CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
@@ -1760,57 +1772,57 @@ void initData(state_global_data_t *data)
 {
     /* This functions is used to initialize all the variables.
 	 * It's called just during the state INIT. */
-	data->tractiveSystem = false;	 // Tractive system off
-	data->go = false;				 // setup
-	data->breakingPedal = false;	 // breaking pedal up
-	data->inverterSx = false;		 // inverter Sx disable
-	data->inverterDx = false;		 // inverter Dx disable
-	data->requestOfShutdown = false; // shutdown not request
-	data->writeInCan = false;		 // wait next timeout for writing
+    data->tractiveSystem = false;    // Tractive system off
+    data->go = false;                // setup
+    data->breakingPedal = false;     // breaking pedal up
+    data->inverterSx = false;        // inverter Sx disable
+    data->inverterDx = false;        // inverter Dx disable
+    data->requestOfShutdown = false; // shutdown not request
+    data->writeInCan = false;        // wait next timeout for writing
 
-	data->steeringPresence = false;
-	data->pedalsPresence = false;
-	data->frontalPresence = false;
-	data->centralPresence = false;
-	data->bmsLvPresence = false;
-	data->bmsHvPresence = false;
-	data->invDxPresence = false;
-	data->invSxPresence = false;
+    data->steeringPresence = false;
+    data->pedalsPresence = false;
+    data->frontalPresence = false;
+    data->centralPresence = false;
+    data->bmsLvPresence = false;
+    data->bmsHvPresence = false;
+    data->invDxPresence = false;
+    data->invSxPresence = false;
 
-	data->errors = 255;		// no devices connected
-	data->warningsB1 = 255; // no sensors connected
+    data->errors = 255;     // no devices connected
+    data->warningsB1 = 255; // no sensors connected
 
-	for (int i = 0; i < NUM_SCS; i++)
-	{
-		data->scs[i] = 0;
-	}
+    for (int i = 0; i < NUM_SCS; i++)
+    {
+        data->scs[i] = 0;
+    }
 
-	data->dataCounterUp = 0x0000;
-	data->dataCounterDown = 0x0000;
+    data->dataCounterUp = 0x0000;
+    data->dataCounterDown = 0x0000;
 
-	data->accelerator = 0x00;
-	data->motLeftTemp = 0x0000;
-	data->motRightTemp = 0x0000;
-	data->invLeftTemp = 0x0000;
-	data->invRightTemp = 0x0000;
-	data->invLeftVol = 0x0000;
-	data->invRightVol = 0x0000;
-	data->invLeftCur = 0x0000;
-	data->invRightCur = 0x0000;
-	data->hvCur = 0x0000;
-	
-	data->hvVol = 0x00000000;
-	data->curRequested = 0.0;
-	data->powerRequested = 0x00;
+    data->accelerator = 0x00;
+    data->motLeftTemp = 0x0000;
+    data->motRightTemp = 0x0000;
+    data->invLeftTemp = 0x0000;
+    data->invRightTemp = 0x0000;
+    data->invLeftVol = 0x0000;
+    data->invRightVol = 0x0000;
+    data->invLeftCur = 0x0000;
+    data->invRightCur = 0x0000;
+    data->hvCur = 0x0000;
+    ;
+    data->hvVol = 0x00000000;
+    data->curRequested = 0.0;
+    data->powerRequested = 0x00;
 
-	data->steeringTimeStamp = 0x0000;
-	data->pedalsTimeStamp = 0x0000;
-	data->frontalTimeStamp = 0x0000;
-	data->centralTimeStamp = 0x0000;
-	data->bmsLvTimeStamp = 0x0000;
-	data->bmsHvTimeStamp = 0x0000;
-	data->invDxTimeStamp = 0x0000;
-	data->invSxTimeStamp = 0x0000;
+    data->steeringTimeStamp = 0x0000;
+    data->pedalsTimeStamp = 0x0000;
+    data->frontalTimeStamp = 0x0000;
+    data->centralTimeStamp = 0x0000;
+    data->bmsLvTimeStamp = 0x0000;
+    data->bmsHvTimeStamp = 0x0000;
+    data->invDxTimeStamp = 0x0000;
+    data->invSxTimeStamp = 0x0000;
 }
 
 void canSendMSGInit(uint8_t *CanSendMSG)
@@ -1844,114 +1856,128 @@ void checkTimeStamp(state_global_data_t *data)
     //data->actualTime = __HAL_TIM_GetCounter(&htim10);
     data->actualTime = HAL_GetTick();
 
-	/* Steering Wheel Timer */
-	if (data->steeringPresence == false)
-		data->steeringPresence = true;
-
-	/* Pedals Timer */
-	if (data->pedalsPresence == true)
+    /* Steering Wheel Timer */
+    if (data->steeringPresence == false)
+        data->steeringPresence = true;
+    /*
+	if (data->steeringPresence == true)
 	{
-		if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
+		if (data->actualTime - data->steeringTimeStamp > LONG_DELTA)
 		{
-			data->pedalsPresence = false;
-			data->errors += 8;
-			data->warningsB1 += 192;
+			data->steeringPresence = false;
 		}
-	}
-	else
-	{
-		data->errors += 8;
-		data->warningsB1 += 192;
-	}
+	}*/
 
-	/* Frontal Timer */
-	if (data->frontalPresence == true)
-	{
-		if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
-		{
-			data->frontalPresence = false;
-			data->errors += 32;
-			data->warningsB1 += 60;
-		}
-	}
-	else
-	{
-		data->errors += 32;
-		data->warningsB1 += 60;
-	}
+    /* Pedals Timer */
+    if (data->pedalsPresence == true)
+    {
+        if (data->actualTime - data->pedalsTimeStamp > SHORT_DELTA)
+        {
+            data->pedalsPresence = false;
+            data->errors += 8;
+            data->warningsB1 += 192;
+        }
+    }
+    else
+    {
+        data->errors += 8;
+        data->warningsB1 += 192;
+    }
 
-	/* Central Timer */
-	if (data->centralPresence == true)
-	{
-		if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
-		{
-			data->centralPresence = false;
-			data->errors += 16;
-			data->warningsB1 += 3;
-		}
-	}
-	else
-	{
-		data->errors += 16;
-		data->warningsB1 += 3;
-	}
+    /* Frontal Timer */
+    if (data->frontalPresence == true)
+    {
+        if (data->actualTime - data->frontalTimeStamp > SHORT_DELTA)
+        {
+            data->frontalPresence = false;
+            data->errors += 32;
+            data->warningsB1 += 60;
+        }
+    }
+    else
+    {
+        data->errors += 32;
+        data->warningsB1 += 60;
+    }
 
-	/* BmsLv Timer */
-	if (data->bmsLvPresence == true)
-	{
-		if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
-		{
-			data->bmsLvPresence = false;
-			data->errors += 2;
-		}
-	}
-	else
-	{
-		data->errors += 2;
-	}
+    /* Central Timer */
+    if (data->centralPresence == true)
+    {
+        if (data->actualTime - data->centralTimeStamp > SHORT_DELTA)
+        {
+            data->centralPresence = false;
+            data->errors += 16;
+            data->warningsB1 += 3;
+        }
+    }
+    else
+    {
+        data->errors += 16;
+        data->warningsB1 += 3;
+    }
 
-	/* BmsHv Timer */
-	if (data->bmsHvPresence == true)
-	{
-		if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
-		{
-			data->bmsHvPresence = false;
-			data->errors += 1;
-		}
-	}
-	else
-	{
-		data->errors += 1;
-	}
+    /* BmsLv Timer */
+    if (data->bmsLvPresence == true)
+    {
+        if (data->actualTime - data->bmsLvTimeStamp > LONG_DELTA)
+        {
+            data->bmsLvPresence = false;
+            data->errors += 2;
+        }
+    }
+    else
+    {
+        data->errors += 2;
+    }
 
-	/* TODO: Reintroduce Inverter Dx*/
-	/* Inverter Dx Timer */
-	if (data->invDxPresence == true)
-	{
-		if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
-		{
-			data->invDxPresence = false;
-			data->errors += 128;
-		}
-	}
-	else
-	{
-		data->errors += 128;
-	}
+    /* BmsHv Timer */
+    if (data->bmsHvPresence == true)
+    {
+        if (data->actualTime - data->bmsHvTimeStamp > LONG_DELTA)
+        {
+            data->bmsHvPresence = false;
+            data->errors += 1;
+        }
+    }
+    else
+    {
+        data->errors += 1;
+    }
 
-	/* Inverter Sx Timer */
-	if (data->invSxPresence == true)
-	{
-		if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
-		{
-			data->invSxPresence = false;
-			data->errors += 64;
-		}
-	}
-	else
-	{
-		data->errors += 64;
-	}
+    /* TODO: Reintroduce Inverter Dx*/
+    /* Inverter Dx Timer */
+    if (data->invDxPresence == true)
+    {
+        if (data->actualTime - data->invDxTimeStamp > SHORT_DELTA)
+        {
+            data->invDxPresence = false;
+            data->errors += 128;
+        }
+    }
+    else
+    {
+        data->errors += 128;
+    }
+
+    /* Inverter Sx Timer */
+    if (data->invSxPresence == true)
+    {
+        if (data->actualTime - data->invSxTimeStamp > SHORT_DELTA)
+        {
+            data->invSxPresence = false;
+            data->errors += 64;
+        }
+    }
+    else
+    {
+        data->errors += 64;
+    }
+
+    /*if (data->errors != 0){
+		char mander[10];
+		sprintf(mander, "%d\n\r", data->errors);
+		HAL_UART_Transmit(&huart2, (uint8_t*)mander, strlen(mander), 10);
+	}*/
 }
 
 void sendStatus(state_global_data_t *data)
@@ -2127,13 +2153,15 @@ void transmission(state_global_data_t *data)
     }
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	uint32_t time = HAL_GetTick();
-	if(time - debounce_timer > 1000){
-		debounce_timer = time;
-		telemetry_to_send = true;
-		buttonState = !buttonState;
-	}
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    uint32_t time = HAL_GetTick();
+    if (time - debounce_timer > 1000)
+    {
+        debounce_timer = time;
+        telemetry_to_send = true;
+        buttonState = !buttonState;
+    }
 }
 
 /* USER CODE END 4 */
@@ -2152,7 +2180,7 @@ void Error_Handler(void)
     /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
