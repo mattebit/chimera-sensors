@@ -23,13 +23,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <math.h>
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_tim.h"
+#include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LONG_DELTA 3000
 #define SHORT_DELTA 850
@@ -44,10 +44,10 @@
 #define ID_CENTER 208
 #define ID_BMS_HV 170
 #define ID_BMS_LV 255
-#define ID_ASK_INV_SX 513
-#define ID_ASK_INV_DX 514
-#define ID_REQ_INV_SX 385
-#define ID_REQ_INV_DX 386
+#define ID_ASK_INV_SX 0x201
+#define ID_ASK_INV_DX 0x202
+#define ID_REQ_INV_SX 0x181
+#define ID_REQ_INV_DX 0x182
 #define ID_ECU 85
 #define ID_ASK_STATE 16
 #define GYRO 0x4EC
@@ -64,6 +64,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -727,7 +730,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     case ID_PEDALS:
         if (RxData[0] == 0x01 && data.go == 1)
         {
-            data.accelerator = RxData[1];
+            data.accelerator = MAX(0, round((RxData[1] - 5) * 100 / 95));
         }
         else if (RxData[0] == 0x02 && data.go == 1)
         {
@@ -824,7 +827,7 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef *hcan)
     case ID_PEDALS:
         if (RxData[0] == 0x01 && data.go == 1)
         {
-            data.accelerator = RxData[1];
+            data.accelerator = MAX(0, round((RxData[1] - 5) * 100.0 / 95.0));
         }
         else if (RxData[0] == 0x02 && data.go == 1)
         {
@@ -2113,7 +2116,7 @@ void transmission(state_global_data_t *data)
     //uint8_t secondByte;
     //uint8_t negFirstByte;
     //uint8_t negSecondByte;
-    int negativeCurrentToInverter;
+    //int negativeCurrentToInverter;
 
     /* TODO: check rules */
     //if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
@@ -2133,7 +2136,7 @@ void transmission(state_global_data_t *data)
         /* Check Inverter datasheet */
 
         //int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
-        int16_t currentToInverter = round(16384 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
+        int16_t currentToInverter = round(32767 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
 
         //int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
 
@@ -2144,9 +2147,9 @@ void transmission(state_global_data_t *data)
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
 
         /* Convert current to inverter must be negative */
-        negativeCurrentToInverter = -currentToInverter;
-        canSendMSG[1] = negativeCurrentToInverter & 0x00FF;
-        canSendMSG[2] = (negativeCurrentToInverter & 0xFF00) >> 8;
+        //negativeCurrentToInverter = -currentToInverter;
+        //canSendMSG[1] = negativeCurrentToInverter & 0x00FF;
+        //canSendMSG[2] = (negativeCurrentToInverter & 0xFF00) >> 8;
         //negFirstByte = (uint8_t)negativeCurrentToInverter;
         //negSecondByte = negativeCurrentToInverter >> 8;
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
