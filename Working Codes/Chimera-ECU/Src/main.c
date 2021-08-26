@@ -1517,9 +1517,16 @@ void to_idle(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current: stop sending */
+    /* Filtered Actual Current (motors): stop sending */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+    /* Actual Current: stop sending */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x20;
     canSendMSG[2] = 0xFF;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
@@ -1679,9 +1686,16 @@ void from_run_to_setup(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current: stop sending */
+    /* Filtered Actual Current (motors): stop sending */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0xFF;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+    /* Actual Current: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x20;
     canSendMSG[2] = 0xFF;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
@@ -1719,9 +1733,16 @@ void to_run(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current: 100 ms */
+    /* Filtered Actual Current (motors): 100 ms */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
+    canSendMSG[2] = 0x64;
+    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+    /* Actual Current: 100 ms */
+    canSendMSG[0] = 0x3D;
+    canSendMSG[1] = 0x20;
     canSendMSG[2] = 0x64;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
