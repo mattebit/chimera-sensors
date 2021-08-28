@@ -2155,10 +2155,9 @@ void transmission(state_global_data_t *data)
     else
     {
         /* Check Inverter datasheet */
-
+        //A maximum value of 9830 equals to 127A max absorbed
+        int16_t currentToInverter = round(9830 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
         //int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
-        int16_t currentToInverter = round(32767 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
-
         //int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
 
         /* Convert current to inverter */
