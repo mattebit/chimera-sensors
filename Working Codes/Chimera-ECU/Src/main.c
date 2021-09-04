@@ -1743,10 +1743,10 @@ void to_run(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
     */
 
-    /* Actual Current: 100 ms */
+    /* Actual Current: 25 ms */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x20;
-    canSendMSG[2] = 0x64;
+    canSendMSG[2] = 0x16;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
