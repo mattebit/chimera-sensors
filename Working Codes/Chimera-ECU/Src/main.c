@@ -342,12 +342,12 @@ int main(void)
             telemetry_to_send = false;
             if (buttonState)
             {
-                uint8_t msg[2] = {0x65, 0x01};
+                uint8_t msg[2] = {0x66, 0x01};
                 CAN_Send(0xA0, msg, 2);
             }
             else
             {
-                uint8_t msg[2] = {0x65, 0x00};
+                uint8_t msg[2] = {0x66, 0x00};
                 CAN_Send(0xA0, msg, 2);
             }
         }
@@ -1517,12 +1517,13 @@ void to_idle(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current (motors): stop sending */
+    /* Filtered Actual Current (motors): stop sending 
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
     canSendMSG[2] = 0xFF;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    */
 
     /* Actual Current: stop sending */
     canSendMSG[0] = 0x3D;
@@ -1686,12 +1687,13 @@ void from_run_to_setup(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current (motors): stop sending */
+    /* Filtered Actual Current (motors): stop sending 
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
     canSendMSG[2] = 0xFF;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    */
 
     /* Actual Current: 100 ms */
     canSendMSG[0] = 0x3D;
@@ -1733,17 +1735,18 @@ void to_run(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Filtered Actual Current (motors): 100 ms */
+    /* Filtered Actual Current (motors): 100 ms 
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x5F;
     canSendMSG[2] = 0x64;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    */
 
-    /* Actual Current: 100 ms */
+    /* Actual Current: 25 ms */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0x20;
-    canSendMSG[2] = 0x64;
+    canSendMSG[2] = 0x16;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
@@ -2155,8 +2158,8 @@ void transmission(state_global_data_t *data)
     else
     {
         /* Check Inverter datasheet */
-        //A maximum value of 9830 equals to 127A max absorbed
-        int16_t currentToInverter = round(9830 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
+        //A maximum value of 11619 equals to 150A max absorbed
+        int16_t currentToInverter = round(11619 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
         //int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
         //int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
 
