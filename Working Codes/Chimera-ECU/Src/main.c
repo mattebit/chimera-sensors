@@ -55,6 +55,9 @@
 #define ID_TELEMETRY 0x99
 
 #define MAX_POWER 8.0
+
+#define INV_N_MAX 7000
+#define MAX_LIM_RPM 2388 //2388
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -152,6 +155,8 @@ typedef struct state_global_data_t
     uint16_t invRightVol;
     uint16_t invLeftCur;
     uint16_t invRightCur;
+    int16_t invLeftRpm;
+    int16_t invRightRpm;
     uint32_t hvVol;
     int16_t hvCur;
     int curRequested;
@@ -1403,6 +1408,16 @@ state_t do_state_run(state_global_data_t *data)
             case 0x49:
                 data->motLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
                 break;
+            case 0xA8:
+                /* Left motor RPM */
+                /* 
+                    The received value goes from -32767 to +32767 and has to be interpreted as -100% to +100% RPM
+                    you have to divide the value with 32767 and multiply it with the maximum RPM (N max) set on the inverter
+                    See example 3 at page 12 of Unitek's CAN manual, and page 20 speed unit.
+                */
+                data->invLeftRpm = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
+                data->invLeftRpm = (int16_t)round(((float)data->invLeftRpm / 32767.0f) * INV_N_MAX);
+                break;
             default:
                 break;
             }
@@ -1415,6 +1430,12 @@ state_t do_state_run(state_global_data_t *data)
                 break;
             case 0x49:
                 data->motRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
+                break;
+            case 0xA8:
+                /* Right motor RPM */
+                /* Same as left */
+                data->invRightRpm = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
+                data->invRightRpm = (int16_t)round(((float)data->invRightRpm / 32767.0f) * INV_N_MAX);
                 break;
             default:
                 break;
@@ -1728,10 +1749,10 @@ void to_run(state_global_data_t *data)
     canSendMSG[0] = 0x05;
     CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-    /* Actual Speed Value Filtered: 50 ms */
+    /* Actual Speed Value Filtered: 25 ms */
     canSendMSG[0] = 0x3D;
     canSendMSG[1] = 0xA8;
-    canSendMSG[2] = 0x32;
+    canSendMSG[2] = 0x16;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
@@ -2136,12 +2157,6 @@ void transmission(state_global_data_t *data)
 	 * opposite direction (right and left). */
     canSendMSGInit(canSendMSG);
 
-    //uint8_t firstByte;
-    //uint8_t secondByte;
-    //uint8_t negFirstByte;
-    //uint8_t negSecondByte;
-    //int negativeCurrentToInverter;
-
     /* TODO: check rules */
     //if ((data->breakingPedal == 1 && data->accelerator > 25) || (data->requestOfShutdown == true))
     if ((data->requestOfShutdown == true))
@@ -2158,24 +2173,51 @@ void transmission(state_global_data_t *data)
     else
     {
         /* Check Inverter datasheet */
-        //A maximum value of 11619 equals to 150A max absorbed
-        int16_t currentToInverter = round(11619 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
-        //int currentToInverter = ((32767 / 424.2) * (120 / 0.8) * 1.414) * (data->accelerator / 100.0) * (data->powerRequested / 100.0);
-        //int currentToInverter = ((32767 * data->powerRequested * 800.0) / (424.2 * data->hvVol)) * (1.414 / 2) * (data->accelerator / 100.0);
+        //A maximum value of 15492 equals to 200A max absorbed
+        int16_t currentToInverter = round(15492 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
+
+        // 40kW Limit
+        /* The maximum current to be asked to the inverters is calculated with a formula which
+            considers the angular velocity of the motor and the max power, the value is then multiplied
+            by 32767/423 which is a scaling for the inverters based on the maximum amperage value (423A)
+            and the maximum commandable value (32767). This way the current is limited under a defined
+            curve. For more info check Unitek CAN manual page 13*/
+
+        int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invLeftRpm) + 1)) * (32767 / 423);
+        int16_t currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
+
+        int64_t invLimitedCurrentValueRight = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invRightRpm) + 1)) * (32767 / 423);
+        int16_t currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
+
+        //TODO: GESTIRE LA RETRO
+
+        /*
+        char asd[30] = {0};
+        sprintf(asd, "left: %d\tright: %d\n\r", (int16_t)(((float)currentToInverterLeft / 32767.0) * 423.0), (int16_t)((((float)currentToInverterRight / 32767.0) * 423.0)));
+        HAL_UART_Transmit(&huart2, (uint8_t *)asd, 30, 10);
+        */
 
         /* Convert current to inverter */
+        /* Note that right inverter has to be properly configured to turn the opposite direction,
+            because the command is the same for both inverters */
+
+        canSendMSG[0] = 0x90;
+        canSendMSG[1] = currentToInverterLeft & 0x00FF;
+        canSendMSG[2] = (currentToInverterLeft & 0xFF00) >> 8;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+
+        canSendMSG[0] = 0x90;
+        canSendMSG[1] = currentToInverterRight & 0x00FF;
+        canSendMSG[2] = (currentToInverterRight & 0xFF00) >> 8;
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+        /*
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverter & 0x00FF;
         canSendMSG[2] = (currentToInverter & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-
-        /* Convert current to inverter must be negative */
-        //negativeCurrentToInverter = -currentToInverter;
-        //canSendMSG[1] = negativeCurrentToInverter & 0x00FF;
-        //canSendMSG[2] = (negativeCurrentToInverter & 0xFF00) >> 8;
-        //negFirstByte = (uint8_t)negativeCurrentToInverter;
-        //negSecondByte = negativeCurrentToInverter >> 8;
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
     }
 }
 
