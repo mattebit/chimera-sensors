@@ -89,10 +89,6 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-uint32_t debounce_timer = 0;
-bool telemetry_to_send = false;
-bool buttonState = false;
-
 //----------------typedef---------------
 typedef uint8_t errorsInt;
 
@@ -236,6 +232,7 @@ void sendErrors(state_global_data_t *data);
 void shutdown(state_global_data_t *data);
 void shutdownErrors(state_global_data_t *data, int err);
 void checkValues(state_global_data_t *data);
+void inverters_logging(bool essential, bool start);
 void transmission(state_global_data_t *data);
 /* USER CODE END PFP */
 
@@ -340,21 +337,6 @@ int main(void)
         if (HAL_GetTick() % 10 > 0 && data.writeInCan == false)
         {
             data.writeInCan = true;
-        }
-
-        if (telemetry_to_send)
-        {
-            telemetry_to_send = false;
-            if (buttonState)
-            {
-                uint8_t msg[2] = {0x66, 0x01};
-                CAN_Send(0xA0, msg, 2);
-            }
-            else
-            {
-                uint8_t msg[2] = {0x66, 0x00};
-                CAN_Send(0xA0, msg, 2);
-            }
         }
 
         /* USER CODE END WHILE */
@@ -1524,69 +1506,8 @@ void to_idle(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /*IGBT Temperature: 100 ms*/
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x4A;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Actual Speed Value Filtered: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xA8;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Filtered Actual Current (motors): stop sending 
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x5F;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-    */
-
-    /* Actual Current: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x20;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Command Current: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x26;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Motor Temperature: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x49;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* VDC-Bus: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xEB;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Max Motor Current: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x4D;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Motor Continuous Current: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x4E;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    inverters_logging(true, true);
+    inverters_logging(false, false);
 }
 
 void from_idle_to_setup(state_global_data_t *data)
@@ -1616,57 +1537,6 @@ void from_idle_to_setup(state_global_data_t *data)
     canSendMSG[1] = 0xD8;
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Motor Temperature: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x49;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* VDC-Bus: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xEB;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* V-Out: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x8A;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Motor Power: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xF6;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Torque-Out: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xA0;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /*
-	//Max Motor Current: 20 ms --> logging
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x4D;
-	canSendMSG[2] = 0x14;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-	//Motor Continuous Current: 20 ms --> logging
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x4E;
-	canSendMSG[2] = 0x14;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-	*/
 }
 
 void from_run_to_setup(state_global_data_t *data)
@@ -1701,34 +1571,7 @@ void from_run_to_setup(state_global_data_t *data)
     CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
     CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
 
-    /* Actual Speed Value Filtered: stop sending */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xA8;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Filtered Actual Current (motors): stop sending 
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x5F;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-    */
-
-    /* Actual Current: 100 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x20;
-    canSendMSG[2] = 0xFF;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Command Current: stop sending */
-    /*canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x26;
-	canSendMSG[2] = 0xFF;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);*/
+    inverters_logging(false, false);
 }
 
 void to_run(state_global_data_t *data)
@@ -1749,36 +1592,7 @@ void to_run(state_global_data_t *data)
     canSendMSG[0] = 0x05;
     CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
 
-    /* Actual Speed Value Filtered: 25 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0xA8;
-    canSendMSG[2] = 0x16;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /* Filtered Actual Current (motors): 100 ms 
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x5F;
-    canSendMSG[2] = 0x64;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-    */
-
-    /* Actual Current: 25 ms */
-    canSendMSG[0] = 0x3D;
-    canSendMSG[1] = 0x20;
-    canSendMSG[2] = 0x16;
-    CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-    CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-
-    /*
-	//Command Current: 20 ms --> logging
-	canSendMSG[0] = 0x3D;
-	canSendMSG[1] = 0x26;
-	canSendMSG[2] = 0x14;
-	CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
-	CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-	*/
+    inverters_logging(false, true);
 }
 
 //-----List of state functions-----
@@ -2145,6 +1959,73 @@ void checkValues(state_global_data_t *data)
     }
 }
 
+/**
+ * @brief Function used to ask the inverters to send all the parameters to be logged
+ *
+ * @param essential True if you want to ask all the parameters, false if you want to ask only the ones that are essential for the ecu
+ * @param start true if you want to ask to send them, false if you want to stop the sending
+ */
+void inverters_logging(bool essential, bool start)
+{
+    canSendMSGInit(canSendMSG);
+    if (essential)
+    {
+        /* Motor Temperature: 100 ms */
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x49;
+        canSendMSG[2] = start ? 0x64 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+        /*IGBT Temperature: 100 ms*/
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x4A;
+        canSendMSG[2] = start ? 0x64 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    }
+    else
+    {
+        /* Actual Speed Value Filtered: 25 ms 
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0xA8;
+        canSendMSG[2] = start ? 0x16 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
+
+        /* N Actual: 25 ms */
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x30;
+        canSendMSG[2] = start ? 0x16 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+
+        /* N (cmd) ramp: 50 ms 
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x32;
+        canSendMSG[2] = start ? 0x32 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
+
+        /* Iq cmd ramp: 50 ms 
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x22;
+        canSendMSG[2] = start ? 0x32 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
+
+        /* I actual: 50 ms */
+        canSendMSG[0] = 0x3D;
+        canSendMSG[1] = 0x20;
+        canSendMSG[2] = start ? 0x32 : 0xFF;
+        CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
+        CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+    }
+}
+
 void transmission(state_global_data_t *data)
 {
     /* This function is used to send the current request to the inverters.
@@ -2174,7 +2055,8 @@ void transmission(state_global_data_t *data)
     {
         /* Check Inverter datasheet */
         //A maximum value of 15492 equals to 200A max absorbed
-        int16_t currentToInverter = round(15492 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
+        //A maximum value of 11619 equals to 150A max absorbed
+        int16_t currentToInverter = round(11619 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
 
         // 40kW Limit
         /* The maximum current to be asked to the inverters is calculated with a formula which
@@ -2183,11 +2065,13 @@ void transmission(state_global_data_t *data)
             and the maximum commandable value (32767). This way the current is limited under a defined
             curve. For more info check Unitek CAN manual page 13*/
 
+        /*
         int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invLeftRpm) + 1)) * (32767 / 423);
         int16_t currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
 
         int64_t invLimitedCurrentValueRight = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invRightRpm) + 1)) * (32767 / 423);
         int16_t currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
+        */
 
         //TODO: GESTIRE LA RETRO
 
@@ -2200,7 +2084,7 @@ void transmission(state_global_data_t *data)
         /* Convert current to inverter */
         /* Note that right inverter has to be properly configured to turn the opposite direction,
             because the command is the same for both inverters */
-
+        /*
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverterLeft & 0x00FF;
         canSendMSG[2] = (currentToInverterLeft & 0xFF00) >> 8;
@@ -2210,19 +2094,19 @@ void transmission(state_global_data_t *data)
         canSendMSG[1] = currentToInverterRight & 0x00FF;
         canSendMSG[2] = (currentToInverterRight & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
 
-        /*
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverter & 0x00FF;
         canSendMSG[2] = (currentToInverter & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-        */
     }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+    /*
     uint32_t time = HAL_GetTick();
     if (time - debounce_timer > 1000)
     {
@@ -2230,6 +2114,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         telemetry_to_send = true;
         buttonState = !buttonState;
     }
+    */
 }
 
 /* USER CODE END 4 */
