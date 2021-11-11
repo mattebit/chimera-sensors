@@ -917,6 +917,14 @@ state_t do_state_init(state_global_data_t *data)
 
 state_t do_state_idle(state_global_data_t *data)
 {
+    static uint32_t last = 0;
+
+    if ((!data->invSxPresence || !data->invDxPresence) & (HAL_GetTick() - last > 500))
+    {
+        inverters_logging(true, true);
+        last = HAL_GetTick();
+    }
+
     /* In this state the Tractive System is completely disable. This is the first state
 	 * which the driver is put in contact, here it's possible to turning on the car.
 	 * The first thing to do is to check if the CounterDown and the CounterUp are different,
@@ -994,7 +1002,7 @@ state_t do_state_idle(state_global_data_t *data)
                 {
                     canSendMSG[0] = 0x08;
                     CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-                    data->inverterSx = true;
+                    data->inverterSx = true; //WTF?? why turn on the inverters in IDLE?
                 }
                 else
                 {
@@ -1012,7 +1020,7 @@ state_t do_state_idle(state_global_data_t *data)
                 {
                     canSendMSG[0] = 0x09;
                     CAN_Send(ID_ECU, canSendMSG, MSG_LENGHT);
-                    data->inverterDx = true;
+                    data->inverterDx = true; //WTF?? why turn on the inverters in IDLE?
                 }
                 else
                 {
