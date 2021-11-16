@@ -57,7 +57,7 @@
 #define MAX_POWER 8.0
 
 #define INV_N_MAX 7000
-#define MAX_LIM_RPM 2388 //2388
+#define MAX_LIM_RPM 2388 //2388RPM@40kW for each motor
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -151,8 +151,8 @@ typedef struct state_global_data_t
     uint16_t invRightVol;
     uint16_t invLeftCur;
     uint16_t invRightCur;
-    int16_t invLeftRpm;
-    int16_t invRightRpm;
+    int16_t invLeftRpm_filtered;
+    int16_t invRightRpm_filtered;
     uint32_t hvVol;
     int16_t hvCur;
     int curRequested;
@@ -1398,15 +1398,19 @@ state_t do_state_run(state_global_data_t *data)
             case 0x49:
                 data->motLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
                 break;
-            case 0xA8:
+            case 0x30: // to be changed
                 /* Left motor RPM */
                 /* 
                     The received value goes from -32767 to +32767 and has to be interpreted as -100% to +100% RPM
                     you have to divide the value with 32767 and multiply it with the maximum RPM (N max) set on the inverter
                     See example 3 at page 12 of Unitek's CAN manual, and page 20 speed unit.
+                    The rpm value is taken with a moving average filter.
                 */
-                data->invLeftRpm = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
-                data->invLeftRpm = (int16_t)round(((float)data->invLeftRpm / 32767.0f) * INV_N_MAX);
+                {
+                    int16_t tmp = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
+                    float act_left_rpm = ((float)tmp / 32767.0f) * INV_N_MAX;
+                    data->invLeftRpm_filtered = (int16_t)round((act_left_rpm * 0.15) + ((1 - 0.15) * data->invLeftRpm_filtered));
+                }
                 break;
             default:
                 break;
@@ -1421,11 +1425,14 @@ state_t do_state_run(state_global_data_t *data)
             case 0x49:
                 data->motRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
                 break;
-            case 0xA8:
+            case 0x30:
                 /* Right motor RPM */
                 /* Same as left */
-                data->invRightRpm = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
-                data->invRightRpm = (int16_t)round(((float)data->invRightRpm / 32767.0f) * INV_N_MAX);
+                {
+                    int16_t tmp = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
+                    float act_right_rpm = ((float)tmp / 32767.0f) * INV_N_MAX;
+                    data->invRightRpm_filtered = (int16_t)round((act_right_rpm * 0.15) + ((1 - 0.15) * data->invRightRpm_filtered));
+                }
                 break;
             default:
                 break;
@@ -1676,6 +1683,8 @@ void initData(state_global_data_t *data)
     data->invLeftTemp = 0x0000;
     data->invRightTemp = 0x0000;
     data->invLeftVol = 0x0000;
+    data->invLeftRpm_filtered = 0;
+    data->invRightRpm_filtered = 0;
     data->invRightVol = 0x0000;
     data->invLeftCur = 0x0000;
     data->invRightCur = 0x0000;
@@ -2064,7 +2073,7 @@ void transmission(state_global_data_t *data)
         /* Check Inverter datasheet */
         //A maximum value of 15492 equals to 200A max absorbed
         //A maximum value of 11619 equals to 150A max absorbed
-        int16_t currentToInverter = round(11619 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
+        int16_t currentToInverter = round(15492 * (data->accelerator / 100.0) * (data->powerRequested / 100.0));
 
         // 40kW Limit
         /* The maximum current to be asked to the inverters is calculated with a formula which
@@ -2073,15 +2082,16 @@ void transmission(state_global_data_t *data)
             and the maximum commandable value (32767). This way the current is limited under a defined
             curve. For more info check Unitek CAN manual page 13*/
 
-        /*
-        int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invLeftRpm) + 1)) * (32767 / 423);
+        // 477707 is the constant to limit the power at 40kW for each motor
+        // 298415 is the constant to limit the power at 25kW for each motor
+
+
+
+        int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invLeftRpm_filtered) + 1)) * (32767 / 423);
         int16_t currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
 
-        int64_t invLimitedCurrentValueRight = abs(data->invLeftRpm) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invRightRpm) + 1)) * (32767 / 423);
+        int64_t invLimitedCurrentValueRight = abs(data->invRightRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invRightRpm_filtered) + 1)) * (32767 / 423);
         int16_t currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
-        */
-
-        //TODO: GESTIRE LA RETRO
 
         /*
         char asd[30] = {0};
@@ -2089,10 +2099,17 @@ void transmission(state_global_data_t *data)
         HAL_UART_Transmit(&huart2, (uint8_t *)asd, 30, 10);
         */
 
+        /*
+        char asd[30] = {0};
+        sprintf(asd, "left: %d\tright: %d\n\r", data->invLeftRpm_filtered, data->invRightRpm_filtered);
+        HAL_UART_Transmit(&huart2, (uint8_t *)asd, 30, 10);
+        */
+
         /* Convert current to inverter */
         /* Note that right inverter has to be properly configured to turn the opposite direction,
             because the command is the same for both inverters */
-        /*
+
+        // With power limits
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverterLeft & 0x00FF;
         canSendMSG[2] = (currentToInverterLeft & 0xFF00) >> 8;
@@ -2102,13 +2119,15 @@ void transmission(state_global_data_t *data)
         canSendMSG[1] = currentToInverterRight & 0x00FF;
         canSendMSG[2] = (currentToInverterRight & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-        */
 
+        /*
+        // Without power limits
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverter & 0x00FF;
         canSendMSG[2] = (currentToInverter & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
     }
 }
 
