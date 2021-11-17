@@ -58,6 +58,13 @@
 
 #define INV_N_MAX 7000
 #define MAX_LIM_RPM 2388 //2388RPM@40kW for each motor
+#define PW_LIM_COEFF_0 0
+#define PW_LIM_COEFF_1 119366 // equals to 10kW
+#define PW_LIM_COEFF_2 238732 // equals to 20kW
+#define PW_LIM_COEFF_3 358098 // equals to 30kW
+#define PW_LIM_COEFF_4 477707 // equals to 40kW
+#define PW_LIM_COEFF_5 596831 // equals to 50kW
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -156,7 +163,8 @@ typedef struct state_global_data_t
     uint32_t hvVol;
     int16_t hvCur;
     int curRequested;
-    int8_t powerRequested; // % of power requested
+    int8_t powerRequested;  // % of power requested
+    uint32_t powerLimitCoefficient; // 0,1,2,3,4,5
 
     uint32_t steeringTimeStamp;
     uint32_t pedalsTimeStamp;
@@ -707,12 +715,6 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     case ID_STEERING_WHEEL:
         data.steeringPresence = true;
         data.steeringTimeStamp = HAL_GetTick();
-        if (RxData[0] == 0x09)
-        {
-            char mander[50];
-            sprintf(mander, "Request Received\n\r");
-            HAL_UART_Transmit(&huart2, (uint8_t *)mander, strlen(mander), 10);
-        }
         break;
     case ID_PEDALS:
         if (RxData[0] == 0x01 && data.go == 1)
@@ -952,17 +954,48 @@ state_t do_state_idle(state_global_data_t *data)
             switch (data->fifoData[data->dataCounterDown].RxData[0])
             {
             /* Check who is online */
-            case 0x02:
+            case 0x02: {
                 sendErrors(data);
-                if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
-                {
+                if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC){
                     data->powerRequested = -20;
-                }
-                else
-                {
+                } else {
                     data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
                 }
+
+                switch (data->fifoData[data->dataCounterDown].RxData[2]){
+                    case 0x00: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_0; //OFF
+                    }
+                    break;
+                    case 0x01: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_1;
+                    }
+                    break;
+                    case 0x02: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_2;
+                    }
+                    break;
+                    case 0x03: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_3;
+                    }
+                    break;
+                    case 0x04: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_4;
+                    }
+                    break;
+                    case 0x05: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_5;
+                    }
+                    break;
+                }
+                /*
+                char asd[30] = {0};
+                sprintf(asd, "val: %ld\n\r", data->powerLimitCoefficient);
+                HAL_UART_Transmit(&huart2, (uint8_t *)asd, 30, 10);
+                */
                 break;
+            }
+
             /* Turning on car driver request */
             case 0x03:
                 sendErrors(data);
@@ -1102,6 +1135,34 @@ state_t do_state_setup(state_global_data_t *data)
                     {
                         data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
                     }
+
+                    switch (data->fifoData[data->dataCounterDown].RxData[2]){
+                        case 0x00: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_0; //OFF
+                        }
+                        break;
+                        case 0x01: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_1;
+                        }
+                        break;
+                        case 0x02: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_2;
+                        }
+                        break;
+                        case 0x03: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_3;
+                        }
+                        break;
+                        case 0x04: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_4;
+                        }
+                        break;
+                        case 0x05: {
+                            data->powerLimitCoefficient = PW_LIM_COEFF_5;
+                        }
+                        break;
+                    }
+
                     __HAL_TIM_SetCounter(&htim7, 0);
                     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
                 }
@@ -1315,7 +1376,7 @@ state_t do_state_run(state_global_data_t *data)
             switch (data->fifoData[data->dataCounterDown].RxData[0])
             {
             /* Check who is online */
-            case 0x02:
+            case 0x02: {
                 sendErrors(data);
                 /* map changing */
                 if (data->fifoData[data->dataCounterDown].RxData[1] == 0xEC)
@@ -1326,13 +1387,40 @@ state_t do_state_run(state_global_data_t *data)
                 {
                     data->powerRequested = data->fifoData[data->dataCounterDown].RxData[1];
                 }
-                break;
+
+                switch (data->fifoData[data->dataCounterDown].RxData[2]){
+                    case 0x00: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_0; //OFF
+                    }
+                    break;
+                    case 0x01: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_1;
+                    }
+                    break;
+                    case 0x02: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_2;
+                    }
+                    break;
+                    case 0x03: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_3;
+                    }
+                    break;
+                    case 0x04: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_4;
+                    }
+                    break;
+                    case 0x05: {
+                        data->powerLimitCoefficient = PW_LIM_COEFF_5;
+                    }
+                    break;
+                }
+            }
+            break;
                 // TODO: reinsert
                 //if (data->errors != 0 && data->errors != 16 && data->errors != 32 && data->errors != 48){
                 /* Turning on car request to bms_hv*/
                 //shutdownErrors(data, data->errors);
                 //}
-                break;
             /* Setup request */
             case 0x06:
                 data->go = false;
@@ -1693,6 +1781,7 @@ void initData(state_global_data_t *data)
     data->hvVol = 0x00000000;
     data->curRequested = 0.0;
     data->powerRequested = 0x00;
+    data->powerLimitCoefficient = PW_LIM_COEFF_0;
 
     data->steeringTimeStamp = 0x0000;
     data->pedalsTimeStamp = 0x0000;
@@ -2082,16 +2171,19 @@ void transmission(state_global_data_t *data)
             and the maximum commandable value (32767). This way the current is limited under a defined
             curve. For more info check Unitek CAN manual page 13*/
 
-        // 477707 is the constant to limit the power at 40kW for each motor
-        // 298415 is the constant to limit the power at 25kW for each motor
+        int16_t currentToInverterLeft = 0;
+        int16_t currentToInverterRight = 0;
 
+        if (data->powerLimitCoefficient != PW_LIM_COEFF_0) {
+            int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invLeftRpm_filtered) + 1)) * (32767 / 423);
+            currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
 
-
-        int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invLeftRpm_filtered) + 1)) * (32767 / 423);
-        int16_t currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
-
-        int64_t invLimitedCurrentValueRight = abs(data->invRightRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (477707 / (abs(data->invRightRpm_filtered) + 1)) * (32767 / 423);
-        int16_t currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
+            int64_t invLimitedCurrentValueRight = abs(data->invRightRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invRightRpm_filtered) + 1)) * (32767 / 423);
+            currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
+        } else {
+            currentToInverterLeft = currentToInverter;
+            currentToInverterRight = currentToInverter;
+        }
 
         /*
         char asd[30] = {0};
@@ -2115,6 +2207,7 @@ void transmission(state_global_data_t *data)
         canSendMSG[2] = (currentToInverterLeft & 0xFF00) >> 8;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
 
+        canSendMSGInit(canSendMSG);
         canSendMSG[0] = 0x90;
         canSendMSG[1] = currentToInverterRight & 0x00FF;
         canSendMSG[2] = (currentToInverterRight & 0xFF00) >> 8;
