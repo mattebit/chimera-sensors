@@ -57,7 +57,7 @@
 #define MAX_POWER 8.0
 
 #define INV_N_MAX 7000
-#define MAX_LIM_RPM 2388 //2388RPM@40kW for each motor
+#define MIN_LIM_RPM 500 //min RPM without limit
 #define PW_LIM_COEFF_0 0
 #define PW_LIM_COEFF_1 119366 // equals to 10kW
 #define PW_LIM_COEFF_2 238732 // equals to 20kW
@@ -2115,13 +2115,12 @@ void inverters_logging(bool essential, bool start)
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
         */
 
-        /* Iq cmd ramp: 50 ms 
+        /* Iq cmd ramp: 50 ms */
         canSendMSG[0] = 0x3D;
         canSendMSG[1] = 0x22;
         canSendMSG[2] = start ? 0x32 : 0xFF;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-        */
 
         /* I actual: 50 ms */
         canSendMSG[0] = 0x3D;
@@ -2175,11 +2174,11 @@ void transmission(state_global_data_t *data)
         int16_t currentToInverterRight = 0;
 
         if (data->powerLimitCoefficient != PW_LIM_COEFF_0) {
-            int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invLeftRpm_filtered) + 1)) * (32767 / 423);
-            currentToInverterLeft = MIN(currentToInverter, invLimitedCurrentValueLeft);
+            int64_t invLimitedCurrentValueLeft = abs(data->invLeftRpm_filtered) < MIN_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invLeftRpm_filtered) + 1)) * (32767 / 423);
+            currentToInverterLeft = MIN(currentToInverter, abs(invLimitedCurrentValueLeft));
 
-            int64_t invLimitedCurrentValueRight = abs(data->invRightRpm_filtered) < MAX_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invRightRpm_filtered) + 1)) * (32767 / 423);
-            currentToInverterRight = MIN(currentToInverter, invLimitedCurrentValueRight);
+            int64_t invLimitedCurrentValueRight = abs(data->invRightRpm_filtered) < MIN_LIM_RPM ? currentToInverter : (data->powerLimitCoefficient / (abs(data->invRightRpm_filtered) + 1)) * (32767 / 423);
+            currentToInverterRight = MIN(currentToInverter, abs(invLimitedCurrentValueRight));
         } else {
             currentToInverterLeft = currentToInverter;
             currentToInverterRight = currentToInverter;
