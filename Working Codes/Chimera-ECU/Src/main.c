@@ -1486,7 +1486,7 @@ state_t do_state_run(state_global_data_t *data)
             case 0x49:
                 data->motLeftTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
                 break;
-            case 0x30: // to be changed
+            case 0xA8: // to be changed
                 /* Left motor RPM */
                 /* 
                     The received value goes from -32767 to +32767 and has to be interpreted as -100% to +100% RPM
@@ -1498,6 +1498,7 @@ state_t do_state_run(state_global_data_t *data)
                     int16_t tmp = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
                     float act_left_rpm = ((float)tmp / 32767.0f) * INV_N_MAX;
                     data->invLeftRpm_filtered = (int16_t)round((act_left_rpm * 0.15) + ((1 - 0.15) * data->invLeftRpm_filtered));
+                    
                 }
                 break;
             default:
@@ -1513,13 +1514,14 @@ state_t do_state_run(state_global_data_t *data)
             case 0x49:
                 data->motRightTemp = data->fifoData[data->dataCounterDown].RxData[2] * 256 + data->fifoData[data->dataCounterDown].RxData[1];
                 break;
-            case 0x30:
+            case 0xA8:
                 /* Right motor RPM */
                 /* Same as left */
                 {
                     int16_t tmp = (int16_t)((data->fifoData[data->dataCounterDown].RxData[2] << 8) | data->fifoData[data->dataCounterDown].RxData[1]);
                     float act_right_rpm = ((float)tmp / 32767.0f) * INV_N_MAX;
                     data->invRightRpm_filtered = (int16_t)round((act_right_rpm * 0.15) + ((1 - 0.15) * data->invRightRpm_filtered));
+                    
                 }
                 break;
             default:
@@ -2089,23 +2091,23 @@ void inverters_logging(bool essential, bool start)
         canSendMSG[2] = start ? 0x64 : 0xFF;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-    }
-    else
-    {
-        /* Actual Speed Value Filtered: 25 ms 
+
+        /* Actual Speed Value Filtered: 25 ms  */
         canSendMSG[0] = 0x3D;
         canSendMSG[1] = 0xA8;
         canSendMSG[2] = start ? 0x16 : 0xFF;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
-        */
-
-        /* N Actual: 25 ms */
+    }
+    else
+    {
+        /* N Actual: 25 ms
         canSendMSG[0] = 0x3D;
         canSendMSG[1] = 0x30;
         canSendMSG[2] = start ? 0x16 : 0xFF;
         CAN_Send(ID_ASK_INV_SX, canSendMSG, MSG_LENGHT);
         CAN_Send(ID_ASK_INV_DX, canSendMSG, MSG_LENGHT);
+        */
 
         /* N (cmd) ramp: 50 ms 
         canSendMSG[0] = 0x3D;
